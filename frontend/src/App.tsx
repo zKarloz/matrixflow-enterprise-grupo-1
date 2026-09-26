@@ -1,121 +1,123 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
+import Sidebar from './components/layout/Sidebar'
+import Header from './components/layout/Header'
+
+import Dashboard from './pages/Dashboard'
+import Empresa from './pages/Empresa'
+import Sucursales from './pages/Sucursales'
+import Productos from './pages/Productos'
+import Ventas from './pages/Ventas'
+import Inventario from './pages/Inventario'
+import Vectores from './pages/Vectores'
+import Matrices from './pages/Matrices'
+import Operaciones from './pages/Operaciones'
+import Historial from './pages/Historial'
+import Reportes from './pages/Reportes'
+import Usuarios from './pages/Usuarios'
+import Configuracion from './pages/Configuracion'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('matrixflow-dark-mode') === 'true'
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+
+    localStorage.setItem(
+      'matrixflow-dark-mode',
+      String(darkMode)
+    )
+  }, [darkMode])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <BrowserRouter>
+      <div
+        className={`min-h-screen transition-colors ${darkMode
+            ? 'bg-slate-950 text-slate-100'
+            : 'bg-slate-50 text-slate-900'
+          }`}
+      >
+        <Sidebar />
 
-      <div className="ticks"></div>
+        <Header />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <main className="ml-64 pt-20">
+          <div className="p-8">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+              <Route
+                path="/empresa"
+                element={<Empresa />}
+              />
+
+              <Route
+                path="/sucursales"
+                element={<Sucursales />}
+              />
+
+              <Route
+                path="/productos"
+                element={<Productos />}
+              />
+
+              <Route
+                path="/ventas"
+                element={<Ventas />}
+              />
+
+              <Route
+                path="/inventario"
+                element={<Inventario />}
+              />
+
+              <Route
+                path="/vectores"
+                element={<Vectores />}
+              />
+
+              <Route
+                path="/matrices"
+                element={<Matrices />}
+              />
+
+              <Route
+                path="/operaciones"
+                element={<Operaciones />}
+              />
+
+              <Route
+                path="/historial"
+                element={<Historial />}
+              />
+
+              <Route
+                path="/reportes"
+                element={<Reportes />}
+              />
+
+              <Route
+                path="/usuarios"
+                element={<Usuarios />}
+              />
+
+              <Route
+                path="/configuracion"
+                element={
+                  <Configuracion
+                    darkMode={darkMode}
+                    setDarkMode={setDarkMode}
+                  />
+                }
+              />
+            </Routes>
+          </div>
+        </main>
+      </div>
+    </BrowserRouter>
   )
 }
 
