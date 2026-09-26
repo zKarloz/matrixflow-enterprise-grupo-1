@@ -1,6 +1,6 @@
 # Matrixflow Enterprise - Semestre IV - Grupo 1
 
-## Estructura del proyecto
+## Estructura del proyecto (26/09)
 
 ```
 matrixflow-enterprise
@@ -33,6 +33,13 @@ matrixflow-enterprise
 ├─ docker-compose.yml
 ├─ docs
 ├─ frontend
+│  ├─ dist
+│  │  ├─ assets
+│  │  │  ├─ index-B9d3Yobx.css
+│  │  │  └─ index-CcxCOOhd.js
+│  │  ├─ favicon.svg
+│  │  ├─ icons.svg
+│  │  └─ index.html
 │  ├─ eslint.config.js
 │  ├─ index.html
 │  ├─ package-lock.json
@@ -49,11 +56,54 @@ matrixflow-enterprise
 │  │  │  ├─ react.svg
 │  │  │  └─ vite.svg
 │  │  ├─ components
+│  │  │  ├─ branches
+│  │  │  │  └─ BranchTable.tsx
+│  │  │  ├─ company
+│  │  │  │  └─ CompanyInfoCard.tsx
+│  │  │  ├─ dashboard
+│  │  │  │  ├─ RecentActivity.tsx
+│  │  │  │  ├─ SalesByBranchChart.tsx
+│  │  │  │  ├─ SalesByProductChart.tsx
+│  │  │  │  ├─ SalesChart.tsx
+│  │  │  │  └─ StatCard.tsx
+│  │  │  ├─ inventory
+│  │  │  │  └─ InventoryTable.tsx
+│  │  │  ├─ layout
+│  │  │  │  ├─ Header.tsx
+│  │  │  │  └─ Sidebar.tsx
+│  │  │  ├─ products
+│  │  │  │  └─ ProductTable.tsx
+│  │  │  ├─ sales
+│  │  │  │  └─ SalesTable.tsx
+│  │  │  └─ ui
+│  │  │     └─ PagePlaceholder.tsx
+│  │  ├─ data
+│  │  │  ├─ branches.ts
+│  │  │  ├─ company.ts
+│  │  │  ├─ dashboard.ts
+│  │  │  ├─ history.ts
+│  │  │  ├─ inventory.ts
+│  │  │  ├─ products.ts
+│  │  │  ├─ sales.ts
+│  │  │  ├─ users.ts
+│  │  │  └─ Vectores.tsx
 │  │  ├─ hooks
 │  │  ├─ index.css
-│  │  ├─ layouts
 │  │  ├─ main.tsx
 │  │  ├─ pages
+│  │  │  ├─ Configuracion.tsx
+│  │  │  ├─ Dashboard.tsx
+│  │  │  ├─ Empresa.tsx
+│  │  │  ├─ Historial.tsx
+│  │  │  ├─ Inventario.tsx
+│  │  │  ├─ Matrices.tsx
+│  │  │  ├─ Operaciones.tsx
+│  │  │  ├─ Productos.tsx
+│  │  │  ├─ Reportes.tsx
+│  │  │  ├─ Sucursales.tsx
+│  │  │  ├─ Usuarios.tsx
+│  │  │  ├─ Vectores.tsx
+│  │  │  └─ Ventas.tsx
 │  │  ├─ schemas
 │  │  ├─ services
 │  │  └─ types
