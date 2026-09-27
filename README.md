@@ -3,12 +3,11 @@
 ## Estructura del proyecto (26/09)
 
 ```
-matrixflow-enterprise
+matrixflow-enterprise-grupo-1
 ├─ .env.example
 ├─ backend
 │  ├─ alembic.ini
 │  ├─ app
-│  │  ├─ algorithms
 │  │  ├─ api
 │  │  │  └─ routes
 │  │  │     ├─ auth.py
@@ -22,21 +21,14 @@ matrixflow-enterprise
 │  │  │     ├─ sales.py
 │  │  │     ├─ users.py
 │  │  │     └─ vectors.py
-│  │  ├─ core
-│  │  ├─ main.py
-│  │  ├─ models
-│  │  ├─ repositories
-│  │  ├─ schemas
-│  │  └─ services
+│  │  └─ main.py
 │  └─ requirements.txt
-├─ database
 ├─ docker-compose.yml
-├─ docs
 ├─ frontend
 │  ├─ dist
 │  │  ├─ assets
-│  │  │  ├─ index-B9d3Yobx.css
-│  │  │  └─ index-CcxCOOhd.js
+│  │  │  ├─ index-BF7OMvi7.css
+│  │  │  └─ index-DOtJsKhW.js
 │  │  ├─ favicon.svg
 │  │  ├─ icons.svg
 │  │  └─ index.html
@@ -52,12 +44,7 @@ matrixflow-enterprise
 │  │  ├─ App.css
 │  │  ├─ App.tsx
 │  │  ├─ assets
-│  │  │  ├─ hero.png
-│  │  │  ├─ react.svg
-│  │  │  └─ vite.svg
 │  │  ├─ components
-│  │  │  ├─ branches
-│  │  │  │  └─ BranchTable.tsx
 │  │  │  ├─ company
 │  │  │  │  └─ CompanyInfoCard.tsx
 │  │  │  ├─ dashboard
@@ -66,47 +53,29 @@ matrixflow-enterprise
 │  │  │  │  ├─ SalesByProductChart.tsx
 │  │  │  │  ├─ SalesChart.tsx
 │  │  │  │  └─ StatCard.tsx
-│  │  │  ├─ inventory
-│  │  │  │  └─ InventoryTable.tsx
-│  │  │  ├─ layout
-│  │  │  │  ├─ Header.tsx
-│  │  │  │  └─ Sidebar.tsx
-│  │  │  ├─ products
-│  │  │  │  └─ ProductTable.tsx
-│  │  │  ├─ sales
-│  │  │  │  └─ SalesTable.tsx
-│  │  │  └─ ui
-│  │  │     └─ PagePlaceholder.tsx
+│  │  │  └─ layout
+│  │  │     ├─ Header.tsx
+│  │  │     └─ Sidebar.tsx
 │  │  ├─ data
-│  │  │  ├─ branches.ts
 │  │  │  ├─ company.ts
 │  │  │  ├─ dashboard.ts
-│  │  │  ├─ history.ts
-│  │  │  ├─ inventory.ts
-│  │  │  ├─ products.ts
-│  │  │  ├─ sales.ts
-│  │  │  ├─ users.ts
-│  │  │  └─ Vectores.tsx
-│  │  ├─ hooks
+│  │  │  └─ users.ts
 │  │  ├─ index.css
 │  │  ├─ main.tsx
-│  │  ├─ pages
-│  │  │  ├─ Configuracion.tsx
-│  │  │  ├─ Dashboard.tsx
-│  │  │  ├─ Empresa.tsx
-│  │  │  ├─ Historial.tsx
-│  │  │  ├─ Inventario.tsx
-│  │  │  ├─ Matrices.tsx
-│  │  │  ├─ Operaciones.tsx
-│  │  │  ├─ Productos.tsx
-│  │  │  ├─ Reportes.tsx
-│  │  │  ├─ Sucursales.tsx
-│  │  │  ├─ Usuarios.tsx
-│  │  │  ├─ Vectores.tsx
-│  │  │  └─ Ventas.tsx
-│  │  ├─ schemas
-│  │  ├─ services
-│  │  └─ types
+│  │  └─ pages
+│  │     ├─ Configuracion.tsx
+│  │     ├─ Dashboard.tsx
+│  │     ├─ Empresa.tsx
+│  │     ├─ Historial.tsx
+│  │     ├─ Inventario.tsx
+│  │     ├─ Matrices.tsx
+│  │     ├─ Operaciones.tsx
+│  │     ├─ Productos.tsx
+│  │     ├─ Reportes.tsx
+│  │     ├─ Sucursales.tsx
+│  │     ├─ Usuarios.tsx
+│  │     ├─ Vectores.tsx
+│  │     └─ Ventas.tsx
 │  ├─ tsconfig.app.json
 │  ├─ tsconfig.json
 │  ├─ tsconfig.node.json
