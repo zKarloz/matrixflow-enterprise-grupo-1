@@ -3,11 +3,20 @@
 ## Estructura del proyecto (26/09)
 
 ```
-matrixflow-enterprise-grupo-1
-├─ .env.example
+matrixflow-enterprise-grupo-1-definitivo
 ├─ backend
+│  ├─ alembic
+│  │  ├─ env.py
+│  │  ├─ README
+│  │  ├─ script.py.mako
+│  │  └─ versions
 │  ├─ alembic.ini
 │  ├─ app
+│  │  ├─ algorithms
+│  │  │  ├─ matrix_operations.py
+│  │  │  ├─ validation.py
+│  │  │  ├─ vector_operations.py
+│  │  │  └─ __init__.py
 │  │  ├─ api
 │  │  │  └─ routes
 │  │  │     ├─ auth.py
@@ -20,18 +29,68 @@ matrixflow-enterprise-grupo-1
 │  │  │     ├─ reports.py
 │  │  │     ├─ sales.py
 │  │  │     ├─ users.py
-│  │  │     └─ vectors.py
-│  │  └─ main.py
+│  │  │     ├─ vectors.py
+│  │  │     └─ __init__.py
+│  │  ├─ core
+│  │  │  ├─ config.py
+│  │  │  ├─ database.py
+│  │  │  └─ security.py
+│  │  ├─ main.py
+│  │  ├─ models
+│  │  │  ├─ audit.py
+│  │  │  ├─ branch.py
+│  │  │  ├─ category.py
+│  │  │  ├─ company.py
+│  │  │  ├─ inventory.py
+│  │  │  ├─ matrix.py
+│  │  │  ├─ operation.py
+│  │  │  ├─ product.py
+│  │  │  ├─ role.py
+│  │  │  ├─ sale.py
+│  │  │  ├─ target.py
+│  │  │  ├─ user.py
+│  │  │  ├─ vector.py
+│  │  │  └─ __init__.py
+│  │  ├─ repositories
+│  │  │  ├─ audit_repository.py
+│  │  │  ├─ branch_repository.py
+│  │  │  ├─ company_repository.py
+│  │  │  ├─ inventory_repository.py
+│  │  │  ├─ matrix_repository.py
+│  │  │  ├─ operation_repository.py
+│  │  │  ├─ product_repository.py
+│  │  │  ├─ sale_repository.py
+│  │  │  ├─ user_repository.py
+│  │  │  ├─ vector_repository.py
+│  │  │  └─ __init__.py
+│  │  ├─ schemas
+│  │  │  ├─ auth.py
+│  │  │  ├─ branch.py
+│  │  │  ├─ company.py
+│  │  │  ├─ inventory.py
+│  │  │  ├─ matrix.py
+│  │  │  ├─ operation.py
+│  │  │  ├─ product.py
+│  │  │  ├─ report.py
+│  │  │  ├─ sale.py
+│  │  │  ├─ vector.py
+│  │  │  └─ __init__.py
+│  │  └─ services
+│  │     ├─ audit_service.py
+│  │     ├─ auth_service.py
+│  │     ├─ branch_service.py
+│  │     ├─ company_service.py
+│  │     ├─ inventory_service.py
+│  │     ├─ matrix_service.py
+│  │     ├─ operation_service.py
+│  │     ├─ product_service.py
+│  │     ├─ report_service.py
+│  │     ├─ sale_service.py
+│  │     ├─ vector_service.py
+│  │     └─ __init__.py
 │  └─ requirements.txt
 ├─ docker-compose.yml
 ├─ frontend
-│  ├─ dist
-│  │  ├─ assets
-│  │  │  ├─ index-B6pYJYuy.js
-│  │  │  └─ index-BYiqhIfq.css
-│  │  ├─ favicon.svg
-│  │  ├─ icons.svg
-│  │  └─ index.html
 │  ├─ eslint.config.js
 │  ├─ index.html
 │  ├─ package-lock.json
