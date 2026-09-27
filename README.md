@@ -9,7 +9,10 @@
 3. Activar el entorno virtual de Python
    `source .venv/Scripts/activate`
 
-4. Correr el servidor del backend
+4. Instalar librerías de requirements.txt
+   `pip install -r requirements.txt`
+
+5. Correr el servidor del backend
    `uvicorn app.main:app --reload`
 
 ## Estructura del proyecto (27/09)
