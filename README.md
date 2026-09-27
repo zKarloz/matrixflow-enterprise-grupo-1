@@ -27,8 +27,8 @@ matrixflow-enterprise-grupo-1
 ├─ frontend
 │  ├─ dist
 │  │  ├─ assets
-│  │  │  ├─ index-BF7OMvi7.css
-│  │  │  └─ index-DOtJsKhW.js
+│  │  │  ├─ index-B6pYJYuy.js
+│  │  │  └─ index-BYiqhIfq.css
 │  │  ├─ favicon.svg
 │  │  ├─ icons.svg
 │  │  └─ index.html
@@ -43,7 +43,6 @@ matrixflow-enterprise-grupo-1
 │  ├─ src
 │  │  ├─ App.css
 │  │  ├─ App.tsx
-│  │  ├─ assets
 │  │  ├─ components
 │  │  │  ├─ company
 │  │  │  │  └─ CompanyInfoCard.tsx
@@ -62,20 +61,23 @@ matrixflow-enterprise-grupo-1
 │  │  │  └─ users.ts
 │  │  ├─ index.css
 │  │  ├─ main.tsx
-│  │  └─ pages
-│  │     ├─ Configuracion.tsx
-│  │     ├─ Dashboard.tsx
-│  │     ├─ Empresa.tsx
-│  │     ├─ Historial.tsx
-│  │     ├─ Inventario.tsx
-│  │     ├─ Matrices.tsx
-│  │     ├─ Operaciones.tsx
-│  │     ├─ Productos.tsx
-│  │     ├─ Reportes.tsx
-│  │     ├─ Sucursales.tsx
-│  │     ├─ Usuarios.tsx
-│  │     ├─ Vectores.tsx
-│  │     └─ Ventas.tsx
+│  │  ├─ pages
+│  │  │  ├─ CombinacionesLineales.tsx
+│  │  │  ├─ Configuracion.tsx
+│  │  │  ├─ Dashboard.tsx
+│  │  │  ├─ Empresa.tsx
+│  │  │  ├─ Historial.tsx
+│  │  │  ├─ Inventario.tsx
+│  │  │  ├─ Matrices.tsx
+│  │  │  ├─ Operaciones.tsx
+│  │  │  ├─ Productos.tsx
+│  │  │  ├─ Reportes.tsx
+│  │  │  ├─ Sucursales.tsx
+│  │  │  ├─ Usuarios.tsx
+│  │  │  ├─ Vectores.tsx
+│  │  │  └─ Ventas.tsx
+│  │  └─ services
+│  │     └─ api.ts
 │  ├─ tsconfig.app.json
 │  ├─ tsconfig.json
 │  ├─ tsconfig.node.json
