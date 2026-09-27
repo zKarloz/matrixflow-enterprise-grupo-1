@@ -1,0 +1,38 @@
+# Framework principal para construir la API REST.
+fastapi
+
+# Servidor ASGI utilizado para ejecutar FastAPI.
+uvicorn[standard]
+
+# ORM para trabajar con PostgreSQL mediante modelos Python.
+sqlalchemy
+
+# Driver de PostgreSQL para SQLAlchemy.
+psycopg[binary]
+
+# Validación y serialización de datos.
+pydantic
+
+# Permite cargar variables de entorno desde el archivo .env.
+python-dotenv
+
+# Motor de cálculo matricial y vectorial.
+numpy
+
+# Herramienta para crear y ejecutar migraciones de la base de datos.
+alembic
+
+# Soporte para autenticación mediante JWT.
+python-jose[cryptography]
+
+# Librería para trabajar con contraseñas de forma segura.
+passlib[bcrypt]
+
+# Permite configurar formularios y archivos enviados a FastAPI.
+python-multipart
+
+# Dependencias para pruebas automatizadas.
+pytest
+httpx
+# Gestión de configuración mediante variables de entorno.
+pydantic-settings

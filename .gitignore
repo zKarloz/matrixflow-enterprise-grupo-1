@@ -1,0 +1,144 @@
+# ============================================================
+# MATRIXFLOW ENTERPRISE - Git Ignore
+# ============================================================
+
+# ------------------------------------------------------------
+# VARIABLES DE ENTORNO Y SECRETOS
+# ------------------------------------------------------------
+
+# Archivos .env locales con credenciales, claves o configuraciones
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Permitimos mantener el archivo de ejemplo en Git
+!.env.example
+
+
+# ------------------------------------------------------------
+# PYTHON / BACKEND
+# ------------------------------------------------------------
+
+# Entornos virtuales de Python
+.venv/
+venv/
+env/
+ENV/
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos generados por herramientas de Python
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Caché de herramientas de Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Archivos temporales de Jupyter
+.ipynb_checkpoints/
+
+
+# ------------------------------------------------------------
+# NODE / FRONTEND
+# ------------------------------------------------------------
+
+# Dependencias instaladas de Node
+node_modules/
+
+# Builds generados
+dist/
+build/
+
+# Cachés de npm, Vite y otras herramientas
+.npm/
+.vite/
+.eslintcache
+
+
+# ------------------------------------------------------------
+# IDE / EDITORES
+# ------------------------------------------------------------
+
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# IntelliJ / WebStorm
+.idea/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+
+# ------------------------------------------------------------
+# SISTEMA OPERATIVO
+# ------------------------------------------------------------
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+
+# ------------------------------------------------------------
+# LOGS
+# ------------------------------------------------------------
+
+*.log
+logs/
+
+
+# ------------------------------------------------------------
+# ARCHIVOS TEMPORALES
+# ------------------------------------------------------------
+
+*.tmp
+*.temp
+*.swp
+*.swo
+
+
+# ------------------------------------------------------------
+# BASES DE DATOS LOCALES
+# ------------------------------------------------------------
+
+# Bases SQLite utilizadas únicamente para desarrollo local
+*.sqlite
+*.sqlite3
+*.db
+
+
+# ------------------------------------------------------------
+# COBERTURA / REPORTES
+# ------------------------------------------------------------
+
+coverage/
+.nyc_output/
+
+
+# ------------------------------------------------------------
+# ARCHIVOS GENERADOS
+# ------------------------------------------------------------
+
+*.bak
+*.backup

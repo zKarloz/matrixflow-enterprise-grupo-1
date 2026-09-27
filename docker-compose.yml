@@ -1,0 +1,47 @@
+# ============================================================
+# MatrixFlow Enterprise
+# Servicios de infraestructura
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # Base de datos PostgreSQL
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16
+
+    # Nombre del contenedor.
+    container_name: matrixflow-postgres
+
+    # Variables utilizadas por PostgreSQL al inicializarse.
+    environment:
+      POSTGRES_USER: matrixflow
+      POSTGRES_PASSWORD: matrixflow
+      POSTGRES_DB: matrixflow
+
+    # Puerto:
+    # Puerto de nuestra máquina : puerto del contenedor.
+    ports:
+      - "5432:5432"
+
+    # Permite conservar los datos aunque el contenedor
+    # sea detenido o recreado.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    # Comprobación básica de disponibilidad de PostgreSQL.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U matrixflow -d matrixflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+# ------------------------------------------------------------
+# Volúmenes persistentes
+# ------------------------------------------------------------
+volumes:
+
+  # Datos persistentes de PostgreSQL.
+  postgres_data:
