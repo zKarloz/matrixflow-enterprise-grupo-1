@@ -1,5 +1,20 @@
 # Matrixflow Enterprise - Semestre IV - Grupo 1
 
+Hola, para correr el proyecto, abrirás 2 terminales de Git Bash
+
+## Primera terminal (Para frontend)
+
+1. Entrar a la carpeta frontend
+   `cd frontend`
+
+2. Instalar los node modules
+   `npm install`
+
+3. Correr el servidor de Vite (Para ver la página)
+   `npm run dev`
+
+## Segunda terminal (Para backend)
+
 1. Entrar a la carpeta backend
    `cd backend`
 
