@@ -1,6 +1,18 @@
 # Matrixflow Enterprise - Semestre IV - Grupo 1
 
-## Estructura del proyecto (26/09)
+1. Entrar a la carpeta backend
+   `cd backend`
+
+2. Crear el entorno virtual de Python
+   `python -m venv .venv`
+
+3. Activar el entorno virtual de Python
+   `source .venv/Scripts/activate`
+
+4. Correr el servidor del backend
+   `uvicorn app.main:app --reload`
+
+## Estructura del proyecto (27/09)
 
 ```
 matrixflow-enterprise-grupo-1-definitivo
