@@ -3,11 +3,13 @@
 
 from sqlalchemy.orm import Session
 
+# Funciones utilizadas para trabajar con los registros
+# de auditoría almacenados en PostgreSQL.
 from app.repositories.audit_repository import (
-    create_audit_log,
     get_all_audit_logs,
-    get_audit_logs_by_module,
     get_audit_logs_by_user,
+    get_audit_logs_by_table,
+    create_audit_log,
 )
 
 
@@ -50,7 +52,7 @@ def list_audit_logs_by_module(
         )
 
     # Consultamos los registros.
-    return get_audit_logs_by_module(
+    return get_audit_logs_by_table(
         db,
         module,
     )

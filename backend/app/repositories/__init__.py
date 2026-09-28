@@ -70,9 +70,10 @@ from app.repositories.operation_repository import (
     create_operation_result,
 )
 
+# Funciones relacionadas con los registros de auditoría.
 from app.repositories.audit_repository import (
     get_all_audit_logs,
     get_audit_logs_by_user,
-    get_audit_logs_by_module,
+    get_audit_logs_by_table,
     create_audit_log,
 )

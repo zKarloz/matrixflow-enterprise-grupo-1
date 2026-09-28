@@ -1,24 +1,30 @@
-
 # ============================================================
 # MatrixFlow Enterprise
 # Ruta de autenticación
+# ============================================================
+#
+# Esta ruta permite iniciar sesión y generar un token JWT.
+#
+# Además, registra en audit_logs:
+#   - Usuario que inició sesión
+#   - Acción realizada
+#   - IP desde donde se realizó la conexión
+#   - Resultado del acceso
+# ============================================================
 
-
-from fastapi import APIRouter, Depends, HTTPException
+# Request permite obtener información de la petición HTTP,
+# incluyendo la dirección IP del cliente.
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import create_access_token
-from app.schemas.auth import (
-    LoginRequest,
-    LoginResponse,
-)
+from app.schemas.auth import LoginRequest, LoginResponse
 from app.services.auth_service import find_user_for_login
 
+# Permite registrar el inicio de sesión en audit_logs.
+from app.repositories.audit_repository import create_audit_log
 
-# ------------------------------------------------------------
-# Router de autenticación
-# ------------------------------------------------------------
 
 router = APIRouter(
     prefix="/auth",
@@ -26,15 +32,12 @@ router = APIRouter(
 )
 
 
-# ------------------------------------------------------------
-# Inicio de sesión
-# ------------------------------------------------------------
-
 @router.post(
     "/login",
     response_model=LoginResponse,
 )
 def login(
+    request: Request,
     data: LoginRequest,
     db: Session = Depends(get_db),
 ):
@@ -45,8 +48,12 @@ def login(
         - correo electrónico
         - contraseña
 
-    Si las credenciales son correctas, se devuelve
-    un token JWT que posteriormente utilizará el frontend.
+    Si las credenciales son correctas:
+        1. Se obtiene el usuario.
+        2. Se obtiene la IP del cliente.
+        3. Se registra el acceso en audit_logs.
+        4. Se genera el JWT.
+        5. Se devuelve el token al frontend.
     """
 
     try:
@@ -54,8 +61,6 @@ def login(
         # 1. Verificar las credenciales
         # ----------------------------------------------------
 
-        # El servicio busca al usuario, comprueba su contraseña
-        # y obtiene el rol asociado.
         user, role = find_user_for_login(
             db,
             data.email,
@@ -63,16 +68,46 @@ def login(
         )
 
         # ----------------------------------------------------
-        # 2. Generar el JWT
+        # 2. Obtener la IP del cliente
         # ----------------------------------------------------
 
-        # Guardamos dentro del token:
+        # FastAPI obtiene la dirección IP de la conexión HTTP.
         #
-        # sub  -> ID del usuario
-        # role -> nombre del rol
+        # En desarrollo local normalmente aparecerá:
+        # 127.0.0.1
         #
-        # El campo "sub" se convierte a texto porque es
-        # el identificador estándar utilizado por JWT.
+        # Cuando el sistema esté desplegado, aquí podrá aparecer
+        # la IP pública del cliente, dependiendo de la configuración
+        # del servidor/proxy.
+        client_ip = (
+            request.client.host
+            if request.client
+            else "IP desconocida"
+        )
+
+        # ----------------------------------------------------
+        # 3. Registrar el inicio de sesión
+        # ----------------------------------------------------
+
+        # La tabla audit_logs no tiene una columna específica
+        # para IP, por lo que guardamos la información dentro
+        # de la columna description.
+        create_audit_log(
+            db=db,
+            user_id=user.id,
+            action="Inicio de sesión",
+            table_name="users",
+            record_id=user.id,
+            description=(
+                f"Inicio de sesión exitoso. "
+                f"IP: {client_ip}"
+            ),
+        )
+
+        # ----------------------------------------------------
+        # 4. Generar el JWT
+        # ----------------------------------------------------
+
         access_token = create_access_token(
             {
                 "sub": str(user.id),
@@ -81,7 +116,7 @@ def login(
         )
 
         # ----------------------------------------------------
-        # 3. Devolver el token
+        # 5. Devolver el token
         # ----------------------------------------------------
 
         return {
@@ -90,10 +125,10 @@ def login(
         }
 
     except ValueError as error:
-        # Si las credenciales no son válidas, devolvemos
-        # HTTP 401 Unauthorized.
+
+        # Si las credenciales son incorrectas,
+        # devolvemos un error HTTP 401.
         raise HTTPException(
             status_code=401,
             detail=str(error),
         )
-

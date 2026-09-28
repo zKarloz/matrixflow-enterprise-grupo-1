@@ -1,6 +1,14 @@
-# Este archivo define el modelo de la tabla "audit_logs".
-# Permite registrar las acciones realizadas dentro de MatrixFlow
-# para mantener un historial y una trazabilidad del sistema.
+# ============================================================
+# MatrixFlow Enterprise
+# Modelo de auditoría
+# ============================================================
+#
+# Este modelo representa la tabla "audit_logs" de PostgreSQL.
+#
+# IMPORTANTE:
+# Los nombres de las columnas deben coincidir exactamente
+# con las columnas existentes en Supabase.
+# ============================================================
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.sql import func
@@ -13,11 +21,14 @@ class AuditLog(Base):
     Modelo SQLAlchemy correspondiente a la tabla audit_logs.
     """
 
-    # Nombre de la tabla en PostgreSQL.
     __tablename__ = "audit_logs"
 
     # Identificador único del registro de auditoría.
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
     # Usuario que realizó la acción.
     user_id = Column(
@@ -26,22 +37,33 @@ class AuditLog(Base):
         nullable=True,
     )
 
-    # Acción realizada.
-    action = Column(String(100), nullable=False)
+    # Nombre de la acción realizada.
+    action = Column(
+        String(100),
+        nullable=False,
+    )
 
-    # Módulo donde se realizó la acción.
-    module = Column(String(100), nullable=False)
+    # Tabla relacionada con la acción.
+    table_name = Column(
+        String(100),
+        nullable=True,
+    )
 
-    # Dirección IP desde donde se realizó la acción.
-    ip_address = Column(String(45), nullable=True)
+    # Identificador del registro afectado, si corresponde.
+    record_id = Column(
+        Integer,
+        nullable=True,
+    )
 
-    # Estado de la operación.
-    status = Column(String(30), nullable=False)
+    # Descripción adicional de la acción.
+    # Aquí podremos guardar temporalmente información como
+    # la dirección IP del inicio de sesión.
+    description = Column(
+        Text,
+        nullable=True,
+    )
 
-    # Resultado o información adicional de la acción.
-    result = Column(Text, nullable=True)
-
-    # Fecha y hora del registro.
+    # Fecha y hora en la que se registró la acción.
     created_at = Column(
         DateTime,
         nullable=False,

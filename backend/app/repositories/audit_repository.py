@@ -1,5 +1,11 @@
-# Este archivo contiene las consultas relacionadas con la auditoría.
-# Permite registrar las acciones realizadas dentro de MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Repositorio de auditoría
+# ============================================================
+#
+# Este archivo contiene las funciones que permiten consultar
+# y registrar eventos en la tabla audit_logs.
+# ============================================================
 
 from sqlalchemy.orm import Session
 
@@ -8,10 +14,10 @@ from app.models.audit import AuditLog
 
 def get_all_audit_logs(db: Session):
     """
-    Obtiene todos los registros de auditoría.
+    Obtiene todos los registros de auditoría,
+    ordenados desde el más reciente.
     """
 
-    # Consultamos los registros de auditoría.
     return (
         db.query(AuditLog)
         .order_by(AuditLog.created_at.desc())
@@ -24,10 +30,10 @@ def get_audit_logs_by_user(
     user_id: int,
 ):
     """
-    Obtiene las acciones realizadas por un usuario.
+    Obtiene los registros de auditoría correspondientes
+    a un usuario específico.
     """
 
-    # Filtramos los registros utilizando el ID del usuario.
     return (
         db.query(AuditLog)
         .filter(AuditLog.user_id == user_id)
@@ -36,18 +42,18 @@ def get_audit_logs_by_user(
     )
 
 
-def get_audit_logs_by_module(
+def get_audit_logs_by_table(
     db: Session,
-    module: str,
+    table_name: str,
 ):
     """
-    Obtiene los registros relacionados con un módulo.
+    Obtiene los registros relacionados con una tabla
+    específica de la base de datos.
     """
 
-    # Filtramos la auditoría por módulo.
     return (
         db.query(AuditLog)
-        .filter(AuditLog.module == module)
+        .filter(AuditLog.table_name == table_name)
         .order_by(AuditLog.created_at.desc())
         .all()
     )
@@ -56,33 +62,36 @@ def get_audit_logs_by_module(
 def create_audit_log(
     db: Session,
     action: str,
-    module: str,
-    status: str,
+    table_name: str | None = None,
+    record_id: int | None = None,
+    description: str | None = None,
     user_id: int | None = None,
-    ip_address: str | None = None,
-    result: str | None = None,
 ):
     """
-    Registra una nueva acción en la auditoría.
+    Crea un nuevo registro de auditoría.
+
+    La información adicional, como la IP del usuario,
+    se puede guardar dentro de 'description'.
     """
 
-    # Creamos el registro de auditoría.
+    # Creamos el registro utilizando únicamente las columnas
+    # que realmente existen en la tabla audit_logs.
     audit_log = AuditLog(
         user_id=user_id,
         action=action,
-        module=module,
-        ip_address=ip_address,
-        status=status,
-        result=result,
+        table_name=table_name,
+        record_id=record_id,
+        description=description,
     )
 
-    # Agregamos el registro.
+    # Agregamos el registro a la sesión de SQLAlchemy.
     db.add(audit_log)
 
-    # Guardamos los cambios.
+    # Guardamos los cambios en PostgreSQL.
     db.commit()
 
-    # Actualizamos el objeto con los datos generados.
+    # Actualizamos el objeto con el ID y la fecha generados
+    # por la base de datos.
     db.refresh(audit_log)
 
     return audit_log
