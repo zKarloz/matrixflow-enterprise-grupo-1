@@ -13,8 +13,8 @@
 //     http://127.0.0.1:8000
 //----------------------------------------------------------
 
-// Todas las peticiones de la API partirán de esta dirección.
-export const API_URL = 'http://127.0.0.1:8000'
+// URL pública del backend desplegado en Render.
+export const API_URL = 'https://matrixflow-backend-oby4.onrender.com'
 
 
 // ------------------------------------------------------------
