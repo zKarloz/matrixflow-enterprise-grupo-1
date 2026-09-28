@@ -1,5 +1,5 @@
-# Este archivo define el modelo de la tabla "roles".
-# Los roles permiten controlar los permisos de los usuarios
+# Este archivo define el modelo SQLAlchemy de la tabla "roles".
+# Los roles permiten determinar los permisos de los usuarios
 # dentro de MatrixFlow Enterprise.
 
 from sqlalchemy import Column, Integer, String
@@ -12,13 +12,28 @@ class Role(Base):
     Modelo SQLAlchemy correspondiente a la tabla roles.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre real de la tabla en PostgreSQL/Supabase.
     __tablename__ = "roles"
 
     # Identificador único del rol.
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    # Nombre del rol.
-    # Ejemplos definidos en el proyecto: Administrador,
-    # Analista y Consulta.
-    name = Column(String(50), unique=True, nullable=False)
+    # Nombre único del rol.
+    #
+    # Actualmente existe en la BD:
+    # "Administrador"
+    name = Column(
+        String(50),
+        unique=True,
+        nullable=False,
+    )
+
+    # Descripción opcional del rol.
+    description = Column(
+        String(255),
+        nullable=True,
+    )

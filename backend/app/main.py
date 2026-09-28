@@ -25,6 +25,7 @@ from app.api.routes import (
     matrices_router,
     operations_router,
     reports_router,
+    audit_router,
 )
 
 
@@ -140,6 +141,11 @@ app.include_router(
     prefix=API_PREFIX,
 )
 
+# Auditoría y seguridad
+app.include_router(
+    audit_router,
+    prefix=API_PREFIX,
+)
 
 # ------------------------------------------------------------
 # Endpoint raíz

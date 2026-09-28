@@ -12,3 +12,6 @@ from app.api.routes.vectors import router as vectors_router
 from app.api.routes.matrices import router as matrices_router
 from app.api.routes.operations import router as operations_router
 from app.api.routes.reports import router as reports_router
+
+# Ruta para consultar los registros de auditoría.
+from app.api.routes.audit import router as audit_router

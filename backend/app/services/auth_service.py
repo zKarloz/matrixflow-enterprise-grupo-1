@@ -1,14 +1,19 @@
-
-# ============================================================
-# MatrixFlow Enterprise
-# Servicio de autenticación
+# Este archivo contiene la lógica principal del inicio de sesión.
+#
+# El servicio recibe los datos enviados por la ruta de autenticación,
+# consulta al usuario mediante el repositorio y verifica:
+#
+# 1. Que el correo exista.
+# 2. Que el usuario esté activo.
+# 3. Que la contraseña sea correcta.
+# 4. Que el usuario tenga un rol válido.
 
 
 from sqlalchemy.orm import Session
 
+from app.core.security import verify_password
 from app.models.role import Role
 from app.repositories.user_repository import get_user_by_email
-from app.core.security import verify_password
 
 
 def find_user_for_login(
@@ -17,78 +22,73 @@ def find_user_for_login(
     password: str,
 ):
     """
-    Busca un usuario y verifica sus credenciales.
+    Busca y valida un usuario para iniciar sesión.
 
     Parámetros:
         db:
             Sesión activa de SQLAlchemy.
 
         email:
-            Correo electrónico utilizado para iniciar sesión.
+            Correo electrónico enviado durante el login.
 
         password:
-            Contraseña enviada por el usuario.
+            Contraseña en texto plano enviada por el usuario.
+            Esta contraseña solamente se utiliza para compararla
+            contra el hash almacenado en la base de datos.
 
     Retorna:
         Una tupla con:
-            - usuario
-            - rol
+            (usuario, rol)
 
     Lanza:
-        ValueError si las credenciales no son válidas.
+        ValueError cuando las credenciales no son válidas
+        o el usuario no puede iniciar sesión.
     """
 
-    # --------------------------------------------------------
-    # 1. Validar el correo
-    # --------------------------------------------------------
-
-    # Comprobamos que el usuario haya enviado un correo.
+    # Comprobamos que el correo no esté vacío.
     if not email.strip():
         raise ValueError(
             "El correo electrónico es obligatorio."
         )
 
-    # --------------------------------------------------------
-    # 2. Buscar el usuario
-    # --------------------------------------------------------
-
-    # Buscamos el usuario mediante el repository existente.
+    # Buscamos al usuario mediante el repositorio.
     user = get_user_by_email(
         db,
         email,
     )
 
-    # Si no existe, no revelamos si el correo está registrado.
-    # Esto evita proporcionar información innecesaria a
-    # posibles atacantes.
+    # Si no existe, no revelamos información adicional.
+    # Utilizamos un mensaje genérico por seguridad.
     if user is None:
         raise ValueError(
             "Las credenciales no son válidas."
         )
 
-    # --------------------------------------------------------
-    # 3. Verificar la contraseña
-    # --------------------------------------------------------
+    # Comprobamos si la cuenta está habilitada.
+    #
+    # Esto permite que un administrador pueda desactivar
+    # un usuario sin eliminarlo de la base de datos.
+    if not user.is_active:
+        raise ValueError(
+            "El usuario está desactivado."
+        )
 
-    # Comparamos la contraseña enviada por el usuario
-    # contra el hash almacenado en la base de datos.
+    # Verificamos la contraseña recibida contra el HASH
+    # almacenado en la columna users.password.
     password_valid = verify_password(
         password,
-        user.password_hash,
+        user.password,
     )
 
-    # Si la contraseña no coincide, rechazamos el acceso.
+    # Si la contraseña no coincide, rechazamos el login.
     if not password_valid:
         raise ValueError(
             "Las credenciales no son válidas."
         )
 
-    # --------------------------------------------------------
-    # 4. Buscar el rol del usuario
-    # --------------------------------------------------------
-
-    # El usuario almacena role_id, mientras que el nombre
-    # del rol está almacenado en la tabla roles.
+    # Buscamos el rol asociado al usuario.
+    #
+    # users.role_id -> roles.id
     role = (
         db.query(Role)
         .filter(Role.id == user.role_id)
@@ -96,17 +96,12 @@ def find_user_for_login(
     )
 
     # Si el usuario tiene un role_id que no corresponde
-    # con ningún rol existente, no permitimos continuar.
+    # con ningún registro de roles, no permitimos el login.
     if role is None:
         raise ValueError(
             "El usuario no tiene un rol válido."
         )
 
-    # --------------------------------------------------------
-    # 5. Devolver información autenticada
-    # --------------------------------------------------------
-
-    # Devolvemos ambos objetos para que auth.py pueda
-    # construir posteriormente el JWT.
+    # Si todas las comprobaciones fueron correctas,
+    # devolvemos el usuario y su rol.
     return user, role
-
