@@ -39,3 +39,6 @@ pytest
 httpx
 # Gestión de configuración mediante variables de entorno.
 pydantic-settings
+
+# Validador requerido por Pydantic para utilizar EmailStr.
+email-validator
