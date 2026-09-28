@@ -6,6 +6,8 @@
 # ============================================================
 
 from fastapi import FastAPI
+# Middleware necesario para permitir comunicación
+# entre frontend y backend en diferentes dominios.
 from fastapi.middleware.cors import CORSMiddleware
 
 # Importamos la configuración general del proyecto.
@@ -43,23 +45,36 @@ app = FastAPI(
     ),
 )
 
+# ============================================================
+# Configuración CORS
+# Permite que el frontend local y el frontend desplegado
+# en Vercel puedan comunicarse con la API de FastAPI.
+# ============================================================
+
+allow_origins = [
+    # Frontend utilizado durante el desarrollo local.
+    "http://localhost:5173",
+
+    # Otra dirección habitual de Vite en desarrollo.
+    "http://127.0.0.1:5173",
+
+    # Frontend oficial desplegado en Vercel.
+    "https://matrixflow-enterprise-grupo-1.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
 
-    # Orígenes desde los cuales permitimos peticiones.
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    # Orígenes autorizados para consumir nuestra API.
+    allow_origins=allow_origins,
 
-    # Permite el envío de credenciales cuando sea necesario.
+    # Permite credenciales y headers relacionados con autenticación.
     allow_credentials=True,
 
     # Permitimos los métodos HTTP utilizados por la API.
-    # Por ejemplo: GET, POST, PUT, DELETE, etc.
     allow_methods=["*"],
 
-    # Permitimos los encabezados HTTP necesarios.
+    # Permitimos los headers enviados por el frontend.
     allow_headers=["*"],
 )
 
