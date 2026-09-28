@@ -71,6 +71,12 @@ const menuItems = [
     path: '/usuarios',
   },
   {
+    // Acceso a la sección de seguridad y auditoría.
+    name: 'Seguridad y accesos',
+    icon: '🔐',
+    path: '/seguridad',
+  },
+  {
     name: 'Configuración',
     icon: '⚙️',
     path: '/configuracion',
