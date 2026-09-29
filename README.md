@@ -30,7 +30,7 @@ Hola, para correr el proyecto, abrirás 2 terminales de Git Bash
 5. Correr el servidor del backend
    `uvicorn app.main:app --reload`
 
-## Estructura del proyecto (27/09)
+## Estructura del proyecto (28/09)
 
 ```
 matrixflow-enterprise-grupo-1-definitivo

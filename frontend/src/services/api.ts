@@ -12,10 +12,8 @@
 //     https://matrixflow-backend-oby4.onrender.com
 // ============================================================
 
-// URL del backend local utilizado durante el desarrollo.
-// El frontend de Vite corre normalmente en localhost:5173
-// y FastAPI corre en localhost:8000.
-const API_URL = 'http://localhost:8000'
+// URL del backend desplegado en Render para producción.
+const API_URL = "https://matrixflow-backend-oby4.onrender.com";
 
 // ============================================================
 // PETICIONES AUTENTICADAS
