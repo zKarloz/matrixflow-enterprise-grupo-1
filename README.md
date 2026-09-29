@@ -49,8 +49,10 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  │  └─ __init__.py
 │  │  ├─ api
 │  │  │  └─ routes
+│  │  │     ├─ audit.py
 │  │  │     ├─ auth.py
 │  │  │     ├─ branches.py
+│  │  │     ├─ categories.py
 │  │  │     ├─ companies.py
 │  │  │     ├─ inventory.py
 │  │  │     ├─ matrices.py
@@ -84,6 +86,7 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  ├─ repositories
 │  │  │  ├─ audit_repository.py
 │  │  │  ├─ branch_repository.py
+│  │  │  ├─ category_repository.py
 │  │  │  ├─ company_repository.py
 │  │  │  ├─ inventory_repository.py
 │  │  │  ├─ matrix_repository.py
@@ -96,6 +99,7 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  ├─ schemas
 │  │  │  ├─ auth.py
 │  │  │  ├─ branch.py
+│  │  │  ├─ category.py
 │  │  │  ├─ company.py
 │  │  │  ├─ inventory.py
 │  │  │  ├─ matrix.py
@@ -103,12 +107,14 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  │  ├─ product.py
 │  │  │  ├─ report.py
 │  │  │  ├─ sale.py
+│  │  │  ├─ user.py
 │  │  │  ├─ vector.py
 │  │  │  └─ __init__.py
 │  │  └─ services
 │  │     ├─ audit_service.py
 │  │     ├─ auth_service.py
 │  │     ├─ branch_service.py
+│  │     ├─ category_service.py
 │  │     ├─ company_service.py
 │  │     ├─ inventory_service.py
 │  │     ├─ matrix_service.py
@@ -118,7 +124,10 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │     ├─ sale_service.py
 │  │     ├─ vector_service.py
 │  │     └─ __init__.py
-│  └─ requirements.txt
+│  ├─ README.md
+│  ├─ requirements.txt
+│  ├─ schema_audit.py
+│  └─ schema_constraints_audit.py
 ├─ docker-compose.yml
 ├─ frontend
 │  ├─ eslint.config.js
@@ -133,6 +142,8 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  ├─ App.css
 │  │  ├─ App.tsx
 │  │  ├─ components
+│  │  │  ├─ auth
+│  │  │  │  └─ ProtectedRoute.tsx
 │  │  │  ├─ company
 │  │  │  │  └─ CompanyInfoCard.tsx
 │  │  │  ├─ dashboard
@@ -146,7 +157,6 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  │     └─ Sidebar.tsx
 │  │  ├─ data
 │  │  │  ├─ company.ts
-│  │  │  ├─ dashboard.ts
 │  │  │  └─ users.ts
 │  │  ├─ index.css
 │  │  ├─ main.tsx
@@ -157,10 +167,12 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  │  ├─ Empresa.tsx
 │  │  │  ├─ Historial.tsx
 │  │  │  ├─ Inventario.tsx
+│  │  │  ├─ Login.tsx
 │  │  │  ├─ Matrices.tsx
 │  │  │  ├─ Operaciones.tsx
 │  │  │  ├─ Productos.tsx
 │  │  │  ├─ Reportes.tsx
+│  │  │  ├─ Seguridad.tsx
 │  │  │  ├─ Sucursales.tsx
 │  │  │  ├─ Usuarios.tsx
 │  │  │  ├─ Vectores.tsx
@@ -170,6 +182,7 @@ matrixflow-enterprise-grupo-1-definitivo
 │  ├─ tsconfig.app.json
 │  ├─ tsconfig.json
 │  ├─ tsconfig.node.json
+│  ├─ vercel.json
 │  └─ vite.config.ts
 └─ README.md
 
