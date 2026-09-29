@@ -1,4 +1,3 @@
-
 // ============================================================
 // MatrixFlow Enterprise
 // Cliente principal para comunicarse con el backend
@@ -10,16 +9,81 @@
 //     http://localhost:5173
 //
 // Backend:
-//     http://127.0.0.1:8000
-//----------------------------------------------------------
+//     https://matrixflow-backend-oby4.onrender.com
+// ============================================================
 
-// URL pública del backend desplegado en Render.
-export const API_URL = 'https://matrixflow-backend-oby4.onrender.com'
+// URL del backend de producción desplegado en Render.
+const API_URL = 'https://matrixflow-backend-oby4.onrender.com'
 
+// ============================================================
+// PETICIONES AUTENTICADAS
+// ============================================================
+//
+// Esta función centraliza las peticiones que necesitan JWT.
+//
+// Flujo:
+//
+// React
+//   ↓
+// localStorage
+//   ↓
+// JWT
+//   ↓
+// Authorization: Bearer <JWT>
+//   ↓
+// FastAPI
+//
+// IMPORTANTE:
+// El frontend solamente envía el token.
+// La validación real del JWT y los permisos RBAC
+// continúan siendo responsabilidad del backend.
+// ============================================================
 
-// ------------------------------------------------------------
+export async function authenticatedFetch(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  // Recuperamos el JWT almacenado después del Login.
+  const token = localStorage.getItem('matrixflow-access-token')
+
+  // Construimos los headers de la petición.
+  const headers = new Headers(options.headers)
+
+  // Indicamos que las peticiones JSON utilizan este formato.
+  headers.set('Content-Type', 'application/json')
+
+  // Si existe un JWT, lo enviamos mediante Bearer Authentication.
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  // Realizamos la petición al endpoint solicitado.
+  const response = await fetch(
+    `${API_URL}${endpoint}`,
+    {
+      ...options,
+      headers,
+    }
+  )
+
+  // Si el token expiró o dejó de ser válido,
+  // eliminamos las credenciales locales.
+  //
+  // El backend continúa siendo quien determina
+  // si el token realmente es válido.
+  if (response.status === 401) {
+    localStorage.removeItem('matrixflow-access-token')
+    localStorage.removeItem('matrixflow-token-type')
+  }
+
+  // Devolvemos la respuesta para que cada función
+  // pueda decidir cómo manejarla.
+  return response
+}
+
+// ============================================================
 // Comprobar estado del backend
-// ------------------------------------------------------------
+// ============================================================
 
 export async function checkBackend(): Promise<{
   status: string
@@ -155,8 +219,10 @@ export interface AuditLog {
 
 // Consulta los registros de auditoría del backend.
 export async function getAuditLogs(): Promise<AuditLog[]> {
-  const response = await fetch(
-    `${API_URL}/api/v1/audit`
+  // Utilizamos la función autenticada para que el JWT
+  // viaje automáticamente en el header Authorization.
+  const response = await authenticatedFetch(
+    '/api/v1/audit'
   )
 
   // Si el backend devuelve un error, detenemos la operación.
@@ -167,5 +233,473 @@ export async function getAuditLogs(): Promise<AuditLog[]> {
   }
 
   // Convertimos la respuesta JSON al formato esperado.
+  return response.json()
+}
+
+// ============================================================
+// SESIÓN DEL USUARIO
+// ============================================================
+//
+// El JWT generado por FastAPI contiene información básica
+// del usuario:
+//
+//     sub  → ID del usuario
+//     role → nombre del rol
+//     exp  → expiración del token
+//
+// Esta función solamente DECODIFICA el contenido del JWT
+// para utilizarlo en la interfaz.
+//
+// IMPORTANTE:
+// Decodificar el JWT en React NO significa validarlo.
+// La firma, expiración y permisos continúan siendo
+// responsabilidad del backend.
+// ============================================================
+
+export interface UserSession {
+  // ID del usuario obtenido del campo "sub" del JWT.
+  userId: number
+
+  // Rol obtenido del campo "role" del JWT.
+  role: string
+}
+
+/**
+ * Obtiene la información básica del usuario conectado.
+ */
+export function getCurrentUser(): UserSession | null {
+  // Recuperamos el JWT almacenado después del Login.
+  const token = localStorage.getItem('matrixflow-access-token')
+
+  // Si no existe token, no existe una sesión local.
+  if (!token) {
+    return null
+  }
+
+  try {
+    // Un JWT tiene tres partes:
+    //
+    // header.payload.signature
+    //
+    // Para la interfaz solamente necesitamos el payload.
+    const parts = token.split('.')
+
+    // Un JWT válido debe contener exactamente tres partes.
+    if (parts.length !== 3) {
+      return null
+    }
+
+    // Obtenemos el payload del JWT.
+    const payload = parts[1]
+
+    // Convertimos Base64URL a Base64 estándar.
+    const base64 = payload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+
+    // Decodificamos el contenido JSON.
+    const decodedPayload = JSON.parse(
+      atob(base64)
+    )
+
+    // Convertimos el ID del usuario a número.
+    const userId = Number(decodedPayload.sub)
+
+    // Obtenemos el rol enviado por FastAPI.
+    const role = decodedPayload.role
+
+    // Verificamos que los datos mínimos existan.
+    if (
+      !Number.isInteger(userId) ||
+      typeof role !== 'string' ||
+      role.trim() === ''
+    ) {
+      return null
+    }
+
+    // Devolvemos solamente la información necesaria
+    // para controlar la interfaz.
+    return {
+      userId,
+      role,
+    }
+  } catch {
+    // Si el token no puede decodificarse,
+    // no asumimos ningún rol.
+    return null
+  }
+}
+
+// ============================================================
+// SUCURSALES
+// ============================================================
+//
+// Estas funciones permiten que React consulte y registre
+// sucursales mediante la API de FastAPI.
+//
+// Flujo:
+//
+// React
+//   ↓
+// authenticatedFetch()
+//   ↓
+// JWT + Bearer
+//   ↓
+// FastAPI
+//   ↓
+// PostgreSQL
+//
+// IMPORTANTE:
+// El backend solamente permite estas operaciones al rol
+// Administrador mediante require_roles("Administrador").
+// ============================================================
+
+/**
+ * Representa una sucursal tal como la devuelve FastAPI.
+ */
+export interface Branch {
+  // Identificador generado por PostgreSQL.
+  id: number
+
+  // Empresa a la que pertenece la sucursal.
+  company_id: number
+
+  // Nombre de la sucursal.
+  name: string
+
+  // Dirección física.
+  address: string | null
+
+  // Teléfono de la sucursal.
+  phone: string | null
+
+  // Indica si la sucursal está activa.
+  is_active: boolean
+}
+
+/**
+ * Datos necesarios para registrar una nueva sucursal.
+ *
+ * El ID y el estado no se envían porque PostgreSQL/backend
+ * se encargan de generarlos y establecer is_active = true.
+ */
+export interface CreateBranchData {
+  // Nombre de la nueva sucursal.
+  name: string
+
+  // Empresa a la que pertenecerá.
+  company_id: number
+
+  // Dirección física.
+  address?: string | null
+
+  // Teléfono de contacto.
+  phone?: string | null
+}
+
+/**
+ * Obtiene todas las sucursales registradas.
+ *
+ * Endpoint:
+ * GET /api/v1/branches
+ */
+export async function getBranches(): Promise<Branch[]> {
+  // Enviamos el JWT mediante authenticatedFetch().
+  const response = await authenticatedFetch(
+    '/api/v1/branches'
+  )
+
+  // El backend puede devolver 401, 403 o 500.
+  // En cualquiera de esos casos informamos el error.
+  if (!response.ok) {
+    throw new Error(
+      'No se pudieron obtener las sucursales.'
+    )
+  }
+
+  // Convertimos el JSON de FastAPI en un arreglo
+  // de objetos Branch.
+  return response.json()
+}
+
+/**
+ * Registra una nueva sucursal.
+ *
+ * Endpoint:
+ * POST /api/v1/branches
+ */
+export async function createBranch(
+  data: CreateBranchData
+): Promise<Branch> {
+  // Enviamos los datos al backend utilizando JWT.
+  const response = await authenticatedFetch(
+    '/api/v1/branches',
+    {
+      method: 'POST',
+
+      // Convertimos el objeto TypeScript a JSON.
+      body: JSON.stringify(data),
+    }
+  )
+
+  // Si FastAPI devuelve un error, intentamos obtener
+  // el mensaje enviado por el backend.
+  if (!response.ok) {
+    let message =
+      'No se pudo registrar la sucursal.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si la respuesta no contiene JSON,
+      // mantenemos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos la sucursal creada por PostgreSQL.
+  return response.json()
+}
+
+// ============================================================
+// EMPRESAS
+// ============================================================
+//
+// Estas funciones permiten consultar las empresas existentes
+// para utilizarlas, entre otras cosas, al registrar sucursales.
+//
+// El endpoint está protegido en FastAPI para Administrador.
+// ============================================================
+
+/**
+ * Representa una empresa devuelta por FastAPI.
+ */
+export interface Company {
+  // Identificador generado por PostgreSQL.
+  id: number
+
+  // Nombre comercial o razón social.
+  name: string
+
+  // Identificador tributario.
+  tax_id: string
+
+  // Dirección de la empresa.
+  address: string | null
+
+  // Teléfono de la empresa.
+  phone: string | null
+
+  // Correo electrónico.
+  email: string | null
+}
+
+/**
+ * Obtiene todas las empresas registradas.
+ *
+ * Endpoint:
+ * GET /api/v1/companies
+ */
+export async function getCompanies(): Promise<Company[]> {
+  // Enviamos automáticamente el JWT mediante
+  // authenticatedFetch().
+  const response = await authenticatedFetch(
+    '/api/v1/companies'
+  )
+
+  // Si FastAPI devuelve un error, informamos al componente.
+  if (!response.ok) {
+    throw new Error(
+      'No se pudieron obtener las empresas.'
+    )
+  }
+
+  // Convertimos la respuesta JSON a un arreglo de Company.
+  return response.json()
+}
+
+// ============================================================
+// CATEGORÍAS
+// ============================================================
+//
+// Las categorías son necesarias para registrar productos,
+// porque el backend utiliza category_id como clave foránea.
+// ============================================================
+
+/**
+ * Representa una categoría devuelta por FastAPI.
+ */
+export interface Category {
+  // Identificador de la categoría.
+  id: number
+
+  // Nombre de la categoría.
+  name: string
+
+  // Descripción opcional.
+  description: string | null
+
+  // Indica si la categoría está activa.
+  is_active: boolean
+}
+
+/**
+ * Obtiene las categorías activas.
+ *
+ * Endpoint:
+ * GET /api/v1/categories/active
+ */
+export async function getActiveCategories(): Promise<Category[]> {
+  // Enviamos el JWT mediante authenticatedFetch().
+  const response = await authenticatedFetch(
+    '/api/v1/categories/active'
+  )
+
+  // Si el backend devuelve un error, informamos al componente.
+  if (!response.ok) {
+    throw new Error(
+      'No se pudieron obtener las categorías.'
+    )
+  }
+
+  // Convertimos la respuesta JSON en un arreglo de categorías.
+  return response.json()
+}
+
+// ============================================================
+// PRODUCTOS
+// ============================================================
+//
+// IMPORTANTE:
+// El stock NO forma parte del producto.
+// El stock será gestionado posteriormente por Inventario.
+// ============================================================
+
+/**
+ * Representa un producto devuelto por FastAPI.
+ *
+ * GET /products devuelve información adicional calculada
+ * por el servicio: nombre de categoría y stock actual.
+ */
+export interface Product {
+  // Identificador generado por PostgreSQL.
+  id: number
+
+  // Nombre del producto.
+  name: string
+
+  // ID de la categoría relacionada.
+  category_id: number
+
+  // Nombre de la categoría.
+  // Esta propiedad viene de la consulta enriquecida
+  // realizada por el backend.
+  category: string
+
+  // Precio del producto.
+  price: number
+
+  // Código único del producto.
+  sku: string
+
+  // Descripción opcional.
+  description: string | null
+
+  // Estado actual del producto.
+  is_active: boolean
+
+  // Stock actual obtenido desde la tabla inventory.
+  stock: number
+}
+
+/**
+ * Datos necesarios para registrar un producto.
+ */
+export interface CreateProductData {
+  // Nombre del producto.
+  name: string
+
+  // Categoría seleccionada.
+  category_id: number
+
+  // Precio del producto.
+  price: number
+
+  // Código SKU.
+  sku: string
+
+  // Descripción opcional.
+  description?: string | null
+}
+
+/**
+ * Obtiene todos los productos.
+ *
+ * Endpoint:
+ * GET /api/v1/products
+ */
+export async function getProducts(): Promise<Product[]> {
+  // Consultamos productos utilizando el JWT actual.
+  const response = await authenticatedFetch(
+    '/api/v1/products'
+  )
+
+  // Comprobamos la respuesta HTTP.
+  if (!response.ok) {
+    throw new Error(
+      'No se pudieron obtener los productos.'
+    )
+  }
+
+  // Devolvemos los productos recibidos desde FastAPI.
+  return response.json()
+}
+
+/**
+ * Registra un nuevo producto.
+ *
+ * Endpoint:
+ * POST /api/v1/products
+ */
+export async function createProduct(
+  data: CreateProductData
+): Promise<Product> {
+  // Enviamos el producto al backend.
+  const response = await authenticatedFetch(
+    '/api/v1/products',
+    {
+      method: 'POST',
+
+      // Convertimos los datos a JSON.
+      body: JSON.stringify(data),
+    }
+  )
+
+  // Si existe un error, intentamos mostrar
+  // el mensaje enviado por FastAPI.
+  if (!response.ok) {
+    let message =
+      'No se pudo registrar el producto.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Mantenemos el mensaje genérico si
+      // FastAPI no devuelve JSON.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos el producto creado.
   return response.json()
 }

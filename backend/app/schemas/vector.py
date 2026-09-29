@@ -1,5 +1,10 @@
-# Este archivo define los datos que la API utiliza para representar
-# vectores matemáticos dentro de MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Schemas de vectores
+# ============================================================
+# Define los datos que la API recibe y devuelve para trabajar
+# con vectores matemáticos.
+# ============================================================
 
 from typing import List
 
@@ -8,11 +13,18 @@ from pydantic import BaseModel
 
 class VectorBase(BaseModel):
     """
-    Datos básicos de un vector.
+    Datos básicos utilizados para representar un vector.
     """
+
+    # Empresa propietaria del vector.
+    # PostgreSQL exige este campo en la tabla "vectors".
+    company_id: int
 
     # Nombre utilizado para identificar el vector.
     name: str
+
+    # Descripción opcional del vector.
+    description: str | None = None
 
     # Valores numéricos que forman el vector.
     values: List[float]
@@ -33,6 +45,9 @@ class VectorResponse(VectorBase):
 
     # Identificador único del vector.
     id: int
+
+    # Cantidad de elementos del vector.
+    dimension: int
 
     class Config:
         # Permite convertir objetos SQLAlchemy

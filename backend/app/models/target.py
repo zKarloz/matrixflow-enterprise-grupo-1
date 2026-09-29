@@ -1,39 +1,97 @@
-# Este archivo define el modelo de la tabla "targets".
-# Los objetivos permiten almacenar valores de referencia que posteriormente
-# pueden compararse con los datos reales mediante las operaciones del sistema.
+# ============================================================
+# MatrixFlow Enterprise
+# Modelo de metas
+# ============================================================
+#
+# Este modelo representa la tabla "targets" de PostgreSQL.
+#
+# Columnas reales:
+# - id
+# - company_id
+# - branch_id
+# - user_id
+# - name
+# - target_value
+# - period
+# - created_at
+#
+# PostgreSQL permite que branch_id y user_id sean NULL,
+# pero company_id es obligatorio.
+# ============================================================
 
-from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String
+
+from sqlalchemy.sql import func
 
 from app.core.database import Base
 
 
 class Target(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla targets.
+    Representa una meta definida para una empresa.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "targets"
 
-    # Identificador único del objetivo.
-    id = Column(Integer, primary_key=True, index=True)
+    # Identificador único de la meta.
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    # Nombre del objetivo.
-    name = Column(String(150), nullable=False)
+    # Empresa propietaria de la meta.
+    # Relación: targets.company_id -> companies.id
+    company_id = Column(
+        Integer,
+        ForeignKey("companies.id"),
+        nullable=False,
+    )
 
-    # Sucursal relacionada con el objetivo.
+    # Sucursal asociada a la meta.
+    # Es opcional porque PostgreSQL permite NULL.
+    # Relación: targets.branch_id -> branches.id
     branch_id = Column(
         Integer,
         ForeignKey("branches.id"),
         nullable=True,
     )
 
-    # Producto relacionado con el objetivo.
-    product_id = Column(
+    # Usuario asociado a la meta.
+    # También es opcional según PostgreSQL.
+    # Relación: targets.user_id -> users.id
+    user_id = Column(
         Integer,
-        ForeignKey("products.id"),
+        ForeignKey("users.id"),
         nullable=True,
     )
 
-    # Valor numérico objetivo.
-    value = Column(Float, nullable=False)
+    # Nombre descriptivo de la meta.
+    name = Column(
+        String(150),
+        nullable=False,
+    )
+
+    # Valor numérico que se desea alcanzar.
+    #
+    # PostgreSQL utiliza NUMERIC(10,2), por lo que usamos
+    # Numeric para conservar precisión decimal.
+    target_value = Column(
+        Numeric(10, 2),
+        nullable=False,
+    )
+
+    # Periodo al que pertenece la meta.
+    # Ejemplos: mensual, trimestral, anual.
+    period = Column(
+        String(30),
+        nullable=False,
+    )
+
+    # Fecha y hora de creación de la meta.
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+    )

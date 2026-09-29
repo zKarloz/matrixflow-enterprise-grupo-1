@@ -1,54 +1,98 @@
-# Este archivo define los modelos de las tablas "vectors"
-# y "vector_values".
-# Permiten almacenar un vector y los valores numéricos que lo componen.
+# ============================================================
+# MatrixFlow Enterprise
+# Modelos de vectores
+# ============================================================
+#
+# Este archivo contiene los modelos correspondientes a:
+#
+# 1. vectors
+# 2. vector_values
+#
+# La estructura se basa directamente en las tablas reales
+# de PostgreSQL.
+# ============================================================
 
-from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, Numeric, String, Text
 
 from app.core.database import Base
 
 
 class Vector(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla vectors.
+    Representa un vector matemático perteneciente a una empresa.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "vectors"
 
     # Identificador único del vector.
-    id = Column(Integer, primary_key=True, index=True)
-
-    # Nombre del vector.
-    name = Column(String(150), nullable=False)
-
-    # Usuario que creó el vector.
-    user_id = Column(
+    id = Column(
         Integer,
-        ForeignKey("users.id"),
+        primary_key=True,
+        index=True,
+    )
+
+    # Empresa propietaria del vector.
+    # Relación: vectors.company_id -> companies.id
+    company_id = Column(
+        Integer,
+        ForeignKey("companies.id"),
+        nullable=False,
+    )
+
+    # Nombre utilizado para identificar el vector.
+    name = Column(
+        String(150),
+        nullable=False,
+    )
+
+    # Descripción opcional del vector.
+    description = Column(
+        String(255),
         nullable=True,
+    )
+
+    # Cantidad de elementos que contiene el vector.
+    dimension = Column(
+        Integer,
+        nullable=False,
     )
 
 
 class VectorValue(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla vector_values.
+    Representa un elemento individual de un vector.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "vector_values"
 
     # Identificador único del valor.
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
     # Vector al que pertenece este valor.
+    # Relación: vector_values.vector_id -> vectors.id
     vector_id = Column(
         Integer,
         ForeignKey("vectors.id"),
         nullable=False,
     )
 
-    # Posición que ocupa el valor dentro del vector.
-    position = Column(Integer, nullable=False)
+    # Posición del valor dentro del vector.
+    position = Column(
+        Integer,
+        nullable=False,
+    )
 
-    # Valor numérico almacenado.
-    value = Column(Float, nullable=False)
+    # Valor numérico del elemento.
+    #
+    # PostgreSQL utiliza NUMERIC(15,4), por lo que usamos
+    # Numeric para conservar precisión decimal.
+    value = Column(
+        Numeric(15, 4),
+        nullable=False,
+    )

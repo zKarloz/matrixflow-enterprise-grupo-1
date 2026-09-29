@@ -1,46 +1,33 @@
 # ============================================================
 # MatrixFlow Enterprise
-# Schemas de productos
+# Schemas de categorías
 # ============================================================
 # Define los datos que la API recibe y devuelve para la tabla
-# "products".
-#
-# IMPORTANTE:
-# El stock NO pertenece a products.
-# El stock pertenece a la tabla inventory.
+# "categories".
 # ============================================================
 
 from pydantic import BaseModel
 
 
-class ProductBase(BaseModel):
-    # Nombre del producto.
+class CategoryBase(BaseModel):
+    # Nombre de la categoría.
     name: str
-
-    # Identificador de la categoría.
-    category_id: int
-
-    # Precio unitario del producto.
-    price: float
-
-    # SKU único del producto.
-    sku: str
 
     # Descripción opcional.
     description: str | None = None
 
 
-class ProductCreate(ProductBase):
-    # No se necesitan campos adicionales para crear
-    # un producto.
+class CategoryCreate(CategoryBase):
+    # No necesita campos adicionales para crear
+    # una categoría.
     pass
 
 
-class ProductResponse(ProductBase):
+class CategoryResponse(CategoryBase):
     # Identificador generado por PostgreSQL.
     id: int
 
-    # Estado actual del producto.
+    # Estado de la categoría.
     is_active: bool
 
     class Config:

@@ -1,8 +1,9 @@
 # ============================================================
 # MatrixFlow Enterprise
-# Rutas de sucursales
+# Rutas de categorías
 # ============================================================
-# Define los endpoints HTTP relacionados con branches.
+# Este archivo expone mediante FastAPI las operaciones
+# relacionadas con las categorías.
 # ============================================================
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,76 +12,73 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import require_roles
 
-from app.schemas.branch import (
-    BranchCreate,
-    BranchResponse,
+from app.schemas.category import (
+    CategoryCreate,
+    CategoryResponse,
 )
 
-from app.services.branch_service import (
-    get_branch,
-    list_branches,
-    list_branches_by_company,
-    register_branch,
+from app.services.category_service import (
+    get_category,
+    list_active_categories,
+    list_categories,
+    register_category,
 )
 
 
-# Router principal de sucursales.
+# Creamos el router de categorías.
 router = APIRouter(
-    prefix="/branches",
-    tags=["Sucursales"],
+    prefix="/categories",
+    tags=["Categorías"],
 )
 
 
 @router.get(
     "",
-    response_model=list[BranchResponse],
+    response_model=list[CategoryResponse],
 )
-def get_branches(
+def get_categories(
     db: Session = Depends(get_db),
     current_user=Depends(
         require_roles("Administrador")
     ),
 ):
-    # Devuelve todas las sucursales.
-    return list_branches(db)
+    # Devuelve todas las categorías registradas.
+    return list_categories(db)
 
 
 @router.get(
-    "/company/{company_id}",
-    response_model=list[BranchResponse],
+    "/active",
+    response_model=list[CategoryResponse],
 )
-def get_company_branches(
-    company_id: int,
+def get_active_category_list(
     db: Session = Depends(get_db),
     current_user=Depends(
         require_roles("Administrador")
     ),
 ):
-    # Devuelve las sucursales de una empresa.
-    return list_branches_by_company(
-        db,
-        company_id,
-    )
+    # Devuelve solamente las categorías activas.
+    return list_active_categories(db)
 
 
 @router.get(
-    "/{branch_id}",
-    response_model=BranchResponse,
+    "/{category_id}",
+    response_model=CategoryResponse,
 )
-def get_branch_by_id(
-    branch_id: int,
+def get_category_by_id(
+    category_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
         require_roles("Administrador")
     ),
 ):
-    # Busca una sucursal por ID.
+    # Busca una categoría específica.
     try:
-        return get_branch(
+        return get_category(
             db,
-            branch_id,
+            category_id,
         )
 
+    # Si no existe, devolvemos HTTP 404.
     except ValueError as error:
         raise HTTPException(
             status_code=404,
@@ -90,25 +88,25 @@ def get_branch_by_id(
 
 @router.post(
     "",
-    response_model=BranchResponse,
+    response_model=CategoryResponse,
 )
-def create_branch(
-    data: BranchCreate,
+def create_category(
+    data: CategoryCreate,
     db: Session = Depends(get_db),
     current_user=Depends(
         require_roles("Administrador")
     ),
 ):
-    # Registra una nueva sucursal.
+    # Crea una nueva categoría.
     try:
-        return register_branch(
+        return register_category(
             db=db,
             name=data.name,
-            company_id=data.company_id,
-            address=data.address,
-            phone=data.phone,
+            description=data.description,
         )
 
+    # Los errores de validación de negocio
+    # se convierten en HTTP 400.
     except ValueError as error:
         raise HTTPException(
             status_code=400,

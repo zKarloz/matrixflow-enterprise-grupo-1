@@ -1,11 +1,23 @@
-# Este archivo contiene los endpoints relacionados con productos.
-# Las rutas utilizan product_service para ejecutar la lógica de negocio.
+# ============================================================
+# MatrixFlow Enterprise
+# Rutas de productos
+# ============================================================
+# Define los endpoints HTTP relacionados con la tabla products.
+#
+# El stock se administra mediante el módulo inventory.
+# ============================================================
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.product import ProductCreate, ProductResponse
+from app.core.security import require_roles
+
+from app.schemas.product import (
+    ProductCreate,
+    ProductResponse,
+)
+
 from app.services.product_service import (
     get_product,
     list_active_products,
@@ -13,7 +25,8 @@ from app.services.product_service import (
     register_product,
 )
 
-# Router del módulo de productos.
+
+# Router principal de productos.
 router = APIRouter(
     prefix="/products",
     tags=["Productos"],
@@ -22,29 +35,28 @@ router = APIRouter(
 
 @router.get(
     "",
-    response_model=list[ProductResponse],
 )
 def get_products(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
-    """
-    Obtiene todos los productos.
-    """
-
+    # Devuelve todos los productos junto con
+    # su categoría y stock disponible.
     return list_products(db)
 
 
 @router.get(
     "/active",
-    response_model=list[ProductResponse],
 )
 def get_active_product_list(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
-    """
-    Obtiene los productos activos.
-    """
-
+    # Devuelve únicamente los productos activos.
     return list_active_products(db)
 
 
@@ -55,11 +67,11 @@ def get_active_product_list(
 def get_product_by_id(
     product_id: int,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
-    """
-    Obtiene un producto mediante su ID.
-    """
-
+    # Busca un producto mediante su ID.
     try:
         return get_product(
             db,
@@ -80,17 +92,24 @@ def get_product_by_id(
 def create_product(
     data: ProductCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
-    """
-    Registra un nuevo producto.
-    """
-
+    # Registra un producto en la tabla products.
+    #
+    # IMPORTANTE:
+    # El stock NO se registra aquí.
+    # Después se crea el registro correspondiente
+    # en la tabla inventory.
     try:
         return register_product(
             db=db,
             name=data.name,
-            category_id=None,
+            category_id=data.category_id,
             price=data.price,
+            sku=data.sku,
+            description=data.description,
         )
 
     except ValueError as error:

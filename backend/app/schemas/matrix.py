@@ -1,5 +1,10 @@
-# Este archivo define los datos que la API utiliza para representar
-# matrices matemáticas dentro de MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Schemas de matrices
+# ============================================================
+# Define los datos que la API recibe y devuelve para trabajar
+# con matrices matemáticas.
+# ============================================================
 
 from typing import List
 
@@ -8,13 +13,21 @@ from pydantic import BaseModel
 
 class MatrixBase(BaseModel):
     """
-    Datos básicos de una matriz.
+    Datos básicos utilizados para representar una matriz.
     """
+
+    # Empresa propietaria de la matriz.
+    # PostgreSQL exige este campo en la tabla "matrices".
+    company_id: int
 
     # Nombre utilizado para identificar la matriz.
     name: str
 
-    # Filas y columnas que forman la matriz.
+    # Descripción opcional de la matriz.
+    description: str | None = None
+
+    # Valores numéricos de la matriz.
+    # El servicio calculará automáticamente filas y columnas.
     values: List[List[float]]
 
 
@@ -33,6 +46,12 @@ class MatrixResponse(MatrixBase):
 
     # Identificador único de la matriz.
     id: int
+
+    # Cantidad de filas almacenada en PostgreSQL.
+    rows: int
+
+    # Cantidad de columnas almacenada en PostgreSQL.
+    columns: int
 
     class Config:
         # Permite convertir objetos SQLAlchemy

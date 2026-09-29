@@ -1,8 +1,19 @@
-# Este archivo define los modelos de las tablas "sales" y "sale_details".
-# "sales" representa la venta y "sale_details" representa los productos
-# incluidos dentro de cada venta.
+# ============================================================
+# MatrixFlow Enterprise
+# Modelos de ventas
+# ============================================================
+#
+# Este archivo contiene los modelos correspondientes a:
+#
+# 1. sales
+# 2. sale_details
+#
+# Ambos modelos deben coincidir con la estructura real
+# definida en PostgreSQL.
+# ============================================================
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric
+
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -10,23 +21,53 @@ from app.core.database import Base
 
 class Sale(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla sales.
+    Representa una venta realizada en una sucursal.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "sales"
 
     # Identificador único de la venta.
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    # Empresa propietaria de la venta.
+    # Relación: sales.company_id -> companies.id
+    company_id = Column(
+        Integer,
+        ForeignKey("companies.id"),
+        nullable=False,
+    )
 
     # Sucursal donde se realizó la venta.
+    # Relación: sales.branch_id -> branches.id
     branch_id = Column(
         Integer,
         ForeignKey("branches.id"),
         nullable=False,
     )
 
-    # Fecha y hora de registro de la venta.
+    # Usuario que registró la venta.
+    # Relación: sales.user_id -> users.id
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    # Importe total de la venta.
+    #
+    # PostgreSQL utiliza NUMERIC(10,2), por lo que usamos
+    # Numeric para evitar problemas de precisión con dinero.
+    total = Column(
+        Numeric(10, 2),
+        nullable=False,
+    )
+
+    # Fecha y hora de creación de la venta.
     created_at = Column(
         DateTime,
         nullable=False,
@@ -36,16 +77,21 @@ class Sale(Base):
 
 class SaleDetail(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla sale_details.
+    Representa un producto incluido dentro de una venta.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "sale_details"
 
     # Identificador único del detalle.
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
     # Venta a la que pertenece este detalle.
+    # Relación: sale_details.sale_id -> sales.id
     sale_id = Column(
         Integer,
         ForeignKey("sales.id"),
@@ -53,6 +99,7 @@ class SaleDetail(Base):
     )
 
     # Producto vendido.
+    # Relación: sale_details.product_id -> products.id
     product_id = Column(
         Integer,
         ForeignKey("products.id"),
@@ -60,7 +107,22 @@ class SaleDetail(Base):
     )
 
     # Cantidad de unidades vendidas.
-    quantity = Column(Integer, nullable=False)
+    quantity = Column(
+        Integer,
+        nullable=False,
+    )
 
     # Precio unitario utilizado en la venta.
-    unit_price = Column(Float, nullable=False)
+    #
+    # Se almacena el precio utilizado en ese momento para
+    # conservar el historial aunque el precio del producto cambie.
+    unit_price = Column(
+        Numeric(10, 2),
+        nullable=False,
+    )
+
+    # Subtotal correspondiente a este detalle.
+    subtotal = Column(
+        Numeric(10, 2),
+        nullable=False,
+    )

@@ -21,6 +21,7 @@ from app.api.routes import (
     companies_router,
     branches_router,
     products_router,
+    categories_router,
     sales_router,
     inventory_router,
     vectors_router,
@@ -117,6 +118,12 @@ app.include_router(
 # Productos
 app.include_router(
     products_router,
+    prefix=API_PREFIX,
+)
+
+# Categorías de productos
+app.include_router(
+    categories_router,
     prefix=API_PREFIX,
 )
 

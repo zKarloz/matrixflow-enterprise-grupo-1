@@ -15,3 +15,6 @@ from app.api.routes.reports import router as reports_router
 
 # Ruta para consultar los registros de auditoría.
 from app.api.routes.audit import router as audit_router
+
+# Ruta para gestionar las categorías de productos.
+from app.api.routes.categories import router as categories_router

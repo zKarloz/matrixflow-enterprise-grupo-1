@@ -1,5 +1,11 @@
-# Este archivo contiene las consultas relacionadas con el inventario.
-# Permite consultar existencias y registrar movimientos de inventario.
+# ============================================================
+# MatrixFlow Enterprise
+# Repository de inventario
+# ============================================================
+#
+# Este archivo contiene las operaciones de acceso a la tabla
+# inventory y a la tabla inventory_movements.
+# ============================================================
 
 from sqlalchemy.orm import Session
 
@@ -11,16 +17,19 @@ def get_inventory(db: Session):
     Obtiene todos los registros de inventario.
     """
 
-    # Consultamos todas las existencias.
+    # Consultamos todas las existencias registradas.
     return db.query(Inventory).all()
 
 
-def get_inventory_by_branch(db: Session, branch_id: int):
+def get_inventory_by_branch(
+    db: Session,
+    branch_id: int,
+):
     """
     Obtiene el inventario de una sucursal.
     """
 
-    # Filtramos el inventario por sucursal.
+    # Filtramos por la sucursal indicada.
     return (
         db.query(Inventory)
         .filter(Inventory.branch_id == branch_id)
@@ -36,7 +45,7 @@ def get_inventory_by_product(
     Obtiene el inventario de un producto.
     """
 
-    # Filtramos el inventario por producto.
+    # Filtramos por el producto indicado.
     return (
         db.query(Inventory)
         .filter(Inventory.product_id == product_id)
@@ -48,26 +57,31 @@ def create_inventory(
     db: Session,
     branch_id: int,
     product_id: int,
-    quantity: int,
+    stock: int,
+    minimum_stock: int,
+    unit_cost: float | None = None,
 ):
     """
     Crea un registro de inventario.
     """
 
-    # Creamos el registro de existencias.
+    # Creamos el inventario utilizando los nombres reales
+    # de las columnas de PostgreSQL.
     inventory = Inventory(
         branch_id=branch_id,
         product_id=product_id,
-        quantity=quantity,
+        stock=stock,
+        minimum_stock=minimum_stock,
+        unit_cost=unit_cost,
     )
 
-    # Agregamos el registro.
+    # Agregamos el registro a la sesión.
     db.add(inventory)
 
-    # Guardamos los cambios.
+    # Guardamos los cambios en PostgreSQL.
     db.commit()
 
-    # Actualizamos el objeto.
+    # Actualizamos el objeto para obtener su ID.
     db.refresh(inventory)
 
     return inventory
@@ -75,21 +89,22 @@ def create_inventory(
 
 def create_inventory_movement(
     db: Session,
-    product_id: int,
-    branch_id: int,
+    inventory_id: int,
     movement_type: str,
     quantity: int,
+    description: str | None = None,
 ):
     """
-    Registra un movimiento de inventario.
+    Registra un movimiento sobre un inventario.
     """
 
-    # Creamos el movimiento.
+    # Creamos el movimiento utilizando las columnas
+    # reales de inventory_movements.
     movement = InventoryMovement(
-        product_id=product_id,
-        branch_id=branch_id,
+        inventory_id=inventory_id,
         movement_type=movement_type,
         quantity=quantity,
+        description=description,
     )
 
     # Agregamos el movimiento.

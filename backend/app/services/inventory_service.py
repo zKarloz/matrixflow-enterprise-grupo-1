@@ -1,5 +1,10 @@
-# Este archivo contiene la lógica de negocio del inventario.
-# Coordina las consultas de existencias y los movimientos de inventario.
+# ============================================================
+# MatrixFlow Enterprise
+# Service de inventario
+# ============================================================
+#
+# Contiene la lógica de negocio del módulo de inventario.
+# ============================================================
 
 from sqlalchemy.orm import Session
 
@@ -17,7 +22,7 @@ def list_inventory(db: Session):
     Obtiene todo el inventario.
     """
 
-    # Consultamos todas las existencias.
+    # Delegamos la consulta al repository.
     return get_inventory(db)
 
 
@@ -29,7 +34,6 @@ def list_inventory_by_branch(
     Obtiene el inventario de una sucursal.
     """
 
-    # Consultamos el inventario filtrado por sucursal.
     return get_inventory_by_branch(
         db,
         branch_id,
@@ -44,7 +48,6 @@ def list_inventory_by_product(
     Obtiene el inventario de un producto.
     """
 
-    # Consultamos el inventario filtrado por producto.
     return get_inventory_by_product(
         db,
         product_id,
@@ -55,55 +58,88 @@ def register_inventory(
     db: Session,
     branch_id: int,
     product_id: int,
-    quantity: int,
+    stock: int,
+    minimum_stock: int,
+    unit_cost: float | None = None,
 ):
     """
-    Registra una existencia inicial de inventario.
+    Registra las existencias iniciales de un producto.
     """
 
-    # La cantidad no puede ser negativa.
-    if quantity < 0:
+    # El stock no puede ser negativo.
+    if stock < 0:
         raise ValueError(
-            "La cantidad de inventario no puede ser negativa."
+            "El stock no puede ser negativo."
         )
 
-    # Creamos el registro de inventario.
+    # El stock mínimo tampoco puede ser negativo.
+    if minimum_stock < 0:
+        raise ValueError(
+            "El stock mínimo no puede ser negativo."
+        )
+
+    # Los identificadores deben ser positivos.
+    if branch_id <= 0:
+        raise ValueError(
+            "El identificador de sucursal no es válido."
+        )
+
+    if product_id <= 0:
+        raise ValueError(
+            "El identificador de producto no es válido."
+        )
+
+    # El costo unitario, si existe, no puede ser negativo.
+    if unit_cost is not None and unit_cost < 0:
+        raise ValueError(
+            "El costo unitario no puede ser negativo."
+        )
+
+    # Delegamos la creación al repository.
     return create_inventory(
         db=db,
         branch_id=branch_id,
         product_id=product_id,
-        quantity=quantity,
+        stock=stock,
+        minimum_stock=minimum_stock,
+        unit_cost=unit_cost,
     )
 
 
 def register_inventory_movement(
     db: Session,
-    product_id: int,
-    branch_id: int,
+    inventory_id: int,
     movement_type: str,
     quantity: int,
+    description: str | None = None,
 ):
     """
     Registra un movimiento de inventario.
     """
 
-    # Validamos que exista una cantidad positiva.
+    # La cantidad de un movimiento debe ser positiva.
     if quantity <= 0:
         raise ValueError(
             "La cantidad del movimiento debe ser mayor que cero."
         )
 
-    # Validamos que se haya especificado el tipo de movimiento.
+    # Validamos el identificador del inventario.
+    if inventory_id <= 0:
+        raise ValueError(
+            "El identificador de inventario no es válido."
+        )
+
+    # Validamos el tipo de movimiento.
     if not movement_type.strip():
         raise ValueError(
             "El tipo de movimiento es obligatorio."
         )
 
-    # Guardamos el movimiento.
+    # Guardamos el movimiento mediante el repository.
     return create_inventory_movement(
         db=db,
-        product_id=product_id,
-        branch_id=branch_id,
+        inventory_id=inventory_id,
         movement_type=movement_type,
         quantity=quantity,
+        description=description,
     )

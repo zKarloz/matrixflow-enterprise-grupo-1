@@ -5,6 +5,7 @@
 
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     """Configuración central de MatrixFlow Enterprise."""
 
@@ -12,24 +13,31 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
 
-    # Configuración de PostgreSQL.
-    POSTGRES_USER: str = "matrixflow"
-    POSTGRES_PASSWORD: str = "matrixflow"
-    POSTGRES_DB: str = "matrixflow"
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
+    # --------------------------------------------------------
+    # Configuración de PostgreSQL
+    # --------------------------------------------------------
 
-    DATABASE_URL: str = (
-        "postgresql+psycopg2://"
-        "matrixflow:matrixflow@localhost:5432/matrixflow"
-    )
+    # La URL completa de PostgreSQL se obtiene desde .env.
+    # De esta forma no exponemos usuario, contraseña ni host
+    # directamente dentro del código fuente.
+    DATABASE_URL: str
 
-    # Clave utilizada para firmar los tokens JWT.
-    SECRET_KEY: str = "matrixflow-clave-secreta-desarrollo"
+    # --------------------------------------------------------
+    # Configuración JWT
+    # --------------------------------------------------------
+
+    # La clave utilizada para firmar los JWT se obtiene
+    # exclusivamente desde el archivo .env.
+    SECRET_KEY: str
 
     class Config:
+        # Pydantic Settings leerá las variables desde .env.
         env_file = ".env"
+
+        # Ignoramos variables adicionales que pueda contener
+        # el archivo .env, como las relacionadas con Supabase.
         extra = "ignore"
+
 
 # Instancia única de configuración para toda la aplicación.
 settings = Settings()
