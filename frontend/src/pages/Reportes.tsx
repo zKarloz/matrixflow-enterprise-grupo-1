@@ -1,290 +1,153 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-interface Report {
-  id: number
-  name: string
-  type: string
-  period: string
-  records: number
-  status: 'Generado' | 'Pendiente'
-}
+// Importamos la función que consulta los reportes reales.
+import { getReports } from '../services/api'
 
-const initialReports: Report[] = [
-  {
-    id: 1,
-    name: 'Reporte de ventas',
-    type: 'Ventas',
-    period: 'Septiembre 2026',
-    records: 125,
-    status: 'Generado',
-  },
-  {
-    id: 2,
-    name: 'Reporte de inventario',
-    type: 'Inventario',
-    period: 'Septiembre 2026',
-    records: 86,
-    status: 'Generado',
-  },
-  {
-    id: 3,
-    name: 'Reporte de productos',
-    type: 'Productos',
-    period: 'Septiembre 2026',
-    records: 64,
-    status: 'Generado',
-  },
-  {
-    id: 4,
-    name: 'Reporte de sucursales',
-    type: 'Sucursales',
-    period: 'Septiembre 2026',
-    records: 12,
-    status: 'Pendiente',
-  },
-]
+// Importamos el tipo únicamente para TypeScript.
+import type { ReportsResponse } from '../services/api'
 
 function Reportes() {
-  const [reports, setReports] = useState<Report[]>(initialReports)
+  // Guardamos la respuesta real del backend.
+  const [reports, setReports] = useState<ReportsResponse | null>(null)
 
-  const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState('Todos')
+  // Controlamos el estado de carga.
+  const [loading, setLoading] = useState(true)
 
-  const filteredReports = useMemo(() => {
-    return reports.filter((report) => {
-      const matchesSearch =
-        `${report.name} ${report.type} ${report.period}`
-          .toLowerCase()
-          .includes(search.toLowerCase())
+  // Guardamos cualquier error producido durante la consulta.
+  const [error, setError] = useState<string | null>(null)
 
-      const matchesType =
-        typeFilter === 'Todos' ||
-        report.type === typeFilter
+  // Consultamos los reportes cuando se carga la página.
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        setLoading(true)
+        setError(null)
 
-      return matchesSearch && matchesType
-    })
-  }, [reports, search, typeFilter])
+        // Obtenemos los datos reales desde FastAPI.
+        const data = await getReports()
 
-  const generatedReports = reports.filter(
-    (report) => report.status === 'Generado',
-  ).length
+        setReports(data)
+      } catch (err) {
+        // Mostramos el mensaje recibido desde el backend.
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Ocurrió un error al obtener los reportes.'
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  const totalRecords = reports.reduce(
-    (total, report) => total + report.records,
-    0,
-  )
+    loadReports()
+  }, [])
 
-  const generateReport = (id: number) => {
-    setReports((currentReports) =>
-      currentReports.map((report) =>
-        report.id === id
-          ? {
-              ...report,
-              status: 'Generado',
-            }
-          : report,
-      ),
+  // Mostramos un mensaje mientras esperamos la respuesta.
+  if (loading) {
+    return <div className="p-6">Cargando reportes...</div>
+  }
+
+  // Mostramos el error si la consulta falla.
+  if (error) {
+    return (
+      <div className="p-6 text-red-600">
+        Error: {error}
+      </div>
     )
   }
 
+  // Verificamos que exista información antes de mostrarla.
+  if (!reports) {
+    return <div className="p-6">No hay información disponible.</div>
+  }
+
   return (
-    <div>
+    <div className="space-y-8 p-6">
+      <div>
+        <h1 className="text-3xl font-bold">Reportes</h1>
 
-      {/* Encabezado */}
-
-      <div className="mb-8">
-
-        <h1 className="text-3xl font-bold text-slate-900">
-          Reportes
-        </h1>
-
-        <p className="mt-2 text-slate-500">
-          Consulta y gestión de reportes de MatrixFlow.
+        <p className="mt-2 text-gray-600">
+          Información obtenida desde FastAPI y PostgreSQL.
         </p>
-
       </div>
 
-      {/* Resumen */}
+      {/* Reporte de ventas */}
+      <section>
+        <h2 className="mb-4 text-2xl font-semibold">
+          Ventas
+        </h2>
 
-      <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-3">
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Reportes disponibles
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            {reports.length}
-          </p>
-
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Reportes generados
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-green-600">
-            {generatedReports}
-          </p>
-
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Registros procesados
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-blue-600">
-            {totalRecords}
-          </p>
-
-        </div>
-
-      </div>
-
-      {/* Filtros */}
-
-      <div className="mb-6 flex flex-col gap-3 md:flex-row">
-
-        <input
-          type="text"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar reporte..."
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500 md:max-w-md"
-        />
-
-        <select
-          value={typeFilter}
-          onChange={(event) =>
-            setTypeFilter(event.target.value)
-          }
-          className="rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500"
-        >
-          <option>Todos</option>
-          <option>Ventas</option>
-          <option>Inventario</option>
-          <option>Productos</option>
-          <option>Sucursales</option>
-        </select>
-
-      </div>
-
-      {/* Tabla */}
-
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-
-        <div className="overflow-x-auto">
-
-          <table className="w-full text-left">
-
-            <thead className="border-b bg-slate-50">
-
-              <tr>
-
-                <th className="px-6 py-4 text-sm font-semibold">
-                  Reporte
-                </th>
-
-                <th className="px-6 py-4 text-sm font-semibold">
-                  Tipo
-                </th>
-
-                <th className="px-6 py-4 text-sm font-semibold">
-                  Período
-                </th>
-
-                <th className="px-6 py-4 text-sm font-semibold">
-                  Registros
-                </th>
-
-                <th className="px-6 py-4 text-sm font-semibold">
-                  Estado
-                </th>
-
-                <th className="px-6 py-4 text-sm font-semibold">
-                  Acción
-                </th>
-
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="p-3 text-left">ID</th>
+                <th className="p-3 text-left">Empresa</th>
+                <th className="p-3 text-left">Sucursal</th>
+                <th className="p-3 text-left">Usuario</th>
+                <th className="p-3 text-left">Total</th>
+                <th className="p-3 text-left">Fecha</th>
               </tr>
-
             </thead>
 
-            <tbody className="divide-y">
-
-              {filteredReports.map((report) => (
-
-                <tr
-                  key={report.id}
-                  className="hover:bg-slate-50"
-                >
-
-                  <td className="px-6 py-4 font-medium text-slate-800">
-                    {report.name}
+            <tbody>
+              {reports.sales.map((sale) => (
+                <tr key={sale.id} className="border-b">
+                  <td className="p-3">{sale.id}</td>
+                  <td className="p-3">{sale.company_id}</td>
+                  <td className="p-3">{sale.branch_id}</td>
+                  <td className="p-3">{sale.user_id}</td>
+                  <td className="p-3">
+                    S/ {sale.total.toFixed(2)}
                   </td>
-
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {report.type}
+                  <td className="p-3">
+                    {new Date(sale.created_at).toLocaleString('es-PE')}
                   </td>
-
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {report.period}
-                  </td>
-
-                  <td className="px-6 py-4 text-sm">
-                    {report.records}
-                  </td>
-
-                  <td className="px-6 py-4">
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        report.status === 'Generado'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}
-                    >
-                      {report.status}
-                    </span>
-
-                  </td>
-
-                  <td className="px-6 py-4">
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        generateReport(report.id)
-                      }
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
-                    >
-                      Generar
-                    </button>
-
-                  </td>
-
                 </tr>
-
               ))}
-
             </tbody>
-
           </table>
-
-          {filteredReports.length === 0 && (
-            <div className="p-8 text-center text-slate-500">
-              No se encontraron reportes.
-            </div>
-          )}
-
         </div>
+      </section>
 
-      </div>
+      {/* Reporte de inventario */}
+      <section>
+        <h2 className="mb-4 text-2xl font-semibold">
+          Inventario
+        </h2>
 
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="p-3 text-left">ID</th>
+                <th className="p-3 text-left">Sucursal</th>
+                <th className="p-3 text-left">Producto</th>
+                <th className="p-3 text-left">Stock</th>
+                <th className="p-3 text-left">Stock mínimo</th>
+                <th className="p-3 text-left">Costo unitario</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {reports.inventory.map((item) => (
+                <tr key={item.id} className="border-b">
+                  <td className="p-3">{item.id}</td>
+                  <td className="p-3">{item.branch_id}</td>
+                  <td className="p-3">{item.product_id}</td>
+                  <td className="p-3">{item.stock}</td>
+                  <td className="p-3">{item.minimum_stock}</td>
+                  <td className="p-3">
+                    {item.unit_cost !== null
+                      ? `S/ ${item.unit_cost.toFixed(2)}`
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   )
 }

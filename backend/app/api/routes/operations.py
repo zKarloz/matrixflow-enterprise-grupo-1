@@ -2,6 +2,7 @@
 # MatrixFlow Enterprise
 # Rutas de operaciones matemáticas
 # ============================================================
+
 # Este archivo define los endpoints HTTP utilizados para
 # ejecutar y consultar operaciones de matrices y vectores.
 #
@@ -21,6 +22,7 @@ from app.services.operation_service import execute_operation
 # ------------------------------------------------------------
 # Configuración del router
 # ------------------------------------------------------------
+
 router = APIRouter(
     prefix="/operations",
     tags=["Operaciones"],
@@ -30,6 +32,7 @@ router = APIRouter(
 # ============================================================
 # POST /operations
 # ============================================================
+
 @router.post("")
 def create_operation(
     data: OperationCreate,
@@ -53,6 +56,11 @@ def create_operation(
             first_values=data.first_values,
             second_values=data.second_values,
             scalar=data.scalar,
+
+            # Enviamos el segundo coeficiente necesario
+            # para las combinaciones lineales.
+            second_scalar=data.second_scalar,
+
             first_matrix_id=data.first_matrix_id,
             second_matrix_id=data.second_matrix_id,
             first_vector_id=data.first_vector_id,
@@ -82,6 +90,7 @@ def create_operation(
 # ============================================================
 # GET /operations
 # ============================================================
+
 @router.get("")
 def get_operations(
     db: Session = Depends(get_db),

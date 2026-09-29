@@ -1,146 +1,370 @@
-import { useMemo, useState } from 'react'
+// ============================================================
+// MatrixFlow Enterprise
+// Módulo de Vectores
+// ============================================================
+//
+// Los datos y cálculos de esta pantalla utilizan el backend.
+//
+// Persistencia:
+//   GET/POST /api/v1/vectors
+//
+// Operaciones:
+//   POST /api/v1/operations
+//
+// React solamente controla la interfaz.
+// Los cálculos matemáticos se realizan en el backend mediante
+// el motor NumPy del proyecto.
+// ============================================================
+
+import { useEffect, useMemo, useState } from 'react'
+
+import {
+  createOperation,
+  createVector,
+  getVectors,
+  type Vector,
+} from '../services/api'
+
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+
+// Empresa utilizada actualmente para los registros matemáticos.
+//
+// El backend exige company_id.
+// Si posteriormente el proyecto obtiene la empresa desde
+// el contexto de sesión, este valor podrá sustituirse.
+const DEFAULT_COMPANY_ID = 2
+
+// Operaciones vectoriales actualmente implementadas
+// por app/algorithms/vector_operations.py.
+const VECTOR_OPERATIONS = [
+  {
+    value: 'sum_vector',
+    label: 'Suma de vectores',
+  },
+  {
+    value: 'subtract_vector',
+    label: 'Resta de vectores',
+  },
+  {
+    value: 'dot_product',
+    label: 'Producto punto',
+  },
+]
+
+// ============================================================
+// COMPONENTE
+// ============================================================
 
 function Vectores() {
-  const [vectorA, setVectorA] = useState<number[]>([
-    2,
-    4,
-    6,
-  ])
+  // ----------------------------------------------------------
+  // DATOS
+  // ----------------------------------------------------------
 
-  const [vectorB, setVectorB] = useState<number[]>([
-    1,
-    3,
-    5,
-  ])
+  // Vectores reales almacenados en PostgreSQL.
+  const [vectors, setVectors] = useState<Vector[]>([])
 
-  const [scalar, setScalar] = useState('2')
+  // ----------------------------------------------------------
+  // ESTADOS GENERALES
+  // ----------------------------------------------------------
 
-  const [newValueA, setNewValueA] = useState('')
-  const [newValueB, setNewValueB] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [calculating, setCalculating] = useState(false)
 
-  const sameDimension =
-    vectorA.length === vectorB.length
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const suma = useMemo(() => {
-    if (!sameDimension) {
-      return []
+  // ----------------------------------------------------------
+  // FORMULARIO DE VECTOR
+  // ----------------------------------------------------------
+
+  const [vectorName, setVectorName] = useState('')
+  const [vectorDescription, setVectorDescription] =
+    useState('')
+
+  // El usuario escribe los componentes separados por coma.
+  //
+  // Ejemplo:
+  // 1, 2, 3
+  //
+  // Internamente se transforma a:
+  // [1, 2, 3]
+  const [vectorValues, setVectorValues] = useState('')
+
+  // ----------------------------------------------------------
+  // OPERACIONES
+  // ----------------------------------------------------------
+
+  // Vector seleccionado como primera entrada.
+  const [firstVectorId, setFirstVectorId] =
+    useState('')
+
+  // Vector seleccionado como segunda entrada.
+  const [secondVectorId, setSecondVectorId] =
+    useState('')
+
+  // Operación seleccionada.
+  const [operationType, setOperationType] =
+    useState('sum_vector')
+
+  // Resultado proveniente del backend.
+  const [operationResult, setOperationResult] =
+    useState<unknown>(null)
+
+  // ==========================================================
+  // CARGAR VECTORES
+  // ==========================================================
+
+  useEffect(() => {
+    const loadVectors = async () => {
+      try {
+        setLoading(true)
+        setError('')
+
+        // Consulta real al backend.
+        const data = await getVectors()
+
+        setVectors(data)
+      } catch (requestError) {
+        console.error(
+          'Error al cargar vectores:',
+          requestError,
+        )
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'No se pudieron cargar los vectores.',
+        )
+      } finally {
+        setLoading(false)
+      }
     }
 
-    return vectorA.map(
-      (value, index) => value + vectorB[index],
-    )
-  }, [vectorA, vectorB, sameDimension])
+    loadVectors()
+  }, [])
 
-  const resta = useMemo(() => {
-    if (!sameDimension) {
-      return []
-    }
+  // ==========================================================
+  // VECTORES SELECCIONABLES
+  // ==========================================================
 
-    return vectorA.map(
-      (value, index) => value - vectorB[index],
-    )
-  }, [vectorA, vectorB, sameDimension])
-
-  const productoPunto = useMemo(() => {
-    if (!sameDimension) {
-      return 0
-    }
-
-    return vectorA.reduce(
-      (total, value, index) =>
-        total + value * vectorB[index],
-      0,
-    )
-  }, [vectorA, vectorB, sameDimension])
-
-  const magnitudA = Math.sqrt(
-    vectorA.reduce(
-      (total, value) => total + value ** 2,
-      0,
-    ),
+  const selectedFirstVector = useMemo(
+    () =>
+      vectors.find(
+        (vector) =>
+          vector.id === Number(firstVectorId),
+      ),
+    [vectors, firstVectorId],
   )
 
-  const magnitudB = Math.sqrt(
-    vectorB.reduce(
-      (total, value) => total + value ** 2,
-      0,
-    ),
+  const selectedSecondVector = useMemo(
+    () =>
+      vectors.find(
+        (vector) =>
+          vector.id === Number(secondVectorId),
+      ),
+    [vectors, secondVectorId],
   )
 
-  const scalarValue = Number(scalar)
+  // ==========================================================
+  // CONVERTIR TEXTO A VECTOR
+  // ==========================================================
 
-  const productoEscalar = vectorA.map(
-    (value) => value * scalarValue,
-  )
+  const parseVectorValues = (
+    text: string,
+  ): number[] | null => {
+    // Separamos los valores utilizando comas.
+    const parts = text
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
 
-  const updateVectorA = (
-    index: number,
-    value: number,
-  ) => {
-    const newVector = [...vectorA]
+    // Un vector debe contener al menos un elemento.
+    if (parts.length === 0) {
+      return null
+    }
 
-    newVector[index] = value
+    const numbers = parts.map(Number)
 
-    setVectorA(newVector)
+    // Verificamos que todos sean números válidos.
+    if (
+      numbers.some(
+        (value) => !Number.isFinite(value),
+      )
+    ) {
+      return null
+    }
+
+    return numbers
   }
 
-  const updateVectorB = (
-    index: number,
-    value: number,
-  ) => {
-    const newVector = [...vectorB]
+  // ==========================================================
+  // REGISTRAR VECTOR
+  // ==========================================================
 
-    newVector[index] = value
+  const handleCreateVector = async () => {
+    const values = parseVectorValues(vectorValues)
 
-    setVectorB(newVector)
-  }
-
-  const addComponentA = () => {
-    if (!newValueA.trim()) {
+    // Validaciones básicas antes de llamar al backend.
+    if (!vectorName.trim()) {
+      setError('Ingresa un nombre para el vector.')
       return
     }
 
-    setVectorA([
-      ...vectorA,
-      Number(newValueA),
-    ])
-
-    setNewValueA('')
-  }
-
-  const addComponentB = () => {
-    if (!newValueB.trim()) {
+    if (!values) {
+      setError(
+        'Ingresa valores numéricos separados por comas.',
+      )
       return
     }
 
-    setVectorB([
-      ...vectorB,
-      Number(newValueB),
-    ])
+    try {
+      setSaving(true)
+      setError('')
+      setSuccess('')
 
-    setNewValueB('')
+      // Enviamos el vector real a FastAPI.
+      await createVector({
+        company_id: DEFAULT_COMPANY_ID,
+        name: vectorName.trim(),
+        description:
+          vectorDescription.trim() || null,
+        values,
+      })
+
+      // Volvemos a consultar PostgreSQL para mostrar
+      // exactamente los datos almacenados.
+      const updatedVectors = await getVectors()
+
+      setVectors(updatedVectors)
+
+      // Limpiamos el formulario.
+      setVectorName('')
+      setVectorDescription('')
+      setVectorValues('')
+
+      setSuccess(
+        'Vector registrado correctamente.',
+      )
+    } catch (requestError) {
+      console.error(
+        'Error al registrar vector:',
+        requestError,
+      )
+
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo registrar el vector.',
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const removeComponentA = () => {
-    if (vectorA.length <= 1) {
+  // ==========================================================
+  // EJECUTAR OPERACIÓN
+  // ==========================================================
+
+  const handleOperation = async () => {
+    // Las operaciones actuales trabajan con dos vectores.
+    if (!selectedFirstVector) {
+      setError(
+        'Selecciona el primer vector.',
+      )
       return
     }
 
-    setVectorA(vectorA.slice(0, -1))
-  }
-
-  const removeComponentB = () => {
-    if (vectorB.length <= 1) {
+    if (!selectedSecondVector) {
+      setError(
+        'Selecciona el segundo vector.',
+      )
       return
     }
 
-    setVectorB(vectorB.slice(0, -1))
+    try {
+      setCalculating(true)
+      setError('')
+      setSuccess('')
+      setOperationResult(null)
+
+      // ------------------------------------------------------
+      // IMPORTANTE:
+      //
+      // El backend espera:
+      //
+      // first_values: [[1, 2, 3]]
+      //
+      // aunque un vector almacenado sea:
+      //
+      // values: [1, 2, 3]
+      //
+      // Por eso envolvemos los valores en otra lista.
+      // ------------------------------------------------------
+
+      const operation = await createOperation({
+        company_id: DEFAULT_COMPANY_ID,
+
+        // Nombre legible para el registro.
+        name: VECTOR_OPERATIONS.find(
+          (item) =>
+            item.value === operationType,
+        )?.label ?? 'Operación vectorial',
+
+        // Tipo exacto que entiende operation_service.py.
+        operation_type: operationType,
+
+        // Primer vector convertido al formato esperado.
+        first_values: [
+          selectedFirstVector.values,
+        ],
+
+        // Segundo vector.
+        second_values: [
+          selectedSecondVector.values,
+        ],
+
+        // Referencias a los vectores almacenados.
+        first_vector_id:
+          selectedFirstVector.id,
+
+        second_vector_id:
+          selectedSecondVector.id,
+      })
+
+      // El resultado viene calculado por FastAPI/NumPy.
+      setOperationResult(operation.result)
+
+      setSuccess(
+        'Operación ejecutada correctamente por el backend.',
+      )
+    } catch (requestError) {
+      console.error(
+        'Error al ejecutar operación:',
+        requestError,
+      )
+
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo ejecutar la operación.',
+      )
+    } finally {
+      setCalculating(false)
+    }
   }
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
     <div>
-
-      {/* ENCABEZADO */}
+      {/* ====================================================
+          ENCABEZADO
+          ==================================================== */}
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">
@@ -148,313 +372,335 @@ function Vectores() {
         </h1>
 
         <p className="mt-2 text-slate-500">
-          Operaciones matemáticas con vectores.
+          Gestión y operaciones de vectores mediante el motor
+          matemático del backend.
         </p>
       </div>
 
-      {/* ESTADO */}
+      {/* ====================================================
+          MENSAJES
+          ==================================================== */}
 
-      <div
-        className={`mb-6 rounded-xl border p-4 ${
-          sameDimension
-            ? 'border-green-200 bg-green-50'
-            : 'border-red-200 bg-red-50'
-        }`}
-      >
-        <p
-          className={`text-sm font-medium ${
-            sameDimension
-              ? 'text-green-700'
-              : 'text-red-700'
-          }`}
-        >
-          {sameDimension
-            ? `Dimensión válida: ambos vectores tienen ${vectorA.length} componentes.`
-            : 'Los vectores deben tener la misma cantidad de componentes para realizar suma, resta y producto punto.'}
-        </p>
-      </div>
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-      {/* VECTORES */}
+      {success && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {success}
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* ====================================================
+          REGISTRAR VECTOR
+          ==================================================== */}
 
-        {/* VECTOR A */}
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-slate-900">
+            Registrar vector
+          </h2>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="mt-1 text-sm text-slate-500">
+            Los datos se almacenarán en PostgreSQL mediante
+            FastAPI.
+          </p>
+        </div>
 
-          <div className="flex items-center justify-between">
-
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Vector A
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                {vectorA.length} componentes
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={removeComponentA}
-              disabled={vectorA.length <= 1}
-              className="rounded-lg border border-red-300 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              - Quitar
-            </button>
-
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-3">
-
-            {vectorA.map((value, index) => (
-              <input
-                key={index}
-                type="number"
-                value={value}
-                onChange={(event) =>
-                  updateVectorA(
-                    index,
-                    Number(event.target.value),
-                  )
-                }
-                className="w-20 rounded-lg border border-slate-300 px-3 py-2 text-center outline-none focus:border-blue-500"
-              />
-            ))}
-
-          </div>
-
-          <div className="mt-5 flex gap-2">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {/* Nombre */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Nombre
+            </label>
 
             <input
-              type="number"
-              value={newValueA}
+              type="text"
+              value={vectorName}
               onChange={(event) =>
-                setNewValueA(event.target.value)
+                setVectorName(event.target.value)
               }
-              placeholder="Nuevo valor"
-              className="flex-1 rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
+              placeholder="Ej. Vector A"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
             />
-
-            <button
-              type="button"
-              onClick={addComponentA}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + Agregar
-            </button>
-
           </div>
 
-          <div className="mt-5 rounded-lg bg-slate-50 p-4">
-
-            <p className="text-sm text-slate-500">
-              Vector A
-            </p>
-
-            <p className="mt-2 text-lg font-bold text-slate-900">
-              [{vectorA.join(', ')}]
-            </p>
-
-          </div>
-
-        </div>
-
-        {/* VECTOR B */}
-
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Vector B
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                {vectorB.length} componentes
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={removeComponentB}
-              disabled={vectorB.length <= 1}
-              className="rounded-lg border border-red-300 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              - Quitar
-            </button>
-
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-3">
-
-            {vectorB.map((value, index) => (
-              <input
-                key={index}
-                type="number"
-                value={value}
-                onChange={(event) =>
-                  updateVectorB(
-                    index,
-                    Number(event.target.value),
-                  )
-                }
-                className="w-20 rounded-lg border border-slate-300 px-3 py-2 text-center outline-none focus:border-blue-500"
-              />
-            ))}
-
-          </div>
-
-          <div className="mt-5 flex gap-2">
+          {/* Descripción */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Descripción
+            </label>
 
             <input
-              type="number"
-              value={newValueB}
+              type="text"
+              value={vectorDescription}
               onChange={(event) =>
-                setNewValueB(event.target.value)
+                setVectorDescription(
+                  event.target.value,
+                )
               }
-              placeholder="Nuevo valor"
-              className="flex-1 rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
+              placeholder="Descripción opcional"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* Valores */}
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Valores
+            </label>
+
+            <input
+              type="text"
+              value={vectorValues}
+              onChange={(event) =>
+                setVectorValues(event.target.value)
+              }
+              placeholder="Ej. 1, 2, 3, 4"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
             />
 
-            <button
-              type="button"
-              onClick={addComponentB}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            <p className="mt-2 text-xs text-slate-400">
+              Introduce los componentes separados por comas.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={handleCreateVector}
+            disabled={saving}
+            className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {saving
+              ? 'Guardando...'
+              : 'Guardar vector'}
+          </button>
+        </div>
+      </div>
+
+      {/* ====================================================
+          LISTA DE VECTORES
+          ==================================================== */}
+
+      <div className="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 p-6">
+          <h2 className="text-xl font-semibold text-slate-900">
+            Vectores registrados
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Datos obtenidos directamente del backend.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="p-8 text-center text-sm text-slate-500">
+            Cargando vectores...
+          </div>
+        ) : vectors.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-500">
+            No existen vectores registrados.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-left">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    ID
+                  </th>
+
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Nombre
+                  </th>
+
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Dimensión
+                  </th>
+
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Valores
+                  </th>
+
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Descripción
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {vectors.map((vector) => (
+                  <tr
+                    key={vector.id}
+                    className="hover:bg-slate-50"
+                  >
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      #{vector.id}
+                    </td>
+
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                      {vector.name}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-slate-700">
+                      {vector.dimension}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <code className="rounded bg-slate-100 px-3 py-1 text-sm text-slate-700">
+                        [{vector.values.join(', ')}]
+                      </code>
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {vector.description ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ====================================================
+          OPERACIONES MATEMÁTICAS
+          ==================================================== */}
+
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-slate-900">
+            Operaciones matemáticas
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            El cálculo se ejecuta en FastAPI utilizando NumPy.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          {/* Primer vector */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Primer vector
+            </label>
+
+            <select
+              value={firstVectorId}
+              onChange={(event) =>
+                setFirstVectorId(event.target.value)
+              }
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500"
             >
-              + Agregar
-            </button>
+              <option value="">
+                Seleccionar vector
+              </option>
 
+              {vectors.map((vector) => (
+                <option
+                  key={vector.id}
+                  value={vector.id}
+                >
+                  {vector.name} — [
+                  {vector.values.join(', ')}]
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="mt-5 rounded-lg bg-slate-50 p-4">
+          {/* Operación */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Operación
+            </label>
 
-            <p className="text-sm text-slate-500">
-              Vector B
-            </p>
-
-            <p className="mt-2 text-lg font-bold text-slate-900">
-              [{vectorB.join(', ')}]
-            </p>
-
+            <select
+              value={operationType}
+              onChange={(event) =>
+                setOperationType(event.target.value)
+              }
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500"
+            >
+              {VECTOR_OPERATIONS.map(
+                (operation) => (
+                  <option
+                    key={operation.value}
+                    value={operation.value}
+                  >
+                    {operation.label}
+                  </option>
+                ),
+              )}
+            </select>
           </div>
 
+          {/* Segundo vector */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Segundo vector
+            </label>
+
+            <select
+              value={secondVectorId}
+              onChange={(event) =>
+                setSecondVectorId(
+                  event.target.value,
+                )
+              }
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500"
+            >
+              <option value="">
+                Seleccionar vector
+              </option>
+
+              {vectors.map((vector) => (
+                <option
+                  key={vector.id}
+                  value={vector.id}
+                >
+                  {vector.name} — [
+                  {vector.values.join(', ')}]
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-      </div>
-
-      {/* OPERACIONES */}
-
-      <div className="mt-8">
-
-        <h2 className="mb-4 text-xl font-bold text-slate-900">
-          Operaciones
-        </h2>
-
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <p className="text-sm text-slate-500">
-              A + B
-            </p>
-
-            <p className="mt-3 text-xl font-bold text-slate-900">
-              {sameDimension
-                ? `[${suma.join(', ')}]`
-                : 'Dimensiones diferentes'}
-            </p>
-
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <p className="text-sm text-slate-500">
-              A - B
-            </p>
-
-            <p className="mt-3 text-xl font-bold text-slate-900">
-              {sameDimension
-                ? `[${resta.join(', ')}]`
-                : 'Dimensiones diferentes'}
-            </p>
-
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <p className="text-sm text-slate-500">
-              Producto punto
-            </p>
-
-            <p className="mt-3 text-xl font-bold text-blue-600">
-              {sameDimension
-                ? productoPunto
-                : 'No disponible'}
-            </p>
-
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <p className="text-sm text-slate-500">
-              Magnitudes
-            </p>
-
-            <p className="mt-3 text-sm font-bold text-slate-900">
-              |A| = {magnitudA.toFixed(2)}
-            </p>
-
-            <p className="mt-1 text-sm font-bold text-slate-900">
-              |B| = {magnitudB.toFixed(2)}
-            </p>
-
-          </div>
-
+        {/* Botón de cálculo */}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={handleOperation}
+            disabled={calculating}
+            className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {calculating
+              ? 'Calculando...'
+              : 'Ejecutar operación'}
+          </button>
         </div>
 
-      </div>
+        {/* Resultado */}
+        {operationResult !== null && (
+          <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-5">
+            <p className="text-sm font-medium text-blue-700">
+              Resultado calculado por el backend
+            </p>
 
-      {/* ESCALAR */}
-
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-        <h2 className="text-xl font-bold text-slate-900">
-          Multiplicación por escalar
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Multiplica cada componente del Vector A por un número.
-        </p>
-
-        <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center">
-
-          <input
-            type="number"
-            value={scalar}
-            onChange={(event) =>
-              setScalar(event.target.value)
-            }
-            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 md:w-32"
-          />
-
-          <div className="rounded-lg bg-slate-50 px-5 py-3">
-
-            <span className="text-sm text-slate-500">
-              Resultado:
-            </span>
-
-            <span className="ml-2 font-bold text-slate-900">
-              [{productoEscalar.join(', ')}]
-            </span>
-
+            <div className="mt-3 overflow-x-auto">
+              <code className="text-lg font-semibold text-slate-900">
+                {Array.isArray(operationResult)
+                  ? `[${operationResult.join(', ')}]`
+                  : String(operationResult)}
+              </code>
+            </div>
           </div>
-
-        </div>
-
+        )}
       </div>
-
     </div>
   )
 }

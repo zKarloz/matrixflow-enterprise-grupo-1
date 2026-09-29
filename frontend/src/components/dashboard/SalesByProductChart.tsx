@@ -1,68 +1,17 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-
-const productData = [
-  {
-    product: 'Laptops',
-    sales: 12500,
-  },
-  {
-    product: 'Monitores',
-    sales: 8300,
-  },
-  {
-    product: 'Teclados',
-    sales: 4200,
-  },
-  {
-    product: 'Mouse',
-    sales: 3100,
-  },
-  {
-    product: 'Accesorios',
-    sales: 2600,
-  },
-]
-
 function SalesByProductChart() {
   return (
-    <div className="h-[320px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={productData}
-          margin={{
-            top: 10,
-            right: 20,
-            left: 10,
-            bottom: 10,
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
+    <div className="flex h-[320px] w-full flex-col items-center justify-center text-center">
+      {/* Indicamos que todavía no existe una fuente de datos
+          que relacione las ventas con sus productos. */}
+      <p className="text-sm font-medium text-slate-600">
+        Ventas por producto no disponibles
+      </p>
 
-          <XAxis dataKey="product" />
-
-          <YAxis />
-
-          <Tooltip
-            formatter={(value) => [
-              `S/ ${Number(value).toLocaleString('es-PE')}`,
-              'Ventas',
-            ]}
-          />
-
-          <Bar
-            dataKey="sales"
-            radius={[6, 6, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+      {/* Explicamos por qué no mostramos datos simulados. */}
+      <p className="mt-2 max-w-md text-sm text-slate-400">
+        El endpoint actual de ventas no incluye el detalle de productos
+        asociado a cada venta.
+      </p>
     </div>
   )
 }
