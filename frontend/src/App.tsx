@@ -13,7 +13,7 @@
 // 6. Comprobar la conexión con FastAPI.
 // ============================================================
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import {
   BrowserRouter,
   Routes,
@@ -100,11 +100,6 @@ function RoleProtectedRoute({
 // ============================================================
 
 interface AppLayoutProps {
-  // Indica si el modo oscuro está activado.
-  darkMode: boolean
-
-  // Permite cambiar el estado del modo oscuro.
-  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 
@@ -122,18 +117,10 @@ interface AppLayoutProps {
 // La autenticación se controla mediante ProtectedRoute.
 // ============================================================
 
-function AppLayout({
-  darkMode,
-  setDarkMode,
-}: AppLayoutProps) {
+function AppLayout({}: AppLayoutProps) {
 
   return (
-    <div
-      className={`min-h-screen transition-colors ${darkMode
-        ? 'bg-slate-950 text-slate-100'
-        : 'bg-slate-50 text-slate-900'
-        }`}
-    >
+    <div className="min-h-screen bg-slate-50 text-slate-900">
 
       {/* Menú lateral principal. */}
       <Sidebar />
@@ -399,10 +386,7 @@ function AppLayout({
                 <RoleProtectedRoute
                   allowedRoles={['Administrador']}
                 >
-                  <Configuracion
-                    darkMode={darkMode}
-                    setDarkMode={setDarkMode}
-                  />
+                  <Configuracion />
                 </RoleProtectedRoute>
               }
             />
@@ -455,38 +439,6 @@ function App() {
 
 
   // ==========================================================
-  // MODO OSCURO
-  // ==========================================================
-
-  // Recuperamos la preferencia guardada anteriormente.
-  const [darkMode, setDarkMode] = useState(() => {
-
-    return (
-      localStorage.getItem(
-        'matrixflow-dark-mode'
-      ) === 'true'
-    )
-  })
-
-
-  // Aplicamos el modo oscuro al documento.
-  useEffect(() => {
-
-    document.documentElement.classList.toggle(
-      'dark',
-      darkMode
-    )
-
-    // Guardamos la preferencia para futuras visitas.
-    localStorage.setItem(
-      'matrixflow-dark-mode',
-      String(darkMode)
-    )
-
-  }, [darkMode])
-
-
-  // ==========================================================
   // SISTEMA DE RUTAS
   // ==========================================================
 
@@ -529,10 +481,7 @@ function App() {
           element={
             <ProtectedRoute>
 
-              <AppLayout
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-              />
+              <AppLayout />
 
             </ProtectedRoute>
           }

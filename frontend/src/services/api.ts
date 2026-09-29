@@ -12,8 +12,10 @@
 //     https://matrixflow-backend-oby4.onrender.com
 // ============================================================
 
-// URL del backend de producción desplegado en Render.
-const API_URL = 'https://matrixflow-backend-oby4.onrender.com'
+// URL del backend local utilizado durante el desarrollo.
+// El frontend de Vite corre normalmente en localhost:5173
+// y FastAPI corre en localhost:8000.
+const API_URL = 'http://localhost:8000'
 
 // ============================================================
 // PETICIONES AUTENTICADAS
@@ -701,5 +703,747 @@ export async function createProduct(
   }
 
   // Devolvemos el producto creado.
+  return response.json()
+}
+
+// ============================================================
+// VENTAS
+// ============================================================
+//
+// Estas funciones permiten consultar las ventas reales
+// almacenadas en PostgreSQL mediante FastAPI.
+//
+// IMPORTANTE:
+// El frontend NO consulta Supabase directamente.
+// El flujo es:
+//
+// React
+//   ↓
+// authenticatedFetch()
+//   ↓
+// JWT
+//   ↓
+// FastAPI /api/v1/sales
+//   ↓
+// SQLAlchemy
+//   ↓
+// PostgreSQL / Supabase
+// ============================================================
+
+/**
+ * Representa una venta almacenada en la tabla sales.
+ *
+ * Estos campos corresponden al modelo real del backend.
+ */
+export interface Sale {
+  // Identificador de la venta.
+  id: number
+
+  // Empresa relacionada con la venta.
+  company_id: number
+
+  // Sucursal donde se registró la venta.
+  branch_id: number
+
+  // Usuario que registró la venta.
+  user_id: number
+
+  // Importe total de la venta.
+  total: number
+
+  // Fecha y hora en que se creó la venta.
+  created_at: string
+}
+
+/**
+ * Obtiene las ventas registradas en PostgreSQL.
+ *
+ * Endpoint:
+ * GET /api/v1/sales
+ *
+ * El backend controla los permisos mediante RBAC.
+ * Actualmente este endpoint está disponible para
+ * Administrador y Analista.
+ */
+export async function getSales(): Promise<Sale[]> {
+  // authenticatedFetch agrega automáticamente
+  // el JWT almacenado en localStorage.
+  const response = await authenticatedFetch(
+    '/api/v1/sales'
+  )
+
+  // Si FastAPI devuelve 401, 403, 500, etc.,
+  // informamos al componente que ocurrió un error.
+  if (!response.ok) {
+    let message =
+      'No se pudieron obtener las ventas.'
+
+    try {
+      // Intentamos recuperar el mensaje enviado
+      // por FastAPI.
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si FastAPI no devuelve JSON,
+      // mantenemos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Convertimos la respuesta JSON de FastAPI
+  // en un arreglo de ventas.
+  return response.json()
+}
+
+// Representa un registro de inventario almacenado en PostgreSQL.
+export interface InventoryItem {
+  id: number
+  branch_id: number
+  product_id: number
+  stock: number
+  minimum_stock: number
+  unit_cost: number | null
+}
+
+// Obtiene el inventario real desde FastAPI.
+export async function getInventory(): Promise<InventoryItem[]> {
+  // Consultamos el endpoint protegido del inventario.
+  const response = await authenticatedFetch('/api/v1/inventory')
+
+  // Si FastAPI devuelve un error, mostramos el detalle disponible.
+  if (!response.ok) {
+    let message = 'No se pudo obtener el inventario.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si FastAPI no devuelve JSON, mantenemos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Convertimos la respuesta JSON al arreglo de inventario.
+  return response.json()
+}
+
+// Representa una venta incluida en el reporte.
+export interface SalesReportItem {
+  id: number
+  company_id: number
+  branch_id: number
+  user_id: number
+  total: number
+  created_at: string
+}
+
+// Representa un registro de inventario incluido en el reporte.
+export interface InventoryReportItem {
+  id: number
+  branch_id: number
+  product_id: number
+  stock: number
+  minimum_stock: number
+  unit_cost: number | null
+}
+
+// Representa la respuesta completa del endpoint de reportes.
+export interface ReportsResponse {
+  sales: SalesReportItem[]
+  inventory: InventoryReportItem[]
+}
+
+// Obtiene los reportes generados a partir de los datos reales.
+export async function getReports(): Promise<ReportsResponse> {
+  // Consultamos el endpoint protegido de reportes.
+  const response = await authenticatedFetch('/api/v1/reports')
+
+  // Si FastAPI devuelve un error, intentamos mostrar su detalle.
+  if (!response.ok) {
+    let message = 'No se pudieron obtener los reportes.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si no existe una respuesta JSON, usamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos los datos reales enviados por FastAPI.
+  return response.json()
+}
+
+// ============================================================
+// USUARIOS
+// ============================================================
+//
+// Estos servicios conectan la pantalla Usuarios con FastAPI.
+//
+// Flujo:
+// React
+//   ↓
+// getUsers() / createUser()
+//   ↓
+// authenticatedFetch()
+//   ↓
+// JWT
+//   ↓
+// FastAPI /api/v1/users
+//   ↓
+// Repository
+//   ↓
+// PostgreSQL
+//
+// IMPORTANTE:
+// La autorización de Administrador se mantiene en el backend.
+// ============================================================
+
+/**
+ * Representa un usuario recibido desde FastAPI.
+ *
+ * La contraseña nunca forma parte de esta interfaz porque
+ * el backend jamás devuelve contraseñas ni hashes.
+ */
+export interface User {
+  // Identificador único del usuario.
+  id: number
+
+  // Nombre de usuario utilizado para iniciar sesión.
+  username: string
+
+  // Correo electrónico del usuario.
+  email: string
+
+  // Nombre completo.
+  full_name: string
+
+  // Indica si la cuenta está activa.
+  is_active: boolean
+
+  // Identificador del rol almacenado en PostgreSQL.
+  role_id: number
+}
+
+/**
+ * Datos necesarios para registrar un usuario.
+ *
+ * La contraseña solamente se envía al backend para que
+ * FastAPI genere el hash correspondiente.
+ */
+export interface CreateUserData {
+  // Nombre de usuario único.
+  username: string
+
+  // Correo electrónico único.
+  email: string
+
+  // Contraseña inicial.
+  password: string
+
+  // Nombre completo.
+  full_name: string
+
+  // ID del rol seleccionado.
+  role_id: number
+}
+
+/**
+ * Obtiene todos los usuarios.
+ *
+ * Endpoint:
+ * GET /api/v1/users
+ *
+ * Este endpoint está protegido para Administrador.
+ */
+export async function getUsers(): Promise<User[]> {
+  // Enviamos automáticamente el JWT actual.
+  const response = await authenticatedFetch(
+    '/api/v1/users'
+  )
+
+  // Si FastAPI devuelve un error, intentamos mostrar
+  // el detalle proporcionado por el backend.
+  if (!response.ok) {
+    let message = 'No se pudieron obtener los usuarios.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si la respuesta no contiene JSON,
+      // conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos los usuarios reales de PostgreSQL.
+  return response.json()
+}
+
+/**
+ * Registra un nuevo usuario.
+ *
+ * Endpoint:
+ * POST /api/v1/users
+ */
+export async function createUser(
+  data: CreateUserData
+): Promise<User> {
+  // Enviamos los datos al backend utilizando el JWT.
+  const response = await authenticatedFetch(
+    '/api/v1/users',
+    {
+      method: 'POST',
+
+      // Convertimos el objeto TypeScript a JSON.
+      body: JSON.stringify(data),
+    }
+  )
+
+  // Si FastAPI devuelve un error, intentamos mostrar
+  // el mensaje enviado por el backend.
+  if (!response.ok) {
+    let message = 'No se pudo registrar el usuario.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si no existe una respuesta JSON,
+      // usamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos el usuario creado por FastAPI.
+  return response.json()
+}
+
+// ============================================================
+// MATRICES
+// ============================================================
+
+// Representa una matriz almacenada en el backend.
+export interface Matrix {
+  id: number
+  company_id: number
+  name: string
+  description: string | null
+  rows: number
+  columns: number
+  values: number[][]
+}
+
+// Datos necesarios para crear una matriz.
+export interface CreateMatrixData {
+  company_id: number
+  name: string
+  description?: string | null
+  values: number[][]
+}
+
+// Obtiene todas las matrices registradas.
+export async function getMatrices(): Promise<Matrix[]> {
+  // Enviamos el JWT al backend.
+  const response = await authenticatedFetch(
+    '/api/v1/matrices'
+  )
+
+  // Procesamos posibles errores.
+  if (!response.ok) {
+    let message = 'No se pudieron obtener las matrices.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos las matrices reales.
+  return response.json()
+}
+
+// Obtiene una matriz específica.
+export async function getMatrix(
+  matrixId: number
+): Promise<Matrix> {
+  // Consultamos la matriz por su identificador.
+  const response = await authenticatedFetch(
+    `/api/v1/matrices/${matrixId}`
+  )
+
+  // Procesamos posibles errores.
+  if (!response.ok) {
+    let message = 'No se pudo obtener la matriz.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos la matriz real.
+  return response.json()
+}
+
+// Registra una nueva matriz en el backend.
+export async function createMatrix(
+  data: CreateMatrixData
+): Promise<Matrix> {
+  // Enviamos la matriz mediante POST.
+  const response = await authenticatedFetch(
+    '/api/v1/matrices',
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }
+  )
+
+  // Procesamos posibles errores.
+  if (!response.ok) {
+    let message = 'No se pudo registrar la matriz.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos la matriz recién creada.
+  return response.json()
+}
+
+// ============================================================
+// VECTORES Y OPERACIONES MATEMÁTICAS
+// ============================================================
+//
+// Estos servicios conectan el módulo matemático de React
+// con los endpoints reales de FastAPI.
+//
+// Vectores:
+//   GET  /api/v1/vectors
+//   GET  /api/v1/vectors/{id}
+//   POST /api/v1/vectors
+//
+// Operaciones:
+//   GET  /api/v1/operations
+//   POST /api/v1/operations
+//
+// Los cálculos matemáticos NO se realizan en React.
+// FastAPI delega estas operaciones al motor NumPy.
+// ============================================================
+
+// ------------------------------------------------------------
+// INTERFAZ DE VECTOR
+// ------------------------------------------------------------
+
+/**
+ * Representa un vector almacenado en el backend.
+ */
+export interface Vector {
+  // Identificador único del vector.
+  id: number
+
+  // Empresa propietaria del vector.
+  company_id: number
+
+  // Nombre descriptivo.
+  name: string
+
+  // Descripción opcional.
+  description: string | null
+
+  // Cantidad de componentes.
+  dimension: number
+
+  // Valores numéricos del vector.
+  values: number[]
+}
+
+// ------------------------------------------------------------
+// DATOS PARA CREAR UN VECTOR
+// ------------------------------------------------------------
+
+export interface CreateVectorData {
+  // Empresa propietaria.
+  company_id: number
+
+  // Nombre del vector.
+  name: string
+
+  // Descripción opcional.
+  description?: string | null
+
+  // Componentes numéricos.
+  values: number[]
+}
+
+// ------------------------------------------------------------
+// OBTENER VECTORES
+// ------------------------------------------------------------
+
+/**
+ * Obtiene todos los vectores registrados.
+ *
+ * Endpoint:
+ * GET /api/v1/vectors
+ */
+export async function getVectors(): Promise<Vector[]> {
+  // Enviamos el JWT mediante authenticatedFetch().
+  const response = await authenticatedFetch(
+    '/api/v1/vectors'
+  )
+
+  // Procesamos posibles errores del backend.
+  if (!response.ok) {
+    let message = 'No se pudieron obtener los vectores.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos los vectores reales.
+  return response.json()
+}
+
+// ------------------------------------------------------------
+// OBTENER UN VECTOR
+// ------------------------------------------------------------
+
+/**
+ * Obtiene un vector específico junto con sus valores.
+ *
+ * Endpoint:
+ * GET /api/v1/vectors/{vector_id}
+ */
+export async function getVector(
+  vectorId: number
+): Promise<Vector> {
+  const response = await authenticatedFetch(
+    `/api/v1/vectors/${vectorId}`
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo obtener el vector.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+// ------------------------------------------------------------
+// CREAR VECTOR
+// ------------------------------------------------------------
+
+/**
+ * Registra un nuevo vector en PostgreSQL.
+ *
+ * Endpoint:
+ * POST /api/v1/vectors
+ */
+export async function createVector(
+  data: CreateVectorData
+): Promise<Vector> {
+  const response = await authenticatedFetch(
+    '/api/v1/vectors',
+    {
+      method: 'POST',
+
+      // Convertimos los datos a JSON.
+      body: JSON.stringify(data),
+    }
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo registrar el vector.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+// ============================================================
+// OPERACIONES MATEMÁTICAS
+// ============================================================
+
+// Datos necesarios para registrar una operación matemática.
+export interface CreateOperationData {
+  company_id: number
+  name: string
+  operation_type: string
+  first_values: number[][]
+  second_values?: number[][] | null
+
+  // Primer escalar o coeficiente de la operación.
+  scalar?: number | null
+
+  // Segundo coeficiente utilizado en combinaciones lineales.
+  second_scalar?: number | null
+
+  // Identificadores opcionales de matrices y vectores.
+  first_vector_id?: number | null
+  second_vector_id?: number | null
+  result_vector_id?: number | null
+  first_matrix_id?: number | null
+  second_matrix_id?: number | null
+  result_matrix_id?: number | null
+}
+
+/**
+ * Respuesta del backend después de ejecutar una operación.
+ */
+export interface Operation {
+  id: number
+  company_id: number
+  name: string
+  operation_type: string
+
+  // El backend puede devolver un número o un arreglo.
+  result: unknown
+}
+
+/**
+ * Ejecuta una operación matemática en FastAPI.
+ *
+ * Endpoint:
+ * POST /api/v1/operations
+ *
+ * El cálculo se realiza en el backend utilizando NumPy.
+ */
+export async function createOperation(
+  data: CreateOperationData
+): Promise<Operation> {
+  const response = await authenticatedFetch(
+    '/api/v1/operations',
+    {
+      method: 'POST',
+
+      // Enviamos exactamente el contrato definido
+      // por OperationCreate en FastAPI.
+      body: JSON.stringify(data),
+    }
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo ejecutar la operación.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
+  // Devolvemos el resultado calculado por el backend.
+  return response.json()
+}
+
+/**
+ * Obtiene el historial de operaciones matemáticas.
+ *
+ * Endpoint:
+ * GET /api/v1/operations
+ */
+export async function getOperations(): Promise<Operation[]> {
+  const response = await authenticatedFetch(
+    '/api/v1/operations'
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudieron obtener las operaciones.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje genérico.
+    }
+
+    throw new Error(message)
+  }
+
   return response.json()
 }

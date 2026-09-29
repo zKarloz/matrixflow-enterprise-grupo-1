@@ -2,23 +2,18 @@
 # MatrixFlow Enterprise
 # Schemas de operaciones
 # ============================================================
+
 # Define los datos que recibe y devuelve la API para ejecutar
 # operaciones matemáticas.
-#
-# La estructura está alineada con las tablas reales:
-# - operations
-# - operation_inputs
-# - operation_results
-# ============================================================
 
 from typing import List
-
 from pydantic import BaseModel
 
 
 # ------------------------------------------------------------
 # Datos para crear una operación
 # ------------------------------------------------------------
+
 class OperationCreate(BaseModel):
     # Empresa a la que pertenece la operación.
     company_id: int
@@ -27,8 +22,6 @@ class OperationCreate(BaseModel):
     name: str
 
     # Tipo de operación matemática.
-    # Ejemplos:
-    # add_matrix, sum_vector, transpose_matrix, etc.
     operation_type: str
 
     # Primera entrada matemática.
@@ -40,13 +33,18 @@ class OperationCreate(BaseModel):
     # [[1, 2, 3]]
     first_values: List[List[float]]
 
-    # Segunda entrada, necesaria solamente para operaciones
-    # que trabajan con dos matrices o dos vectores.
+    # Segunda entrada para operaciones que utilizan
+    # dos matrices o dos vectores.
     second_values: List[List[float]] | None = None
 
-    # Escalar utilizado por operaciones como:
-    # scalar_multiply y scalar_multiply_matrix.
+    # Primer escalar.
+    # Se utiliza, por ejemplo, en multiplicación escalar
+    # y como primer coeficiente de una combinación lineal.
     scalar: float | None = None
+
+    # Segundo escalar utilizado por combinaciones lineales.
+    # Representa el coeficiente del segundo vector.
+    second_scalar: float | None = None
 
     # ID de la primera matriz utilizada.
     first_matrix_id: int | None = None
@@ -70,6 +68,7 @@ class OperationCreate(BaseModel):
 # ------------------------------------------------------------
 # Respuesta de una operación
 # ------------------------------------------------------------
+
 class OperationResponse(BaseModel):
     # Identificador de la operación registrada.
     id: int

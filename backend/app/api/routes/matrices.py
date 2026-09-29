@@ -34,12 +34,66 @@ def get_matrices(
     ),
 ):
     """
-    Obtiene todas las matrices registradas.
+    Obtiene todas las matrices registradas incluyendo
+    sus valores en formato bidimensional.
     """
 
-    # Delegamos la consulta al servicio.
-    return list_matrices(db)
+    # Primero obtenemos las matrices principales.
+    matrices = list_matrices(db)
 
+    # Aquí construiremos la respuesta que recibirá React.
+    response = []
+
+    # Recorremos cada matriz registrada.
+    for matrix in matrices:
+        # Reutilizamos el servicio que ya reconstruye
+        # los valores almacenados de la matriz.
+        _, values = get_matrix(
+            db,
+            matrix.id,
+        )
+
+        # Agrupamos los valores por fila y columna.
+        result = {}
+
+        for item in values:
+            # Creamos la fila si todavía no existe.
+            result.setdefault(
+                item.row,
+                {},
+            )
+
+            # Guardamos el valor en su posición.
+            result[item.row][item.column] = item.value
+
+        # Reconstruimos la matriz como lista de listas.
+        matrix_values = []
+
+        for row_index in sorted(result):
+            row = []
+
+            for column_index in sorted(result[row_index]):
+                row.append(
+                    result[row_index][column_index]
+                )
+
+            matrix_values.append(row)
+
+        # Agregamos la matriz completa a la respuesta.
+        response.append(
+            {
+                "id": matrix.id,
+                "company_id": matrix.company_id,
+                "name": matrix.name,
+                "description": matrix.description,
+                "rows": matrix.rows,
+                "columns": matrix.columns,
+                "values": matrix_values,
+            }
+        )
+
+    # Devolvemos matrices listas para consumir desde React.
+    return response
 
 @router.get("/{matrix_id}")
 def get_matrix_by_id(

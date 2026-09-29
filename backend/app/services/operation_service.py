@@ -2,10 +2,11 @@
 # MatrixFlow Enterprise
 # Servicio de operaciones matemáticas
 # ============================================================
+
 # Este archivo contiene la lógica de negocio para:
 #
 # 1. Validar la operación solicitada.
-# 2. Ejecutar el cálculo utilizando NumPy.
+# 2. Ejecutar el cálculo utilizando los algoritmos matemáticos.
 # 3. Registrar la operación.
 # 4. Registrar sus matrices o vectores de entrada.
 # 5. Crear y registrar automáticamente el resultado.
@@ -49,6 +50,7 @@ from app.repositories.operation_repository import (
 # ============================================================
 # Ejecutar una operación matemática
 # ============================================================
+
 def execute_operation(
     db: Session,
     company_id: int,
@@ -57,6 +59,7 @@ def execute_operation(
     first_values: list[list[float]],
     second_values: list[list[float]] | None = None,
     scalar: float | None = None,
+    second_scalar: float | None = None,  # Segundo coeficiente para combinaciones lineales.
     first_matrix_id: int | None = None,
     second_matrix_id: int | None = None,
     first_vector_id: int | None = None,
@@ -75,6 +78,7 @@ def execute_operation(
     # Validaciones básicas
     # --------------------------------------------------------
 
+    # Normalizamos el tipo de operación.
     operation = operation_type.strip().lower()
 
     if not operation:
@@ -86,16 +90,40 @@ def execute_operation(
     if company_id <= 0:
         raise ValueError("El company_id debe ser válido.")
 
-    # Operaciones que necesitan dos entradas.
+    # --------------------------------------------------------
+    # Validación de combinación lineal
+    # --------------------------------------------------------
+
+    # Una combinación lineal necesita:
+    # a) Un primer vector.
+    # b) Un segundo vector.
+    # c) Un coeficiente para cada vector.
+    if operation == "linear_combination":
+        if second_values is None:
+            raise ValueError(
+                "La combinación lineal requiere un segundo vector."
+            )
+
+        if scalar is None or second_scalar is None:
+            raise ValueError(
+                "La combinación lineal requiere dos coeficientes."
+            )
+
+    # --------------------------------------------------------
+    # Operaciones que necesitan dos entradas
+    # --------------------------------------------------------
+
     operations_with_second_value = {
         "sum_vector",
         "subtract_vector",
         "dot_product",
+        "linear_combination",
         "add_matrix",
         "subtract_matrix",
         "multiply_matrix",
     }
 
+    # Validamos que exista el segundo valor cuando sea necesario.
     if (
         operation in operations_with_second_value
         and second_values is None
@@ -104,13 +132,20 @@ def execute_operation(
             "Esta operación requiere un segundo valor."
         )
 
-    # Operaciones que necesitan un escalar.
+    # --------------------------------------------------------
+    # Operaciones que necesitan un escalar
+    # --------------------------------------------------------
+
     operations_with_scalar = {
         "scalar_multiply",
         "scalar_multiply_matrix",
     }
 
-    if operation in operations_with_scalar and scalar is None:
+    # Validamos que exista el escalar cuando sea necesario.
+    if (
+        operation in operations_with_scalar
+        and scalar is None
+    ):
         raise ValueError(
             "Esta operación requiere un escalar."
         )
@@ -119,85 +154,114 @@ def execute_operation(
     # Ejecutar operación matemática
     # --------------------------------------------------------
 
+    # Iniciamos el cronómetro para medir el tiempo de ejecución.
     start_time = perf_counter()
 
-    # Operaciones de vectores.
-    if operation == "sum_vector":
+    # --------------------------------------------------------
+    # Operaciones de vectores
+    # --------------------------------------------------------
 
+    if operation == "sum_vector":
+        # Sumamos los dos vectores.
         result = sum_vector(
             first_values[0],
             second_values[0],
         )
 
     elif operation == "subtract_vector":
-
+        # Restamos el segundo vector al primero.
         result = subtract_vector(
             first_values[0],
             second_values[0],
         )
 
     elif operation == "scalar_multiply":
-
+        # Multiplicamos el vector por un escalar.
         result = scalar_multiply(
             first_values[0],
             scalar,
         )
 
     elif operation == "dot_product":
-
+        # Calculamos el producto punto.
         result = dot_product(
             first_values[0],
             second_values[0],
         )
 
-    # Operaciones de matrices.
-    elif operation == "add_matrix":
+    elif operation == "linear_combination":
+        # Multiplicamos el primer vector por su coeficiente.
+        first_scaled = scalar_multiply(
+            first_values[0],
+            scalar,
+        )
 
+        # Multiplicamos el segundo vector por su coeficiente.
+        second_scaled = scalar_multiply(
+            second_values[0],
+            second_scalar,
+        )
+
+        # Sumamos ambos resultados para obtener:
+        # aU + bV
+        result = sum_vector(
+            first_scaled,
+            second_scaled,
+        )
+
+    # --------------------------------------------------------
+    # Operaciones de matrices
+    # --------------------------------------------------------
+
+    elif operation == "add_matrix":
+        # Sumamos las dos matrices.
         result = add_matrix(
             first_values,
             second_values,
         )
 
     elif operation == "subtract_matrix":
-
+        # Restamos las dos matrices.
         result = subtract_matrix(
             first_values,
             second_values,
         )
 
     elif operation == "multiply_matrix":
-
+        # Multiplicamos las dos matrices.
         result = multiply_matrix(
             first_values,
             second_values,
         )
 
     elif operation == "transpose_matrix":
-
+        # Calculamos la matriz transpuesta.
         result = transpose_matrix(
             first_values,
         )
 
     elif operation == "scalar_multiply_matrix":
-
+        # Multiplicamos la matriz por un escalar.
         result = scalar_multiply_matrix(
             first_values,
             scalar,
         )
 
     else:
-
+        # Rechazamos cualquier operación que el backend
+        # todavía no tenga implementada.
         raise ValueError(
             f"Operación no soportada: {operation_type}"
         )
 
-    # Calculamos el tiempo de ejecución matemática.
+    # Calculamos el tiempo total de ejecución matemática.
     execution_time = perf_counter() - start_time
 
     # --------------------------------------------------------
     # Registrar operación principal
     # --------------------------------------------------------
 
+    # Guardamos la operación en la base de datos.
     operation_record = create_operation(
         db=db,
         company_id=company_id,
@@ -211,7 +275,7 @@ def execute_operation(
     # --------------------------------------------------------
 
     if first_vector_id is not None:
-
+        # Relacionamos el primer vector con la operación.
         create_operation_input(
             db=db,
             operation_id=operation_record.id,
@@ -221,7 +285,7 @@ def execute_operation(
         )
 
     elif first_matrix_id is not None:
-
+        # Relacionamos la primera matriz con la operación.
         create_operation_input(
             db=db,
             operation_id=operation_record.id,
@@ -235,7 +299,7 @@ def execute_operation(
     # --------------------------------------------------------
 
     if second_vector_id is not None:
-
+        # Relacionamos el segundo vector con la operación.
         create_operation_input(
             db=db,
             operation_id=operation_record.id,
@@ -245,7 +309,7 @@ def execute_operation(
         )
 
     elif second_matrix_id is not None:
-
+        # Relacionamos la segunda matriz con la operación.
         create_operation_input(
             db=db,
             operation_id=operation_record.id,
@@ -261,8 +325,9 @@ def execute_operation(
     # --------------------------------------------------------
     # Caso 1: el resultado ya existe como matriz
     # --------------------------------------------------------
-    if result_matrix_id is not None:
 
+    if result_matrix_id is not None:
+        # Relacionamos la matriz existente con la operación.
         create_operation_result(
             db=db,
             operation_id=operation_record.id,
@@ -273,8 +338,9 @@ def execute_operation(
     # --------------------------------------------------------
     # Caso 2: el resultado ya existe como vector
     # --------------------------------------------------------
-    elif result_vector_id is not None:
 
+    elif result_vector_id is not None:
+        # Relacionamos el vector existente con la operación.
         create_operation_result(
             db=db,
             operation_id=operation_record.id,
@@ -285,41 +351,40 @@ def execute_operation(
     # --------------------------------------------------------
     # Caso 3: resultado escalar
     # --------------------------------------------------------
-    elif isinstance(result, (int, float)):
 
-        # La estructura actual de PostgreSQL no tiene una tabla
-        # específica para resultados escalares.
+    elif isinstance(result, (int, float)):
+        # Actualmente no existe una tabla específica para
+        # almacenar resultados escalares.
         #
-        # Por eso no podemos inventar un matrix_id/vector_id.
-        # El cálculo se devuelve correctamente, pero no se crea
-        # un registro en operation_results para este caso.
+        # El resultado se devuelve correctamente al endpoint,
+        # pero no se crea un operation_result para este caso.
         pass
 
     # --------------------------------------------------------
     # Caso 4: resultado matricial
     # --------------------------------------------------------
+
     elif (
         isinstance(result, list)
         and result
         and isinstance(result[0], list)
     ):
-
-        # Si el resultado es una matriz, la persistimos como
-        # una nueva matriz perteneciente a la misma empresa.
+        # Creamos una matriz para almacenar el resultado.
         result_matrix = create_matrix(
             db=db,
             company_id=company_id,
             name=f"Resultado - {operation_name.strip()}",
-            description="Matriz generada automáticamente por una operación matemática.",
+            description=(
+                "Matriz generada automáticamente "
+                "por una operación matemática."
+            ),
             rows=len(result),
             columns=len(result[0]),
         )
 
-        # Guardamos cada valor utilizando la posición real
-        # de la matriz.
+        # Guardamos cada valor utilizando su posición.
         for row_index, row in enumerate(result):
             for column_index, value in enumerate(row):
-
                 create_matrix_value(
                     db=db,
                     matrix_id=result_matrix.id,
@@ -328,8 +393,7 @@ def execute_operation(
                     value=value,
                 )
 
-        # Finalmente relacionamos la matriz resultado con
-        # la operación ejecutada.
+        # Relacionamos la matriz resultado con la operación.
         create_operation_result(
             db=db,
             operation_id=operation_record.id,
@@ -340,20 +404,22 @@ def execute_operation(
     # --------------------------------------------------------
     # Caso 5: resultado vectorial
     # --------------------------------------------------------
-    elif isinstance(result, list):
 
-        # Creamos un vector perteneciente a la misma empresa.
+    elif isinstance(result, list):
+        # Creamos un vector para almacenar el resultado.
         result_vector = create_vector(
             db=db,
             company_id=company_id,
             name=f"Resultado - {operation_name.strip()}",
-            description="Vector generado automáticamente por una operación matemática.",
+            description=(
+                "Vector generado automáticamente "
+                "por una operación matemática."
+            ),
             dimension=len(result),
         )
 
         # Guardamos cada componente del vector.
         for position, value in enumerate(result):
-
             create_vector_value(
                 db=db,
                 vector_id=result_vector.id,
@@ -373,4 +439,5 @@ def execute_operation(
     # Devolver información al endpoint
     # --------------------------------------------------------
 
+    # El endpoint recibe tanto el registro como el resultado.
     return operation_record, result

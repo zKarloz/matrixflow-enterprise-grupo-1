@@ -2,8 +2,15 @@
 # MatrixFlow Enterprise
 # Rutas de vectores
 # ============================================================
-# Este archivo define los endpoints HTTP utilizados para
-# crear y consultar vectores.
+#
+# Este router permite:
+# - Consultar todos los vectores.
+# - Consultar un vector específico.
+# - Registrar nuevos vectores.
+#
+# Los valores de cada vector se obtienen desde la tabla
+# vector_values para entregar al frontend una respuesta
+# completa y consistente.
 # ============================================================
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,12 +26,19 @@ from app.services.vector_service import (
 )
 
 
-# Router del módulo de vectores.
+# ------------------------------------------------------------
+# Configuración del router
+# ------------------------------------------------------------
+
 router = APIRouter(
     prefix="/vectors",
     tags=["Vectores"],
 )
 
+
+# ============================================================
+# GET /vectors
+# ============================================================
 
 @router.get("")
 def get_vectors(
@@ -35,11 +49,44 @@ def get_vectors(
 ):
     """
     Obtiene todos los vectores registrados.
+
+    La respuesta incluye tanto los datos principales
+    como los valores numéricos de cada vector.
     """
 
-    # Delegamos la consulta al servicio.
-    return list_vectors(db)
+    # Obtenemos los registros principales.
+    vectors = list_vectors(db)
 
+    # Construimos una respuesta completa para el frontend.
+    response = []
+
+    for vector in vectors:
+        # Obtenemos los valores almacenados para este vector.
+        _, values = get_vector(
+            db,
+            vector.id,
+        )
+
+        response.append(
+            {
+                "id": vector.id,
+                "company_id": vector.company_id,
+                "name": vector.name,
+                "description": vector.description,
+                "dimension": vector.dimension,
+                "values": [
+                    item.value
+                    for item in values
+                ],
+            }
+        )
+
+    return response
+
+
+# ============================================================
+# GET /vectors/{vector_id}
+# ============================================================
 
 @router.get("/{vector_id}")
 def get_vector_by_id(
@@ -50,18 +97,17 @@ def get_vector_by_id(
     ),
 ):
     """
-    Obtiene un vector junto con sus valores.
+    Obtiene un vector específico junto con sus valores.
     """
 
     try:
-        # Obtenemos el vector y sus valores almacenados.
+        # El servicio obtiene el vector principal y
+        # todos sus valores asociados.
         vector, values = get_vector(
             db,
             vector_id,
         )
 
-        # Reconstruimos la lista de valores a partir
-        # de los registros almacenados en vector_values.
         return {
             "id": vector.id,
             "company_id": vector.company_id,
@@ -82,6 +128,10 @@ def get_vector_by_id(
         )
 
 
+# ============================================================
+# POST /vectors
+# ============================================================
+
 @router.post("")
 def create_vector(
     data: VectorCreate,
@@ -95,7 +145,7 @@ def create_vector(
     """
 
     try:
-        # Enviamos al servicio los datos recibidos.
+        # Delegamos la creación al servicio.
         vector = register_vector(
             db=db,
             company_id=data.company_id,
@@ -104,7 +154,7 @@ def create_vector(
             values=data.values,
         )
 
-        # Devolvemos el vector recién creado.
+        # Devolvemos el mismo contrato que utiliza GET.
         return {
             "id": vector.id,
             "company_id": vector.company_id,
@@ -115,8 +165,7 @@ def create_vector(
         }
 
     except ValueError as error:
-        # Los errores de validación del servicio
-        # se convierten en HTTP 400.
+        # Los errores de validación se convierten en HTTP 400.
         raise HTTPException(
             status_code=400,
             detail=str(error),

@@ -1,722 +1,600 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-type Matrix = number[][]
+import {
+  createMatrix,
+  createOperation,
+  getMatrices,
+  type Matrix,
+} from '../services/api'
+
+// Empresa utilizada durante el desarrollo local.
+// Debe corresponder a una empresa existente en la BD.
+const DEFAULT_COMPANY_ID = 2
+
+// Operaciones de matrices soportadas actualmente
+// por el backend de MatrixFlow.
+type MatrixOperation =
+  | 'add_matrix'
+  | 'subtract_matrix'
+  | 'multiply_matrix'
+  | 'transpose_matrix'
+  | 'scalar_multiply_matrix'
 
 function Matrices() {
-  const [matrixA, setMatrixA] = useState<Matrix>([
-    [1, 2],
-    [3, 4],
-  ])
+  // ============================================================
+  // ESTADO DE DATOS
+  // ============================================================
 
-  const [matrixB, setMatrixB] = useState<Matrix>([
-    [5, 6],
-    [7, 8],
-  ])
+  // Lista real de matrices obtenidas desde FastAPI.
+  const [matrices, setMatrices] = useState<Matrix[]>([])
 
-  const [newValueA, setNewValueA] = useState('')
-  const [newValueB, setNewValueB] = useState('')
+  // Matriz seleccionada como primera entrada.
+  const [selectedMatrixA, setSelectedMatrixA] =
+    useState<number | ''>('')
 
+  // Matriz seleccionada como segunda entrada.
+  const [selectedMatrixB, setSelectedMatrixB] =
+    useState<number | ''>('')
+
+  // Escalar utilizado para multiplicación.
   const [scalar, setScalar] = useState('2')
 
-  const sameDimensions =
-    matrixA.length === matrixB.length &&
-    matrixA[0]?.length === matrixB[0]?.length
+  // Resultado devuelto directamente por el backend.
+  const [operationResult, setOperationResult] =
+    useState<unknown>(null)
 
-  const canMultiply =
-    matrixA[0]?.length === matrixB.length
+  // Operación actualmente seleccionada.
+  const [operation, setOperation] =
+    useState<MatrixOperation>('add_matrix')
 
-  const suma = useMemo(() => {
-    if (!sameDimensions) {
-      return []
+  // ============================================================
+  // ESTADO DEL FORMULARIO DE CREACIÓN
+  // ============================================================
+
+  const [newName, setNewName] = useState('')
+
+  const [newDescription, setNewDescription] =
+    useState('')
+
+  // Los valores se introducen como:
+  // 1,2,3
+  // 4,5,6
+  const [newValues, setNewValues] =
+    useState('')
+
+  // ============================================================
+  // ESTADO DE LA INTERFAZ
+  // ============================================================
+
+  const [loading, setLoading] = useState(true)
+
+  const [saving, setSaving] = useState(false)
+
+  const [operating, setOperating] = useState(false)
+
+  const [error, setError] = useState('')
+
+  // ============================================================
+  // CARGAR MATRICES DESDE EL BACKEND
+  // ============================================================
+
+  async function loadMatrices() {
+    try {
+      setLoading(true)
+      setError('')
+
+      // Consultamos las matrices reales.
+      const data = await getMatrices()
+
+      setMatrices(data)
+
+      // Si existen matrices, seleccionamos automáticamente
+      // las dos primeras.
+      if (data.length > 0) {
+        setSelectedMatrixA(data[0].id)
+      }
+
+      if (data.length > 1) {
+        setSelectedMatrixB(data[1].id)
+      }
+    } catch (err) {
+      // Mostramos el error recibido desde FastAPI.
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudieron cargar las matrices.'
+      )
+    } finally {
+      setLoading(false)
     }
-
-    return matrixA.map((row, i) =>
-      row.map(
-        (value, j) => value + matrixB[i][j],
-      ),
-    )
-  }, [matrixA, matrixB, sameDimensions])
-
-  const resta = useMemo(() => {
-    if (!sameDimensions) {
-      return []
-    }
-
-    return matrixA.map((row, i) =>
-      row.map(
-        (value, j) => value - matrixB[i][j],
-      ),
-    )
-  }, [matrixA, matrixB, sameDimensions])
-
-  const multiplicacion = useMemo(() => {
-    if (!canMultiply) {
-      return []
-    }
-
-    return matrixA.map((row) =>
-      matrixB[0].map((_, columnIndex) =>
-        row.reduce(
-          (total, value, rowIndex) =>
-            total +
-            value *
-              matrixB[rowIndex][columnIndex],
-          0,
-        ),
-      ),
-    )
-  }, [matrixA, matrixB, canMultiply])
-
-  const transposeA = useMemo(() => {
-    return matrixA[0].map((_, columnIndex) =>
-      matrixA.map(
-        (row) => row[columnIndex],
-      ),
-    )
-  }, [matrixA])
-
-  const transposeB = useMemo(() => {
-    return matrixB[0].map((_, columnIndex) =>
-      matrixB.map(
-        (row) => row[columnIndex],
-      ),
-    )
-  }, [matrixB])
-
-  const determinantA =
-    matrixA.length === 2 &&
-    matrixA[0].length === 2
-      ? matrixA[0][0] * matrixA[1][1] -
-        matrixA[0][1] * matrixA[1][0]
-      : null
-
-  const determinantB =
-    matrixB.length === 2 &&
-    matrixB[0].length === 2
-      ? matrixB[0][0] * matrixB[1][1] -
-        matrixB[0][1] * matrixB[1][0]
-      : null
-
-  const scalarValue = Number(scalar)
-
-  const scalarMatrix = matrixA.map(
-    (row) =>
-      row.map(
-        (value) => value * scalarValue,
-      ),
-  )
-
-  const updateMatrix = (
-    matrix: Matrix,
-    setMatrix: React.Dispatch<
-      React.SetStateAction<Matrix>
-    >,
-    row: number,
-    column: number,
-    value: number,
-  ) => {
-    const newMatrix = matrix.map(
-      (currentRow) => [...currentRow],
-    )
-
-    newMatrix[row][column] = value
-
-    setMatrix(newMatrix)
   }
 
-  const addRow = (
-    matrix: Matrix,
-    setMatrix: React.Dispatch<
-      React.SetStateAction<Matrix>
-    >,
-    value: number,
-  ) => {
-    const columns = matrix[0]?.length ?? 2
+  // Cargamos las matrices cuando entra la página.
+  useEffect(() => {
+    loadMatrices()
+  }, [])
 
-    setMatrix([
-      ...matrix,
-      Array(columns).fill(value),
-    ])
-  }
+  // ============================================================
+  // CREAR MATRIZ
+  // ============================================================
 
-  const removeRow = (
-    matrix: Matrix,
-    setMatrix: React.Dispatch<
-      React.SetStateAction<Matrix>
-    >,
-  ) => {
-    if (matrix.length <= 1) {
-      return
+  function parseMatrixValues(): number[][] {
+    // Cada línea representa una fila.
+    const rows = newValues
+      .trim()
+      .split('\n')
+      .map((row) =>
+        row
+          .split(',')
+          .map((value) => Number(value.trim()))
+      )
+
+    // Validamos que todos los valores sean numéricos.
+    if (
+      rows.length === 0 ||
+      rows.some((row) =>
+        row.some((value) => Number.isNaN(value))
+      )
+    ) {
+      throw new Error(
+        'Los valores de la matriz deben ser números.'
+      )
     }
 
-    setMatrix(matrix.slice(0, -1))
+    // Validamos que todas las filas tengan
+    // la misma cantidad de columnas.
+    const columns = rows[0].length
+
+    if (
+      columns === 0 ||
+      rows.some(
+        (row) => row.length !== columns
+      )
+    ) {
+      throw new Error(
+        'Todas las filas deben tener la misma cantidad de columnas.'
+      )
+    }
+
+    return rows
   }
 
-  const addColumn = (
-    matrix: Matrix,
-    setMatrix: React.Dispatch<
-      React.SetStateAction<Matrix>
-    >,
-    value: number,
-  ) => {
-    setMatrix(
-      matrix.map((row) => [
-        ...row,
-        value,
-      ]),
+  async function handleCreateMatrix() {
+    try {
+      setSaving(true)
+      setError('')
+
+      // Validamos los valores introducidos.
+      const values = parseMatrixValues()
+
+      // Enviamos la matriz real al backend.
+      await createMatrix({
+        company_id: DEFAULT_COMPANY_ID,
+        name: newName,
+        description: newDescription || null,
+        values,
+      })
+
+      // Limpiamos el formulario.
+      setNewName('')
+      setNewDescription('')
+      setNewValues('')
+
+      // Volvemos a consultar PostgreSQL.
+      await loadMatrices()
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo crear la matriz.'
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ============================================================
+  // EJECUTAR OPERACIÓN MATRICIAL
+  // ============================================================
+
+  async function handleOperation() {
+    try {
+      setOperating(true)
+      setError('')
+      setOperationResult(null)
+
+      // Validamos la primera matriz.
+      if (selectedMatrixA === '') {
+        throw new Error(
+          'Selecciona la primera matriz.'
+        )
+      }
+
+      // Buscamos la matriz real.
+      const matrixA = matrices.find(
+        (matrix) =>
+          matrix.id === selectedMatrixA
+      )
+
+      if (!matrixA) {
+        throw new Error(
+          'No se encontró la primera matriz.'
+        )
+      }
+
+      // Determinamos si la operación necesita
+      // una segunda matriz.
+      const needsSecondMatrix =
+        operation === 'add_matrix' ||
+        operation === 'subtract_matrix' ||
+        operation === 'multiply_matrix'
+
+      let matrixB: Matrix | undefined
+
+      if (needsSecondMatrix) {
+        if (selectedMatrixB === '') {
+          throw new Error(
+            'Selecciona la segunda matriz.'
+          )
+        }
+
+        matrixB = matrices.find(
+          (matrix) =>
+            matrix.id === selectedMatrixB
+        )
+
+        if (!matrixB) {
+          throw new Error(
+            'No se encontró la segunda matriz.'
+          )
+        }
+      }
+
+      // Ejecutamos la operación contra el backend.
+      const response = await createOperation({
+        company_id: DEFAULT_COMPANY_ID,
+        name: `Operación ${operation}`,
+        operation_type: operation,
+        first_values: matrixA.values,
+        second_values: matrixB?.values ?? null,
+        scalar:
+          operation === 'scalar_multiply_matrix'
+            ? Number(scalar)
+            : null,
+        first_matrix_id: matrixA.id,
+        second_matrix_id: matrixB?.id ?? null,
+      })
+
+      // Guardamos únicamente el resultado que devuelve el backend.
+      // Así evitamos recargar toda la página y perder las selecciones.
+      setOperationResult(response.result)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo ejecutar la operación.'
+      )
+    } finally {
+      setOperating(false)
+    }
+  }
+
+  // ============================================================
+  // RENDERIZAR MATRIZ
+  // ============================================================
+
+  function renderMatrix(
+    values: number[][],
+    className = 'text-slate-900'
+  ) {
+    return (
+      <div className="space-y-2">
+        {values.map((row, rowIndex) => (
+          <p
+            key={rowIndex}
+            className={`font-mono text-lg ${className}`}
+          >
+            [{row.join(', ')}]
+          </p>
+        ))}
+      </div>
     )
   }
 
-  const removeColumn = (
-    matrix: Matrix,
-    setMatrix: React.Dispatch<
-      React.SetStateAction<Matrix>
-    >,
-  ) => {
-    if ((matrix[0]?.length ?? 0) <= 1) {
-      return
-    }
-
-    setMatrix(
-      matrix.map((row) =>
-        row.slice(0, -1),
-      ),
-    )
-  }
-
-  const addComponentA = () => {
-    if (!newValueA.trim()) {
-      return
-    }
-
-    addRow(
-      matrixA,
-      setMatrixA,
-      Number(newValueA),
-    )
-
-    setNewValueA('')
-  }
-
-  const addComponentB = () => {
-    if (!newValueB.trim()) {
-      return
-    }
-
-    addRow(
-      matrixB,
-      setMatrixB,
-      Number(newValueB),
-    )
-
-    setNewValueB('')
-  }
-
-  const renderMatrix = (
-    matrix: Matrix,
-    color = 'text-slate-900',
-  ) => (
-    <div className="space-y-2">
-      {matrix.map((row, rowIndex) => (
-        <p
-          key={rowIndex}
-          className={`font-mono text-lg ${color}`}
-        >
-          [{row.join(', ')}]
-        </p>
-      ))}
-    </div>
-  )
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <div>
-
       {/* ENCABEZADO */}
-
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">
           Matrices
         </h1>
 
         <p className="mt-2 text-slate-500">
-          Operaciones matemáticas con matrices.
+          Gestión y operaciones matemáticas con matrices
+          almacenadas en el backend.
         </p>
       </div>
 
-      {/* ESTADO */}
-
-      <div
-        className={`mb-6 rounded-xl border p-4 ${
-          sameDimensions
-            ? 'border-green-200 bg-green-50'
-            : 'border-red-200 bg-red-50'
-        }`}
-      >
-        <p
-          className={`text-sm font-medium ${
-            sameDimensions
-              ? 'text-green-700'
-              : 'text-red-700'
-          }`}
-        >
-          {sameDimensions
-            ? `Dimensiones compatibles para suma y resta: ${matrixA.length} × ${matrixA[0].length}.`
-            : 'Las matrices deben tener las mismas dimensiones para realizar suma y resta.'}
-        </p>
-      </div>
-
-      {/* MATRICES */}
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-
-        {/* MATRIZ A */}
-
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Matriz A
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                {matrixA.length} × {matrixA[0].length}
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-
-              <button
-                type="button"
-                onClick={() =>
-                  addColumn(
-                    matrixA,
-                    setMatrixA,
-                    0,
-                  )
-                }
-                className="rounded-lg border border-blue-300 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50"
-              >
-                + Columna
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  removeColumn(
-                    matrixA,
-                    setMatrixA,
-                  )
-                }
-                className="rounded-lg border border-red-300 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
-              >
-                - Columna
-              </button>
-
-            </div>
-
-          </div>
-
-          <div className="mt-5 space-y-3">
-
-            {matrixA.map(
-              (row, rowIndex) => (
-                <div
-                  key={rowIndex}
-                  className="flex gap-3"
-                >
-
-                  {row.map(
-                    (value, columnIndex) => (
-                      <input
-                        key={columnIndex}
-                        type="number"
-                        value={value}
-                        onChange={(event) =>
-                          updateMatrix(
-                            matrixA,
-                            setMatrixA,
-                            rowIndex,
-                            columnIndex,
-                            Number(
-                              event.target.value,
-                            ),
-                          )
-                        }
-                        className="w-20 rounded-lg border border-slate-300 px-3 py-2 text-center outline-none focus:border-blue-500"
-                      />
-                    ),
-                  )}
-
-                </div>
-              ),
-            )}
-
-          </div>
-
-          <div className="mt-5 flex gap-2">
-
-            <input
-              type="number"
-              value={newValueA}
-              onChange={(event) =>
-                setNewValueA(
-                  event.target.value,
-                )
-              }
-              placeholder="Valor fila"
-              className="flex-1 rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
-            />
-
-            <button
-              type="button"
-              onClick={addComponentA}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + Fila
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                removeRow(
-                  matrixA,
-                  setMatrixA,
-                )
-              }
-              className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-            >
-              - Fila
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* MATRIZ B */}
-
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Matriz B
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                {matrixB.length} × {matrixB[0].length}
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-
-              <button
-                type="button"
-                onClick={() =>
-                  addColumn(
-                    matrixB,
-                    setMatrixB,
-                    0,
-                  )
-                }
-                className="rounded-lg border border-blue-300 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50"
-              >
-                + Columna
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  removeColumn(
-                    matrixB,
-                    setMatrixB,
-                  )
-                }
-                className="rounded-lg border border-red-300 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
-              >
-                - Columna
-              </button>
-
-            </div>
-
-          </div>
-
-          <div className="mt-5 space-y-3">
-
-            {matrixB.map(
-              (row, rowIndex) => (
-                <div
-                  key={rowIndex}
-                  className="flex gap-3"
-                >
-
-                  {row.map(
-                    (value, columnIndex) => (
-                      <input
-                        key={columnIndex}
-                        type="number"
-                        value={value}
-                        onChange={(event) =>
-                          updateMatrix(
-                            matrixB,
-                            setMatrixB,
-                            rowIndex,
-                            columnIndex,
-                            Number(
-                              event.target.value,
-                            ),
-                          )
-                        }
-                        className="w-20 rounded-lg border border-slate-300 px-3 py-2 text-center outline-none focus:border-blue-500"
-                      />
-                    ),
-                  )}
-
-                </div>
-              ),
-            )}
-
-          </div>
-
-          <div className="mt-5 flex gap-2">
-
-            <input
-              type="number"
-              value={newValueB}
-              onChange={(event) =>
-                setNewValueB(
-                  event.target.value,
-                )
-              }
-              placeholder="Valor fila"
-              className="flex-1 rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
-            />
-
-            <button
-              type="button"
-              onClick={addComponentB}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + Fila
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                removeRow(
-                  matrixB,
-                  setMatrixB,
-                )
-              }
-              className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-            >
-              - Fila
-            </button>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* OPERACIONES */}
-
-      <div className="mt-8">
-
-        <h2 className="mb-4 text-xl font-bold text-slate-900">
-          Operaciones
-        </h2>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-
-          {/* SUMA */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <h3 className="font-semibold text-slate-900">
-              A + B
-            </h3>
-
-            <div className="mt-4">
-
-              {sameDimensions
-                ? renderMatrix(
-                    suma,
-                  )
-                : (
-                  <p className="text-sm text-red-500">
-                    Dimensiones incompatibles.
-                  </p>
-                )}
-
-            </div>
-
-          </div>
-
-          {/* RESTA */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <h3 className="font-semibold text-slate-900">
-              A - B
-            </h3>
-
-            <div className="mt-4">
-
-              {sameDimensions
-                ? renderMatrix(
-                    resta,
-                  )
-                : (
-                  <p className="text-sm text-red-500">
-                    Dimensiones incompatibles.
-                  </p>
-                )}
-
-            </div>
-
-          </div>
-
-          {/* MULTIPLICACIÓN */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <h3 className="font-semibold text-slate-900">
-              A × B
-            </h3>
-
-            <div className="mt-4">
-
-              {canMultiply
-                ? renderMatrix(
-                    multiplicacion,
-                    'text-blue-600',
-                  )
-                : (
-                  <p className="text-sm text-red-500">
-                    Las columnas de A deben coincidir con las filas de B.
-                  </p>
-                )}
-
-            </div>
-
-          </div>
-
-          {/* TRANSPUESTAS */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <h3 className="font-semibold text-slate-900">
-              Transpuesta
-            </h3>
-
-            <div className="mt-4 grid grid-cols-2 gap-6">
-
-              <div>
-                <p className="mb-2 text-sm text-slate-500">
-                  Aᵀ
-                </p>
-
-                {renderMatrix(
-                  transposeA,
-                )}
-              </div>
-
-              <div>
-                <p className="mb-2 text-sm text-slate-500">
-                  Bᵀ
-                </p>
-
-                {renderMatrix(
-                  transposeB,
-                )}
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* DETERMINANTES */}
-
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Determinante de A
+      {/* ERROR */}
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">
+            {error}
           </p>
-
-          <p className="mt-3 text-2xl font-bold text-blue-600">
-            {determinantA !== null
-              ? determinantA
-              : 'Disponible para matrices 2 × 2'}
-          </p>
-
         </div>
+      )}
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Determinante de B
-          </p>
-
-          <p className="mt-3 text-2xl font-bold text-blue-600">
-            {determinantB !== null
-              ? determinantB
-              : 'Disponible para matrices 2 × 2'}
-          </p>
-
-        </div>
-
-      </div>
-
-      {/* ESCALAR */}
-
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
+      {/* CREAR MATRIZ */}
+      <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-bold text-slate-900">
-          Multiplicación por escalar
+          Registrar matriz
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          Multiplica todos los elementos de la matriz A por un número.
+          Los datos serán guardados directamente en
+          PostgreSQL mediante FastAPI.
         </p>
 
-        <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center">
-
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
           <input
-            type="number"
-            value={scalar}
+            value={newName}
             onChange={(event) =>
-              setScalar(event.target.value)
+              setNewName(event.target.value)
             }
-            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 md:w-32"
+            placeholder="Nombre de la matriz"
+            className="rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
           />
 
-          <div className="rounded-lg bg-slate-50 px-5 py-3">
-
-            <span className="text-sm text-slate-500">
-              Resultado:
-            </span>
-
-            <span className="ml-2 font-bold text-slate-900">
-              {scalarMatrix.map(
-                (row) => `[${row.join(', ')}]`,
-              ).join(' ')}
-            </span>
-
-          </div>
-
+          <input
+            value={newDescription}
+            onChange={(event) =>
+              setNewDescription(
+                event.target.value
+              )
+            }
+            placeholder="Descripción"
+            className="rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+          />
         </div>
 
-      </div>
+        <textarea
+          value={newValues}
+          onChange={(event) =>
+            setNewValues(event.target.value)
+          }
+          placeholder={'1,2,3\n4,5,6'}
+          rows={4}
+          className="mt-4 w-full rounded-lg border border-slate-300 px-4 py-3 font-mono outline-none focus:border-blue-500"
+        />
 
+        <button
+          type="button"
+          onClick={handleCreateMatrix}
+          disabled={saving}
+          className="mt-4 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {saving
+            ? 'Guardando...'
+            : 'Registrar matriz'}
+        </button>
+      </section>
+
+      {/* MATRICES REALES */}
+      <section className="mb-8">
+        <h2 className="mb-4 text-xl font-bold text-slate-900">
+          Matrices registradas
+        </h2>
+
+        {loading ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <p className="text-slate-500">
+              Cargando matrices...
+            </p>
+          </div>
+        ) : matrices.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <p className="text-slate-500">
+              No existen matrices registradas.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {matrices.map((matrix) => (
+              <div
+                key={matrix.id}
+                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">
+                      {matrix.name}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {matrix.rows} × {matrix.columns}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600">
+                    ID {matrix.id}
+                  </span>
+                </div>
+
+                {matrix.description && (
+                  <p className="mt-3 text-sm text-slate-500">
+                    {matrix.description}
+                  </p>
+                )}
+
+                <div className="mt-5">
+                  {renderMatrix(matrix.values)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* OPERACIONES */}
+      {matrices.length > 0 && (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900">
+            Operaciones matriciales
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Las operaciones son ejecutadas por FastAPI
+            utilizando el motor matemático del backend.
+          </p>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {/* PRIMERA MATRIZ */}
+            <select
+              value={selectedMatrixA}
+              onChange={(event) =>
+                setSelectedMatrixA(
+                  event.target.value
+                    ? Number(event.target.value)
+                    : ''
+                )
+              }
+              className="rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+            >
+              <option value="">
+                Seleccionar matriz A
+              </option>
+
+              {matrices.map((matrix) => (
+                <option
+                  key={matrix.id}
+                  value={matrix.id}
+                >
+                  {matrix.name} — {matrix.rows}×
+                  {matrix.columns}
+                </option>
+              ))}
+            </select>
+
+            {/* SEGUNDA MATRIZ */}
+            <select
+              value={selectedMatrixB}
+              onChange={(event) =>
+                setSelectedMatrixB(
+                  event.target.value
+                    ? Number(event.target.value)
+                    : ''
+                )
+              }
+              disabled={
+                operation === 'transpose_matrix' ||
+                operation ===
+                'scalar_multiply_matrix'
+              }
+              className="rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 disabled:bg-slate-100"
+            >
+              <option value="">
+                Seleccionar matriz B
+              </option>
+
+              {matrices.map((matrix) => (
+                <option
+                  key={matrix.id}
+                  value={matrix.id}
+                >
+                  {matrix.name} — {matrix.rows}×
+                  {matrix.columns}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* OPERACIÓN */}
+          <select
+            value={operation}
+            onChange={(event) =>
+              setOperation(
+                event.target.value as MatrixOperation
+              )
+            }
+            className="mt-4 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+          >
+            <option value="add_matrix">
+              Suma A + B
+            </option>
+
+            <option value="subtract_matrix">
+              Resta A - B
+            </option>
+
+            <option value="multiply_matrix">
+              Multiplicación A × B
+            </option>
+
+            <option value="transpose_matrix">
+              Transpuesta de A
+            </option>
+
+            <option value="scalar_multiply_matrix">
+              Multiplicación de A por escalar
+            </option>
+          </select>
+
+          {/* ESCALAR */}
+          {operation ===
+            'scalar_multiply_matrix' && (
+              <input
+                type="number"
+                value={scalar}
+                onChange={(event) =>
+                  setScalar(event.target.value)
+                }
+                placeholder="Escalar"
+                className="mt-4 rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+              />
+            )}
+
+          {/* BOTÓN */}
+          <button
+            type="button"
+            onClick={handleOperation}
+            disabled={operating}
+            className="mt-4 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {operating
+              ? 'Ejecutando...'
+              : 'Ejecutar operación'}
+          </button>
+
+          {/* RESULTADO */}
+          {operationResult !== null && (
+            <div className="mt-6 rounded-xl bg-slate-50 p-5">
+              <p className="mb-3 text-sm font-medium text-slate-500">
+                Resultado devuelto por el backend
+              </p>
+
+              {Array.isArray(
+                operationResult
+              ) &&
+                Array.isArray(
+                  operationResult[0]
+                ) ? (
+                renderMatrix(
+                  operationResult as number[][],
+                  'text-blue-600'
+                )
+              ) : (
+                <p className="font-mono text-lg font-bold text-blue-600">
+                  {String(operationResult)}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }
