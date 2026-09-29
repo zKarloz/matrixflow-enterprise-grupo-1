@@ -12,8 +12,8 @@
 //     https://matrixflow-backend-oby4.onrender.com
 // ============================================================
 
-// URL del backend local de FastAPI durante el desarrollo.
-const API_URL = 'http://127.0.0.1:8000'
+// URL del backend de producción desplegado en Render.
+const API_URL = 'https://matrixflow-backend-oby4.onrender.com'
 
 // ============================================================
 // PETICIONES AUTENTICADAS
