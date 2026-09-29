@@ -45,7 +45,8 @@ router = APIRouter(
 def get_audit_logs(
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador")
+        # El historial puede ser consultado por Administrador y Analista.
+        require_roles("Administrador", "Analista")
     ),
 ):
     """
