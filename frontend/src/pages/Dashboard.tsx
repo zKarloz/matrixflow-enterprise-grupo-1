@@ -12,15 +12,30 @@ import SalesByBranchChart from '../components/dashboard/SalesByBranchChart'
 import SalesByProductChart from '../components/dashboard/SalesByProductChart'
 import RecentActivity from '../components/dashboard/RecentActivity'
 
-import { getInventory, getSales } from '../services/api'
+import {
+  getCurrentUser,
+  getInventory,
+  getReports,
+  getSales,
+} from '../services/api'
 
 // Importamos los tipos únicamente para TypeScript.
 import type {
   InventoryItem,
+  ReportsResponse,
   Sale,
 } from '../services/api'
 
+// Roles disponibles en MatrixFlow.
+type UserRole = 'Administrador' | 'Analista' | 'Consulta'
+
 function Dashboard() {
+  // Obtenemos el usuario autenticado y su rol desde el JWT.
+  const currentUser = getCurrentUser()
+
+  // Guardamos el rol actual para decidir qué endpoints puede consultar.
+  const currentRole = currentUser?.role as UserRole | undefined
+
   // Guardamos el total real de ventas.
   const [totalSales, setTotalSales] = useState(0)
 
@@ -34,13 +49,40 @@ function Dashboard() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Cargamos las métricas reales del Dashboard.
+    // Cargamos las métricas utilizando únicamente endpoints
+    // permitidos para el rol autenticado.
     async function loadDashboardStats() {
       try {
         setLoading(true)
         setError('')
 
-        // Consultamos ventas e inventario en paralelo.
+        // Consulta puede utilizar /reports porque este endpoint
+        // está autorizado para los tres roles.
+        if (currentRole === 'Consulta') {
+          const reports: ReportsResponse = await getReports()
+
+          // Sumamos las ventas reales entregadas por el reporte.
+          const salesTotal = reports.sales.reduce(
+            (accumulator, sale) =>
+              accumulator + Number(sale.total),
+            0,
+          )
+
+          // Sumamos el stock real entregado por el reporte.
+          const inventoryTotal = reports.inventory.reduce(
+            (accumulator, item) =>
+              accumulator + Number(item.stock),
+            0,
+          )
+
+          setTotalSales(salesTotal)
+          setTotalInventory(inventoryTotal)
+
+          return
+        }
+
+        // Administrador y Analista pueden consultar directamente
+        // los endpoints de ventas e inventario.
         const [sales, inventory] = await Promise.all([
           getSales(),
           getInventory(),
@@ -76,7 +118,7 @@ function Dashboard() {
     }
 
     loadDashboardStats()
-  }, [])
+  }, [currentRole])
 
   return (
     <div>
@@ -135,65 +177,85 @@ function Dashboard() {
 
       </div>
 
-      {/* Ventas agrupadas por período utilizando datos reales. */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* Los componentes que consultan /sales solamente se muestran
+          a los roles que tienen autorización para ese endpoint. */}
+      {currentRole !== 'Consulta' && (
+        <>
+          {/* Ventas agrupadas por período utilizando datos reales. */}
+          <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
 
-        <div className="mb-6">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-slate-900">
+                Ventas por período
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Evolución de las ventas registradas.
+              </p>
+            </div>
+
+            <SalesChart />
+
+          </div>
+
+          {/* Gráficos secundarios del Dashboard. */}
+          <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Ventas por sucursal
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Distribución de ventas entre las sucursales.
+                </p>
+              </div>
+
+              <SalesByBranchChart />
+
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Ventas por producto
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Información disponible según los datos actuales.
+                </p>
+              </div>
+
+              <SalesByProductChart />
+
+            </div>
+
+          </div>
+
+          {/* Actividad reciente basada en ventas reales. */}
+          <div className="mt-8">
+            <RecentActivity />
+          </div>
+        </>
+      )}
+
+      {/* Consulta recibe una explicación clara en lugar de intentar
+          acceder a endpoints que su rol no tiene autorizados. */}
+      {currentRole === 'Consulta' && (
+        <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold text-slate-900">
-            Ventas por período
+            Vista de consulta
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Evolución de las ventas registradas.
+          <p className="mt-2 text-sm text-slate-500">
+            Las métricas mostradas corresponden a información real
+            obtenida mediante los reportes autorizados para este rol.
           </p>
         </div>
-
-        <SalesChart />
-
-      </div>
-
-      {/* Gráficos secundarios del Dashboard. */}
-      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
-
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900">
-              Ventas por sucursal
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Distribución de ventas entre las sucursales.
-            </p>
-          </div>
-
-          <SalesByBranchChart />
-
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900">
-              Ventas por producto
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Información disponible según los datos actuales.
-            </p>
-          </div>
-
-          <SalesByProductChart />
-
-        </div>
-
-      </div>
-
-      {/* Actividad reciente basada en ventas reales. */}
-      <div className="mt-8">
-        <RecentActivity />
-      </div>
-
+      )}
     </div>
   )
 }
