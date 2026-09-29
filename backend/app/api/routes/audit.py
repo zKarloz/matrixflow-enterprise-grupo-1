@@ -30,6 +30,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import require_roles
 from app.services.audit_service import list_audit_logs
 
 
@@ -43,6 +44,9 @@ router = APIRouter(
 @router.get("")
 def get_audit_logs(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
     """
     Obtiene todos los registros de auditoría.

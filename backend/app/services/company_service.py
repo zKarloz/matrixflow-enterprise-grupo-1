@@ -1,5 +1,10 @@
-# Este archivo contiene la lógica de negocio relacionada con las empresas.
-# El service se encarga de coordinar la validación y el repository.
+# ============================================================
+# MatrixFlow Enterprise
+# Servicio de empresas
+# ============================================================
+# Este archivo contiene la lógica de negocio relacionada
+# con las empresas.
+# ============================================================
 
 from sqlalchemy.orm import Session
 
@@ -10,47 +15,53 @@ from app.repositories.company_repository import (
 )
 
 
+# ------------------------------------------------------------
+# Listar empresas
+# ------------------------------------------------------------
 def list_companies(db: Session):
-    """
-    Devuelve todas las empresas registradas.
-    """
-
-    # El repository se encarga de consultar la base de datos.
+    # Obtiene todas las empresas desde el repositorio.
     return get_all_companies(db)
 
 
+# ------------------------------------------------------------
+# Obtener una empresa
+# ------------------------------------------------------------
 def get_company(db: Session, company_id: int):
-    """
-    Obtiene una empresa por su identificador.
-    """
-
-    # Consultamos la empresa.
+    # Busca una empresa por su ID.
     company = get_company_by_id(db, company_id)
 
-    # Si no existe, informamos el error para que la ruta
-    # pueda convertirlo posteriormente en una respuesta HTTP.
+    # Si no existe, informamos el error al endpoint.
     if company is None:
-        raise ValueError("La empresa no existe.")
+        raise ValueError("Empresa no encontrada")
 
     return company
 
 
+# ------------------------------------------------------------
+# Registrar una empresa
+# ------------------------------------------------------------
 def register_company(
     db: Session,
     name: str,
-    tax_id: str | None = None,
+    tax_id: str,
+    address: str | None = None,
+    phone: str | None = None,
+    email: str | None = None,
 ):
-    """
-    Registra una nueva empresa.
-    """
-
     # Validamos que el nombre no esté vacío.
-    if not name.strip():
-        raise ValueError("El nombre de la empresa es obligatorio.")
+    if not name or not name.strip():
+        raise ValueError("El nombre de la empresa es obligatorio")
 
-    # Delegamos la persistencia al repository.
+    # Validamos que el RUC/identificador tributario no esté vacío.
+    if not tax_id or not tax_id.strip():
+        raise ValueError("El tax_id de la empresa es obligatorio")
+
+    # Creamos la empresa utilizando todos los datos disponibles.
     return create_company(
         db=db,
-        name=name,
-        tax_id=tax_id,
+        name=name.strip(),
+        tax_id=tax_id.strip(),
+        address=address,
+        phone=phone,
+        email=email,
     )

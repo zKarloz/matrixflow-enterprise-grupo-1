@@ -25,11 +25,11 @@ alembic
 # Soporte para autenticación mediante JWT.
 python-jose[cryptography]
 
-# Librería para trabajar con contraseñas de forma segura.
-# bcrypt 4.3.0 se fija porque Passlib 1.7.4 presenta
-# incompatibilidad con bcrypt 5.0.0.
+# Framework para hashing y verificación de contraseñas.
 passlib==1.7.4
-bcrypt==4.3.0
+
+# Versión compatible con Passlib 1.7.4.
+bcrypt==4.0.1
 
 # Permite configurar formularios y archivos enviados a FastAPI.
 python-multipart

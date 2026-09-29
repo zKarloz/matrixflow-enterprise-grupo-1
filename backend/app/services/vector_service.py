@@ -1,6 +1,10 @@
-# Este archivo contiene la lógica de negocio relacionada con vectores.
-# Coordina los schemas, repositories y posteriormente los algoritmos
-# matemáticos utilizados por MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Service de vectores
+# ============================================================
+# Este archivo contiene la lógica de negocio relacionada
+# con el registro y consulta de vectores.
+# ============================================================
 
 from sqlalchemy.orm import Session
 
@@ -18,7 +22,7 @@ def list_vectors(db: Session):
     Obtiene todos los vectores registrados.
     """
 
-    # Consultamos los vectores mediante el repository.
+    # Delegamos la consulta al repository.
     return get_all_vectors(db)
 
 
@@ -31,7 +35,10 @@ def get_vector(
     """
 
     # Buscamos el vector principal.
-    vector = get_vector_by_id(db, vector_id)
+    vector = get_vector_by_id(
+        db,
+        vector_id,
+    )
 
     # Validamos que exista.
     if vector is None:
@@ -48,15 +55,22 @@ def get_vector(
 
 def register_vector(
     db: Session,
+    company_id: int,
     name: str,
     values: list[float],
-    user_id: int | None = None,
+    description: str | None = None,
 ):
     """
     Registra un vector junto con todos sus valores.
     """
 
-    # Validamos el nombre.
+    # Validamos que exista una empresa válida.
+    if company_id <= 0:
+        raise ValueError(
+            "La empresa del vector no es válida."
+        )
+
+    # Validamos que el nombre tenga contenido.
     if not name.strip():
         raise ValueError(
             "El nombre del vector es obligatorio."
@@ -68,15 +82,24 @@ def register_vector(
             "El vector debe contener al menos un valor."
         )
 
-    # Primero creamos el registro principal.
+    # La dimensión corresponde a la cantidad
+    # de elementos recibidos.
+    dimension = len(values)
+
+    # Creamos el registro principal del vector.
     vector = create_vector(
         db=db,
+        company_id=company_id,
         name=name,
-        user_id=user_id,
+        description=description,
+        dimension=dimension,
     )
 
-    # Guardamos cada elemento con su posición.
+    # Guardamos cada elemento junto con su posición.
     for position, value in enumerate(values):
+
+        # "position" y "value" corresponden a las
+        # columnas reales de vector_values.
         create_vector_value(
             db=db,
             vector_id=vector.id,

@@ -1,8 +1,27 @@
-# Este archivo define los modelos de las tablas "inventory"
-# e "inventory_movements".
-# Permiten controlar las existencias y los movimientos del inventario.
+# ============================================================
+# MatrixFlow Enterprise
+# Modelos de inventario
+# ============================================================
+#
+# Este archivo contiene los modelos correspondientes a:
+#
+# 1. inventory
+# 2. inventory_movements
+#
+# Ambos modelos deben coincidir con la estructura real
+# de PostgreSQL.
+# ============================================================
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
+
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -10,66 +29,104 @@ from app.core.database import Base
 
 class Inventory(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla inventory.
+    Representa las existencias de un producto en una sucursal.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "inventory"
 
     # Identificador único del registro de inventario.
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
     # Sucursal donde se encuentra el inventario.
+    # Relación: inventory.branch_id -> branches.id
     branch_id = Column(
         Integer,
         ForeignKey("branches.id"),
         nullable=False,
     )
 
-    # Producto al que corresponde el inventario.
+    # Producto al que pertenece este inventario.
+    # Relación: inventory.product_id -> products.id
     product_id = Column(
         Integer,
         ForeignKey("products.id"),
         nullable=False,
     )
 
-    # Cantidad disponible.
-    quantity = Column(Integer, nullable=False, default=0)
+    # Cantidad disponible actualmente.
+    # PostgreSQL utiliza el nombre "stock".
+    stock = Column(
+        Integer,
+        nullable=False,
+    )
+
+    # Cantidad mínima permitida antes de generar una alerta.
+    minimum_stock = Column(
+        Integer,
+        nullable=False,
+    )
+
+    # Costo unitario del producto en inventario.
+    #
+    # PostgreSQL utiliza NUMERIC(10,2), por lo que usamos
+    # Numeric en lugar de Float para conservar precisión decimal.
+    unit_cost = Column(
+        Numeric(10, 2),
+        nullable=True,
+    )
 
 
 class InventoryMovement(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla inventory_movements.
+    Representa un movimiento realizado sobre un inventario.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "inventory_movements"
 
     # Identificador único del movimiento.
-    id = Column(Integer, primary_key=True, index=True)
-
-    # Producto afectado por el movimiento.
-    product_id = Column(
+    id = Column(
         Integer,
-        ForeignKey("products.id"),
-        nullable=False,
+        primary_key=True,
+        index=True,
     )
 
-    # Sucursal donde ocurre el movimiento.
-    branch_id = Column(
+    # Inventario sobre el cual se realizó el movimiento.
+    # Relación: inventory_movements.inventory_id -> inventory.id
+    inventory_id = Column(
         Integer,
-        ForeignKey("branches.id"),
+        ForeignKey("inventory.id"),
         nullable=False,
     )
 
     # Tipo de movimiento.
-    # Por ejemplo: entrada, salida o ajuste.
-    movement_type = Column(String(30), nullable=False)
+    # Ejemplos: entrada, salida, ajuste, etc.
+    movement_type = Column(
+        String(30),
+        nullable=False,
+    )
 
-    # Cantidad involucrada en el movimiento.
-    quantity = Column(Integer, nullable=False)
+    # Cantidad afectada por el movimiento.
+    quantity = Column(
+        Integer,
+        nullable=False,
+    )
 
-    # Fecha y hora del movimiento.
+    # Descripción opcional del movimiento.
+    description = Column(
+        String(255),
+        nullable=True,
+    )
+
+    # Fecha y hora en que se registró el movimiento.
+    #
+    # PostgreSQL genera este valor automáticamente cuando
+    # no se proporciona uno.
     created_at = Column(
         DateTime,
         nullable=False,

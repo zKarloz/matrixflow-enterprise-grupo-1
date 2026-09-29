@@ -15,6 +15,9 @@
 
 import { useNavigate } from 'react-router-dom'
 
+// Obtiene el usuario y rol de la sesión actual.
+import { getCurrentUser } from '../../services/api'
+
 
 function Header() {
 
@@ -25,6 +28,26 @@ function Header() {
   // Permite cambiar de ruta después de cerrar sesión.
   const navigate = useNavigate()
 
+  // Obtenemos la información del usuario conectado.
+  // Esta información se utiliza únicamente para mostrar
+  // datos dinámicos en la interfaz.
+  const currentUser = getCurrentUser()
+
+  // Mostramos un nombre sencillo basado en el rol.
+  // Posteriormente podremos obtener el nombre real desde el backend.
+  const displayName = currentUser
+    ? currentUser.role
+    : 'Usuario'
+
+  // Generamos las iniciales para el avatar.
+  const avatarInitials = currentUser
+    ? currentUser.role
+      .split(' ')
+      .map((word) => word[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase()
+    : 'US'
 
   // ==========================================================
   // CERRAR SESIÓN
@@ -101,7 +124,7 @@ function Header() {
 
             {/* Avatar. */}
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 font-semibold text-white">
-              JD
+              {avatarInitials}
             </div>
 
 
@@ -109,11 +132,11 @@ function Header() {
             <div>
 
               <p className="text-sm font-semibold text-slate-800">
-                Usuario
+                {displayName}
               </p>
 
               <p className="text-xs text-slate-500">
-                Administrador
+                Rol del sistema
               </p>
 
             </div>

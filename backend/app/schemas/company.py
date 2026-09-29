@@ -1,35 +1,47 @@
-# Este archivo define los datos que la API acepta y devuelve
-# cuando trabajamos con empresas en MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Schemas de empresas
+# ============================================================
+# Define los datos que recibe y devuelve la API para
+# las empresas.
+# ============================================================
 
 from pydantic import BaseModel
 
 
+# ------------------------------------------------------------
+# Datos comunes de una empresa
+# ------------------------------------------------------------
 class CompanyBase(BaseModel):
-    """
-    Datos básicos de una empresa.
-    """
-
-    # Nombre de la empresa.
+    # Nombre comercial o razón social de la empresa.
     name: str
 
+    # Identificador tributario.
+    # En nuestra BD es obligatorio.
+    tax_id: str
 
+    # Datos adicionales que permite la tabla companies.
+    address: str | None = None
+    phone: str | None = None
+    email: str | None = None
+
+
+# ------------------------------------------------------------
+# Datos utilizados para crear una empresa
+# ------------------------------------------------------------
 class CompanyCreate(CompanyBase):
-    """
-    Datos necesarios para crear una empresa.
-    """
-
+    # Hereda todos los campos de CompanyBase.
     pass
 
 
+# ------------------------------------------------------------
+# Datos devueltos por la API
+# ------------------------------------------------------------
 class CompanyResponse(CompanyBase):
-    """
-    Datos que la API devuelve cuando consulta una empresa.
-    """
-
-    # Identificador único de la empresa.
+    # Identificador generado por PostgreSQL.
     id: int
 
+    # Permite convertir directamente objetos SQLAlchemy
+    # en respuestas Pydantic.
     class Config:
-        # Permite convertir objetos de SQLAlchemy
-        # en objetos que Pydantic pueda devolver como JSON.
         from_attributes = True

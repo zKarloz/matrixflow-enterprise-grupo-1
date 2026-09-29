@@ -1,5 +1,13 @@
-# Este archivo contiene las consultas relacionadas con las matrices.
-# Permite guardar una matriz y consultar cada uno de sus valores.
+# ============================================================
+# MatrixFlow Enterprise
+# Repository de matrices
+# ============================================================
+# Este archivo contiene las consultas relacionadas con las
+# matrices y sus valores.
+#
+# IMPORTANTE:
+# La estructura sigue exactamente el modelo actual de PostgreSQL.
+# ============================================================
 
 from sqlalchemy.orm import Session
 
@@ -20,7 +28,7 @@ def get_matrix_by_id(db: Session, matrix_id: int):
     Obtiene una matriz mediante su identificador.
     """
 
-    # Buscamos la matriz por ID.
+    # Buscamos la matriz por su ID.
     return (
         db.query(Matrix)
         .filter(Matrix.id == matrix_id)
@@ -33,14 +41,14 @@ def get_matrix_values(db: Session, matrix_id: int):
     Obtiene todos los valores de una matriz.
     """
 
-    # Consultamos los valores de la matriz.
-    # Primero ordenamos por fila y después por columna.
+    # Consultamos los valores pertenecientes a la matriz.
+    # La BD utiliza "row" y "column" para indicar su posición.
     return (
         db.query(MatrixValue)
         .filter(MatrixValue.matrix_id == matrix_id)
         .order_by(
-            MatrixValue.row_index,
-            MatrixValue.column_index,
+            MatrixValue.row,
+            MatrixValue.column,
         )
         .all()
     )
@@ -48,26 +56,33 @@ def get_matrix_values(db: Session, matrix_id: int):
 
 def create_matrix(
     db: Session,
+    company_id: int,
     name: str,
-    user_id: int | None = None,
+    description: str | None,
+    rows: int,
+    columns: int,
 ):
     """
     Crea el registro principal de una matriz.
     """
 
-    # Creamos la matriz.
+    # Creamos la matriz utilizando exactamente las columnas
+    # existentes en PostgreSQL.
     matrix = Matrix(
+        company_id=company_id,
         name=name,
-        user_id=user_id,
+        description=description,
+        rows=rows,
+        columns=columns,
     )
 
-    # Agregamos la matriz.
+    # Agregamos la matriz a la sesión.
     db.add(matrix)
 
     # Guardamos los cambios.
     db.commit()
 
-    # Obtenemos el ID generado.
+    # Recuperamos los datos generados por la BD.
     db.refresh(matrix)
 
     return matrix
@@ -76,29 +91,30 @@ def create_matrix(
 def create_matrix_value(
     db: Session,
     matrix_id: int,
-    row_index: int,
-    column_index: int,
+    row: int,
+    column: int,
     value: float,
 ):
     """
     Guarda un valor individual de una matriz.
     """
 
-    # Creamos el valor indicando fila y columna.
+    # Creamos el valor utilizando los nombres reales
+    # de las columnas de PostgreSQL.
     matrix_value = MatrixValue(
         matrix_id=matrix_id,
-        row_index=row_index,
-        column_index=column_index,
+        row=row,
+        column=column,
         value=value,
     )
 
-    # Agregamos el valor.
+    # Agregamos el valor a la sesión.
     db.add(matrix_value)
 
     # Guardamos los cambios.
     db.commit()
 
-    # Actualizamos el objeto.
+    # Actualizamos el objeto con los datos persistidos.
     db.refresh(matrix_value)
 
     return matrix_value

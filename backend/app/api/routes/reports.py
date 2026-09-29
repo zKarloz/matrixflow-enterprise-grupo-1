@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import require_roles
 from app.services.report_service import (
     get_inventory_report,
     get_sales_report,
@@ -20,6 +21,9 @@ router = APIRouter(
 @router.get("")
 def get_reports(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador", "Analista", "Consulta")
+    ),
 ):
     """
     Obtiene información base para los reportes.

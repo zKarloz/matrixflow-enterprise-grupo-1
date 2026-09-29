@@ -1,21 +1,55 @@
-# Este archivo define el modelo de la tabla "categories".
-# Permite clasificar los productos de MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Modelo de categorías
+# ============================================================
+#
+# Este modelo representa la tabla "categories" de PostgreSQL.
+# PostgreSQL define exactamente las columnas:
+#
+# id
+# name
+# description
+# is_active
+#
+# Además, "name" tiene una restricción UNIQUE.
+# ============================================================
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Boolean, Column, Integer, String
 
 from app.core.database import Base
 
 
 class Category(Base):
     """
-    Modelo SQLAlchemy correspondiente a la tabla categories.
+    Representa una categoría de productos.
     """
 
-    # Nombre de la tabla en PostgreSQL.
+    # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "categories"
 
     # Identificador único de la categoría.
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
     # Nombre de la categoría.
-    name = Column(String(100), unique=True, nullable=False)
+    # PostgreSQL exige que sea único.
+    name = Column(
+        String(100),
+        nullable=False,
+        unique=True,
+    )
+
+    # Descripción opcional de la categoría.
+    description = Column(
+        String(255),
+        nullable=True,
+    )
+
+    # Indica si la categoría está activa.
+    is_active = Column(
+        Boolean,
+        nullable=False,
+    )

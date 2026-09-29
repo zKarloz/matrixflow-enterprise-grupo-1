@@ -20,11 +20,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_password_hash
-from app.repositories.user_repository import (
-    create_user,
-    get_all_users,
-)
+from app.core.security import get_password_hash, require_roles
+from app.repositories.user_repository import create_user, get_all_users
 from app.schemas.user import UserCreate, UserResponse
 
 
@@ -48,6 +45,9 @@ router = APIRouter(
 )
 def get_users(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
     """
     Obtiene todos los usuarios registrados.
@@ -72,6 +72,9 @@ def get_users(
 def create_new_user(
     data: UserCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
     """
     Crea un nuevo usuario.

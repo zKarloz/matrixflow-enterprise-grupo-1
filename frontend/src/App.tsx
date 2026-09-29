@@ -13,7 +13,7 @@
 // 6. Comprobar la conexión con FastAPI.
 // ============================================================
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   BrowserRouter,
   Routes,
@@ -60,6 +60,40 @@ import Configuracion from './pages/Configuracion'
 // Página de seguridad y consulta de accesos.
 import Seguridad from './pages/Seguridad'
 
+// ============================================================
+// RUTA PROTEGIDA POR ROL
+// ============================================================
+//
+// Este componente complementa a ProtectedRoute.
+//
+// ProtectedRoute comprueba que exista una sesión.
+// RoleProtectedRoute comprueba además que el usuario tenga
+// uno de los roles autorizados para la página.
+//
+// El backend continúa siendo la autoridad definitiva.
+// ============================================================
+
+type UserRole = 'Administrador' | 'Analista' | 'Consulta'
+
+interface RoleProtectedRouteProps {
+  // Página que queremos proteger.
+  children: ReactNode
+
+  // Roles que pueden acceder a la página.
+  allowedRoles: UserRole[]
+}
+
+function RoleProtectedRoute({
+  children,
+  allowedRoles,
+}: RoleProtectedRouteProps) {
+
+  return (
+    <ProtectedRoute allowedRoles={allowedRoles}>
+      {children}
+    </ProtectedRoute>
+  )
+}
 
 // ============================================================
 // PROPIEDADES DEL LAYOUT PRINCIPAL
@@ -116,8 +150,10 @@ function AppLayout({
 
             {/* ==================================================
                 DASHBOARD
-                ================================================== */}
-
+                ==================================================
+      
+            Los tres roles pueden visualizar el Dashboard.
+            */}
             <Route
               path="/"
               element={<Dashboard />}
@@ -126,132 +162,248 @@ function AppLayout({
 
             {/* ==================================================
                 EMPRESA
-                ================================================== */}
+                ==================================================
+      
+                Estas funciones corresponden exclusivamente
+                al Administrador.
+            */}
 
-            {/* Página principal de Empresa. */}
             <Route
               path="/empresa"
-              element={<Empresa />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador']}
+                >
+                  <Empresa />
+                </RoleProtectedRoute>
+              }
             />
 
-            {/* Gestión de sucursales. */}
             <Route
               path="/empresa/sucursales"
-              element={<Sucursales />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador']}
+                >
+                  <Sucursales />
+                </RoleProtectedRoute>
+              }
             />
 
-            {/* Gestión de productos. */}
             <Route
               path="/empresa/productos"
-              element={<Productos />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador']}
+                >
+                  <Productos />
+                </RoleProtectedRoute>
+              }
             />
 
 
             {/* ==================================================
                 VENTAS
-                ================================================== */}
+                ==================================================
+                
+                Administrador y Analista pueden trabajar con ventas.
+            */}
 
             <Route
               path="/ventas"
-              element={<Ventas />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <Ventas />
+                </RoleProtectedRoute>
+              }
             />
 
 
             {/* ==================================================
                 INVENTARIO
-                ================================================== */}
+                ==================================================
+                
+                Administrador y Analista pueden trabajar con inventario.
+            */}
 
             <Route
               path="/inventario"
-              element={<Inventario />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <Inventario />
+                </RoleProtectedRoute>
+              }
             />
 
 
             {/* ==================================================
                 ANÁLISIS MATEMÁTICO
-                ================================================== */}
+                ==================================================
+                
+                Administrador y Analista pueden utilizar las
+                herramientas matemáticas.
+            */}
 
-            {/* Página principal del módulo. */}
             <Route
               path="/analisis-matematico"
-              element={<Vectores />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <Vectores />
+                </RoleProtectedRoute>
+              }
             />
 
-            {/* Vectores. */}
             <Route
               path="/analisis-matematico/vectores"
-              element={<Vectores />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <Vectores />
+                </RoleProtectedRoute>
+              }
             />
 
-            {/* Matrices. */}
             <Route
               path="/analisis-matematico/matrices"
-              element={<Matrices />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <Matrices />
+                </RoleProtectedRoute>
+              }
             />
 
-            {/* Operaciones. */}
             <Route
               path="/analisis-matematico/operaciones"
-              element={<Operaciones />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <Operaciones />
+                </RoleProtectedRoute>
+              }
             />
 
-            {/* Combinaciones lineales. */}
             <Route
               path="/analisis-matematico/combinaciones-lineales"
-              element={<CombinacionesLineales />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <CombinacionesLineales />
+                </RoleProtectedRoute>
+              }
             />
 
 
             {/* ==================================================
                 HISTORIAL
-                ================================================== */}
+                ==================================================
+                
+                El historial corresponde a la trazabilidad de las
+                operaciones realizadas por los usuarios autorizados.
+            */}
 
             <Route
               path="/historial"
-              element={<Historial />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador', 'Analista']}
+                >
+                  <Historial />
+                </RoleProtectedRoute>
+              }
             />
 
 
             {/* ==================================================
                 REPORTES
-                ================================================== */}
+                ==================================================
+                
+                Los tres roles pueden consultar los reportes
+                autorizados.
+            */}
 
             <Route
               path="/reportes"
-              element={<Reportes />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                    'Consulta',
+                  ]}
+                >
+                  <Reportes />
+                </RoleProtectedRoute>
+              }
             />
 
 
             {/* ==================================================
                 USUARIOS
-                ================================================== */}
+                ==================================================
+                
+                Exclusivo del Administrador.
+            */}
 
             <Route
               path="/usuarios"
-              element={<Usuarios />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador']}
+                >
+                  <Usuarios />
+                </RoleProtectedRoute>
+              }
             />
+
 
             {/* ==================================================
                 SEGURIDAD Y ACCESOS
-                ================================================== */}
+                ==================================================
+                
+                Exclusivo del Administrador.
+            */}
 
-            {/* Página de auditoría y seguridad del sistema. */}
             <Route
               path="/seguridad"
-              element={<Seguridad />}
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador']}
+                >
+                  <Seguridad />
+                </RoleProtectedRoute>
+              }
             />
+
 
             {/* ==================================================
                 CONFIGURACIÓN
-                ================================================== */}
+                ==================================================
+                
+                Exclusivo del Administrador.
+            */}
 
             <Route
               path="/configuracion"
               element={
-                <Configuracion
-                  darkMode={darkMode}
-                  setDarkMode={setDarkMode}
-                />
+                <RoleProtectedRoute
+                  allowedRoles={['Administrador']}
+                >
+                  <Configuracion
+                    darkMode={darkMode}
+                    setDarkMode={setDarkMode}
+                  />
+                </RoleProtectedRoute>
               }
             />
 

@@ -27,10 +27,12 @@ from app.schemas.product import (
 )
 
 # Esquemas de ventas.
+# Separamos los schemas de la venta principal de los schemas de sus detalles.
 from app.schemas.sale import (
-    SaleBase,
     SaleCreate,
     SaleResponse,
+    SaleDetailCreate,
+    SaleDetailResponse,
 )
 
 # Esquemas de inventario.

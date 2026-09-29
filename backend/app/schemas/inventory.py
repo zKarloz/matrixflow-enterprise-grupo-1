@@ -1,41 +1,82 @@
-# Este archivo define los datos que la API acepta y devuelve
-# cuando trabajamos con el inventario de MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Schemas de inventario
+# ============================================================
+# Define los datos que la API recibe y devuelve para:
+#
+# - inventory
+# - inventory_movements
+#
+# Los nombres coinciden con la estructura real de PostgreSQL.
+# ============================================================
 
 from pydantic import BaseModel
 
 
-class InventoryBase(BaseModel):
-    """
-    Datos básicos del inventario de un producto en una sucursal.
-    """
+# ============================================================
+# Inventario
+# ============================================================
 
+class InventoryBase(BaseModel):
     # Identificador de la sucursal.
     branch_id: int
 
     # Identificador del producto.
     product_id: int
 
-    # Cantidad disponible actualmente.
-    quantity: int
+    # Cantidad actual disponible.
+    stock: int
+
+    # Cantidad mínima permitida antes de considerar
+    # que el producto necesita reposición.
+    minimum_stock: int
+
+    # Costo unitario opcional.
+    unit_cost: float | None = None
 
 
 class InventoryCreate(InventoryBase):
-    """
-    Datos necesarios para registrar un inventario.
-    """
-
+    # No necesita campos adicionales por ahora.
     pass
 
 
 class InventoryResponse(InventoryBase):
-    """
-    Datos que la API devuelve al consultar el inventario.
-    """
-
-    # Identificador único del registro de inventario.
+    # Identificador único del inventario.
     id: int
 
     class Config:
         # Permite convertir objetos SQLAlchemy
-        # en respuestas Pydantic.
+        # directamente en respuestas Pydantic.
+        from_attributes = True
+
+
+# ============================================================
+# Movimientos de inventario
+# ============================================================
+
+class InventoryMovementCreate(BaseModel):
+    # Identificador del registro de inventory afectado.
+    inventory_id: int
+
+    # Tipo de movimiento.
+    # Ejemplos: entrada, salida, ajuste.
+    movement_type: str
+
+    # Cantidad del movimiento.
+    quantity: int
+
+    # Descripción opcional del movimiento.
+    description: str | None = None
+
+
+class InventoryMovementResponse(InventoryMovementCreate):
+    # Identificador del movimiento.
+    id: int
+
+    # Fecha de creación.
+    created_at: object
+
+    class Config:
+        # Permite convertir el modelo SQLAlchemy
+        # en una respuesta Pydantic.
         from_attributes = True

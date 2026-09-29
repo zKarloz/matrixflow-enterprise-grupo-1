@@ -16,10 +16,15 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.database import get_db
+from app.repositories.user_repository import get_user_by_id
 
 
 # ------------------------------------------------------------
@@ -40,15 +45,9 @@ pwd_context = CryptContext(
 
 # Clave utilizada para firmar los tokens.
 #
-# IMPORTANTE:
-# En desarrollo usamos una clave de configuración.
-# Cuando conectemos el proyecto al entorno real,
-# esta clave deberá estar definida mediante variables de entorno.
-SECRET_KEY = getattr(
-    settings,
-    "SECRET_KEY",
-    "matrixflow-clave-secreta-desarrollo",
-)
+# La clave secreta se obtiene obligatoriamente desde .env
+# mediante la configuración central de MatrixFlow.
+SECRET_KEY = settings.SECRET_KEY
 
 # Algoritmo utilizado para firmar los tokens JWT.
 ALGORITHM = "HS256"
@@ -67,17 +66,6 @@ def verify_password(
 ) -> bool:
     """
     Comprueba si una contraseña coincide con su hash.
-
-    Parámetros:
-        plain_password:
-            Contraseña introducida por el usuario.
-
-        hashed_password:
-            Hash almacenado en la base de datos.
-
-    Retorna:
-        True si coinciden.
-        False si no coinciden.
     """
 
     return pwd_context.verify(
@@ -109,18 +97,18 @@ def create_access_token(
     Crea un token JWT firmado.
 
     'data' contiene la información que queremos transportar
-    dentro del token, por ejemplo:
+    dentro del token.
+
+    Por ejemplo:
 
         {
             "sub": "1",
             "role": "Administrador"
         }
-
-    expires_delta permite establecer cuánto tiempo
-    será válido el token.
     """
 
-    # Copiamos los datos para no modificar el diccionario original.
+    # Copiamos los datos para no modificar
+    # el diccionario original.
     to_encode = data.copy()
 
     # Calculamos la fecha de expiración.
@@ -152,7 +140,9 @@ def create_access_token(
 # Decodificación de tokens
 # ------------------------------------------------------------
 
-def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_access_token(
+    token: str,
+) -> Optional[Dict[str, Any]]:
     """
     Decodifica y valida un token JWT.
 
@@ -167,6 +157,7 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
     """
 
     try:
+        # Intentamos validar la firma y el contenido del JWT.
         payload = jwt.decode(
             token,
             SECRET_KEY,
@@ -178,3 +169,211 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
     except JWTError:
         # El token no pudo validarse correctamente.
         return None
+
+
+# ============================================================
+# Usuario autenticado
+# ============================================================
+
+# ------------------------------------------------------------
+# Esquema de autenticación Bearer
+# ------------------------------------------------------------
+
+# HTTPBearer permite recibir tokens mediante el encabezado:
+#
+# Authorization: Bearer <token>
+#
+# FastAPI extrae automáticamente el token enviado
+# por el cliente.
+security_scheme = HTTPBearer()
+
+
+# ------------------------------------------------------------
+# Obtener usuario autenticado
+# ------------------------------------------------------------
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(
+        security_scheme
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene el usuario autenticado a partir del JWT.
+
+    El proceso es:
+
+    1. Recibir el token Bearer.
+    2. Validar y decodificar el JWT.
+    3. Obtener el identificador del usuario desde "sub".
+    4. Buscar el usuario en PostgreSQL.
+    5. Verificar que el usuario exista.
+    6. Verificar que el usuario esté activo.
+    7. Devolver el usuario autenticado.
+    """
+
+    # --------------------------------------------------------
+    # 1. Obtener el token enviado por el cliente
+    # --------------------------------------------------------
+
+    # HTTPBearer ya separó "Bearer" del token.
+    token = credentials.credentials
+
+    # --------------------------------------------------------
+    # 2. Validar y decodificar el JWT
+    # --------------------------------------------------------
+
+    payload = decode_access_token(token)
+
+    # Si el token no pudo validarse, rechazamos la petición.
+    if payload is None:
+        raise HTTPException(
+            status_code=401,
+            detail="El token no es válido o ha expirado.",
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
+        )
+
+    # --------------------------------------------------------
+    # 3. Obtener el ID del usuario desde "sub"
+    # --------------------------------------------------------
+
+    # En login guardamos el ID como:
+    #
+    # "sub": str(user.id)
+    #
+    # Por eso ahora esperamos encontrarlo en el payload.
+    subject = payload.get("sub")
+
+    # Si el token no contiene "sub", no podemos saber
+    # qué usuario está realizando la petición.
+    if subject is None:
+        raise HTTPException(
+            status_code=401,
+            detail="El token no contiene un usuario válido.",
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
+        )
+
+    # --------------------------------------------------------
+    # 4. Convertir "sub" a número entero
+    # --------------------------------------------------------
+
+    try:
+        # El JWT almacena el ID como texto.
+        # Lo convertimos al tipo utilizado por PostgreSQL.
+        user_id = int(subject)
+
+    except (TypeError, ValueError):
+        # Evitamos consultar la base de datos
+        # utilizando un identificador inválido.
+        raise HTTPException(
+            status_code=401,
+            detail="El identificador del usuario no es válido.",
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
+        )
+
+    # --------------------------------------------------------
+    # 5. Buscar el usuario en PostgreSQL
+    # --------------------------------------------------------
+
+    # Reutilizamos el repository existente.
+    user = get_user_by_id(
+        db,
+        user_id,
+    )
+
+    # Si el usuario ya no existe, el token no puede
+    # utilizarse para acceder al sistema.
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="El usuario no existe.",
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
+        )
+
+    # --------------------------------------------------------
+    # 6. Comprobar que el usuario esté activo
+    # --------------------------------------------------------
+
+    # Aunque el JWT todavía no haya expirado,
+    # una cuenta desactivada no debe poder acceder.
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="El usuario está desactivado.",
+        )
+
+    # --------------------------------------------------------
+    # 7. Devolver el usuario autenticado
+    # --------------------------------------------------------
+
+    # Los endpoints protegidos podrán recibir directamente
+    # este objeto User mediante Depends(get_current_user).
+    return user
+
+# ============================================================
+# Autorizacion mediante roles
+# ============================================================
+
+
+def require_roles(*allowed_roles: str):
+    """
+    Crea una dependencia de FastAPI que permite acceder
+    solamente a los roles indicados.
+
+    Ejemplo de uso dentro de una ruta:
+
+        current_user=Depends(
+            require_roles("Administrador", "Analista")
+        )
+
+    Los roles se consultan nuevamente en PostgreSQL.
+    Esto evita confiar unicamente en el contenido del JWT.
+    """
+
+    def role_checker(
+        current_user=Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ):
+        """
+        Comprueba que el usuario autenticado tenga
+        uno de los roles permitidos.
+        """
+
+        # Importamos Role aqui para evitar dependencias
+        # innecesarias al cargar el modulo de seguridad.
+        from app.models.role import Role
+
+        # Buscamos el rol actual del usuario directamente
+        # en PostgreSQL utilizando su role_id.
+        role = (
+            db.query(Role)
+            .filter(Role.id == current_user.role_id)
+            .first()
+        )
+
+        # Si el rol ya no existe, el usuario no puede acceder.
+        if role is None:
+            raise HTTPException(
+                status_code=403,
+                detail="El usuario no tiene un rol válido.",
+            )
+
+        # Comprobamos que el nombre del rol esté autorizado.
+        if role.name not in allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail="El usuario no tiene permisos para realizar esta acción.",
+            )
+
+        # Devolvemos el usuario para que el endpoint pueda utilizarlo.
+        return current_user
+
+    return role_checker

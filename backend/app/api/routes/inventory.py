@@ -1,28 +1,48 @@
-# Este archivo contiene los endpoints relacionados con inventario.
-# Las rutas utilizan inventory_service para consultar existencias
-# y registrar movimientos.
+# ============================================================
+# MatrixFlow Enterprise
+# Rutas de inventario
+# ============================================================
+# Define los endpoints HTTP relacionados con:
+#
+# - Consulta de inventario.
+# - Registro de inventario.
+# - Registro de movimientos.
+# ============================================================
+
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import require_roles
+
 from app.schemas.inventory import (
     InventoryCreate,
+    InventoryMovementCreate,
+    InventoryMovementResponse,
     InventoryResponse,
 )
+
 from app.services.inventory_service import (
     list_inventory,
     list_inventory_by_branch,
     list_inventory_by_product,
     register_inventory,
+    register_inventory_movement,
 )
 
-# Router del módulo de inventario.
+
+# Router principal del módulo.
 router = APIRouter(
     prefix="/inventory",
     tags=["Inventario"],
 )
 
+
+# ============================================================
+# Consultar todo el inventario
+# ============================================================
 
 @router.get(
     "",
@@ -30,13 +50,17 @@ router = APIRouter(
 )
 def get_inventory(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador", "Analista")
+    ),
 ):
-    """
-    Obtiene todo el inventario.
-    """
-
+    # Devuelve todas las existencias registradas.
     return list_inventory(db)
 
+
+# ============================================================
+# Consultar inventario por sucursal
+# ============================================================
 
 @router.get(
     "/branch/{branch_id}",
@@ -45,16 +69,20 @@ def get_inventory(
 def get_branch_inventory(
     branch_id: int,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador", "Analista")
+    ),
 ):
-    """
-    Obtiene el inventario de una sucursal.
-    """
-
+    # Devuelve las existencias de una sucursal específica.
     return list_inventory_by_branch(
         db,
         branch_id,
     )
 
+
+# ============================================================
+# Consultar inventario por producto
+# ============================================================
 
 @router.get(
     "/product/{product_id}",
@@ -63,16 +91,20 @@ def get_branch_inventory(
 def get_product_inventory(
     product_id: int,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador", "Analista")
+    ),
 ):
-    """
-    Obtiene el inventario de un producto.
-    """
-
+    # Devuelve las existencias del producto solicitado.
     return list_inventory_by_product(
         db,
         product_id,
     )
 
+
+# ============================================================
+# Crear inventario
+# ============================================================
 
 @router.post(
     "",
@@ -81,17 +113,52 @@ def get_product_inventory(
 def create_inventory(
     data: InventoryCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador", "Analista")
+    ),
 ):
-    """
-    Registra una existencia de inventario.
-    """
-
+    # Registra una nueva existencia de inventario.
     try:
         return register_inventory(
             db=db,
             branch_id=data.branch_id,
             product_id=data.product_id,
+            stock=data.stock,
+            minimum_stock=data.minimum_stock,
+            unit_cost=data.unit_cost,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+
+# ============================================================
+# Registrar movimiento de inventario
+# ============================================================
+
+@router.post(
+    "/movements",
+    response_model=InventoryMovementResponse,
+)
+def create_inventory_movement(
+    data: InventoryMovementCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador", "Analista")
+    ),
+):
+    # Registra un movimiento relacionado con un registro
+    # específico de inventory.
+    try:
+        return register_inventory_movement(
+            db=db,
+            inventory_id=data.inventory_id,
+            movement_type=data.movement_type,
             quantity=data.quantity,
+            description=data.description,
         )
 
     except ValueError as error:

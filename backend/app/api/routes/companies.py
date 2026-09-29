@@ -1,11 +1,16 @@
-# Este archivo contiene los endpoints relacionados con empresas.
-# Las rutas reciben las solicitudes HTTP y delegan la lógica
-# al company_service.
+# ============================================================
+# MatrixFlow Enterprise
+# Rutas de empresas
+# ============================================================
+# Este archivo define los endpoints HTTP relacionados con
+# la gestión de empresas.
+# ============================================================
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import require_roles
 from app.schemas.company import CompanyCreate, CompanyResponse
 from app.services.company_service import (
     get_company,
@@ -13,72 +18,79 @@ from app.services.company_service import (
     register_company,
 )
 
-# Creamos el router correspondiente al módulo de empresas.
+
+# ------------------------------------------------------------
+# Configuración del router
+# ------------------------------------------------------------
 router = APIRouter(
     prefix="/companies",
     tags=["Empresas"],
 )
 
 
-@router.get(
-    "",
-    response_model=list[CompanyResponse],
-)
+# ------------------------------------------------------------
+# GET /companies
+# ------------------------------------------------------------
+@router.get("", response_model=list[CompanyResponse])
 def get_companies(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
-    """
-    Obtiene todas las empresas registradas.
-    """
-
-    # El service se encarga de consultar los datos.
+    # Devuelve todas las empresas registradas.
     return list_companies(db)
 
 
-@router.get(
-    "/{company_id}",
-    response_model=CompanyResponse,
-)
+# ------------------------------------------------------------
+# GET /companies/{company_id}
+# ------------------------------------------------------------
+@router.get("/{company_id}", response_model=CompanyResponse)
 def get_company_by_id(
     company_id: int,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
-    """
-    Obtiene una empresa mediante su ID.
-    """
-
     try:
-        # Delegamos la búsqueda al service.
+        # Busca la empresa solicitada.
         return get_company(db, company_id)
 
     except ValueError as error:
-        # Convertimos el error de negocio en una respuesta HTTP.
+        # Si no existe, devolvemos HTTP 404.
         raise HTTPException(
             status_code=404,
             detail=str(error),
         )
 
 
-@router.post(
-    "",
-    response_model=CompanyResponse,
-)
+# ------------------------------------------------------------
+# POST /companies
+# ------------------------------------------------------------
+@router.post("", response_model=CompanyResponse)
 def create_company(
     data: CompanyCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
 ):
-    """
-    Registra una nueva empresa.
-    """
-
     try:
-        # El service contiene la lógica de creación.
+        # Registramos la empresa utilizando todos los datos
+        # recibidos por el schema.
         return register_company(
             db=db,
             name=data.name,
+            tax_id=data.tax_id,
+            address=data.address,
+            phone=data.phone,
+            email=data.email,
         )
 
     except ValueError as error:
+        # Los errores de validación de negocio se devuelven
+        # como una respuesta HTTP 400.
         raise HTTPException(
             status_code=400,
             detail=str(error),

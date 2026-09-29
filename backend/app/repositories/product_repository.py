@@ -1,6 +1,13 @@
-# Este archivo contiene las consultas relacionadas con los productos.
-# Se encarga de acceder a la tabla products sin mezclar esta tarea
-# con la lógica de negocio de MatrixFlow.
+# ============================================================
+# MatrixFlow Enterprise
+# Repositorio de productos
+# ============================================================
+# Este archivo contiene las operaciones de persistencia
+# relacionadas con la tabla "products".
+#
+# El stock NO se guarda en products.
+# Para consultar stock utilizamos la tabla inventory.
+# ============================================================
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -11,33 +18,19 @@ from app.models.product import Product
 
 
 def get_all_products(db: Session):
-    """
-    Obtiene todos los productos junto con su categoría
-    y el stock total disponible.
-    """
-
-    # Consultamos los productos y relacionamos:
+    # Obtiene todos los productos junto con:
+    # - nombre de la categoría
+    # - stock total disponible
     #
-    # 1. categories para obtener el nombre de la categoría.
-    # 2. inventory para calcular el stock total.
-    #
-    # outerjoin permite que el producto aparezca incluso
-    # cuando todavía no tenga registros de inventario.
+    # El stock se calcula sumando inventory.stock.
     return (
         db.query(
-            Product.id,
-            Product.name,
-            Category.name.label("category"),
-            Product.price,
-
-            # Sumamos el stock existente en todas las sucursales.
-            # COALESCE convierte NULL en 0 cuando no existe inventario.
+            Product,
+            Category.name.label("category_name"),
             func.coalesce(
-                func.sum(Inventory.quantity),
+                func.sum(Inventory.stock),
                 0,
             ).label("stock"),
-
-            Product.active,
         )
         .outerjoin(
             Category,
@@ -49,21 +42,17 @@ def get_all_products(db: Session):
         )
         .group_by(
             Product.id,
-            Product.name,
             Category.name,
-            Product.price,
-            Product.active,
         )
         .all()
     )
 
 
-def get_product_by_id(db: Session, product_id: int):
-    """
-    Obtiene un producto mediante su identificador.
-    """
-
-    # Buscamos el producto por su ID.
+def get_product_by_id(
+    db: Session,
+    product_id: int,
+):
+    # Busca un producto por su identificador.
     return (
         db.query(Product)
         .filter(Product.id == product_id)
@@ -72,14 +61,10 @@ def get_product_by_id(db: Session, product_id: int):
 
 
 def get_active_products(db: Session):
-    """
-    Obtiene únicamente los productos activos.
-    """
-
-    # Filtramos los productos que tienen active = 1.
+    # Obtiene únicamente los productos activos.
     return (
         db.query(Product)
-        .filter(Product.active == 1)
+        .filter(Product.is_active == True)
         .all()
     )
 
@@ -87,28 +72,29 @@ def get_active_products(db: Session):
 def create_product(
     db: Session,
     name: str,
-    category_id: int | None,
+    category_id: int,
     price: float,
+    sku: str,
+    description: str | None = None,
 ):
-    """
-    Crea un nuevo producto.
-    """
-
-    # Creamos el producto.
+    # Creamos únicamente las columnas que pertenecen
+    # realmente a la tabla products.
     product = Product(
         name=name,
         category_id=category_id,
         price=price,
-        active=1,
+        sku=sku,
+        description=description,
+        is_active=True,
     )
 
     # Agregamos el producto a la sesión.
     db.add(product)
 
-    # Guardamos los cambios.
+    # Guardamos el registro en PostgreSQL.
     db.commit()
 
-    # Obtenemos el ID generado.
+    # Recuperamos el ID generado.
     db.refresh(product)
 
     return product
