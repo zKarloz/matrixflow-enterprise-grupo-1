@@ -398,6 +398,19 @@ export interface CreateBranchData {
 }
 
 /**
+ * Datos que pueden modificarse en una sucursal existente.
+ *
+ * company_id no se incluye porque la empresa de una sucursal
+ * no debe cambiar después de su creación.
+ */
+export interface UpdateBranchData {
+  name: string
+  address?: string | null
+  phone?: string | null
+  is_active: boolean
+}
+
+/**
  * Obtiene todas las sucursales registradas.
  *
  * Endpoint:
@@ -463,6 +476,45 @@ export async function createBranch(
   }
 
   // Devolvemos la sucursal creada por PostgreSQL.
+  return response.json()
+}
+
+/**
+ * Actualiza una sucursal existente.
+ *
+ * Endpoint:
+ * PATCH /api/v1/branches/{branchId}
+ */
+export async function updateBranch(
+  branchId: number,
+  data: UpdateBranchData,
+): Promise<Branch> {
+  // authenticatedFetch agrega automáticamente el JWT.
+  const response = await authenticatedFetch(
+    `/api/v1/branches/${branchId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo actualizar la sucursal.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si la API
+      // no devuelve un cuerpo JSON.
+    }
+
+    throw new Error(message)
+  }
+
   return response.json()
 }
 
