@@ -1309,6 +1309,104 @@ export async function getReports(): Promise<ReportsResponse> {
 }
 
 // ============================================================
+// DASHBOARD
+// ============================================================
+//
+// El Dashboard utiliza un único endpoint especializado.
+//
+// React
+//   ↓
+// GET /api/v1/reports/dashboard
+//   ↓
+// FastAPI
+//   ↓
+// PostgreSQL
+//
+// De esta manera evitamos realizar varias consultas repetidas
+// desde cada gráfico del Dashboard.
+// ============================================================
+
+export interface DashboardSummary {
+  total_sales: number
+  total_inventory: number
+  sales_count: number
+}
+
+
+export interface DashboardSalesByPeriod {
+  period: string
+  total: number
+}
+
+
+export interface DashboardSalesByBranch {
+  branch_id: number
+  branch_name: string
+  total: number
+}
+
+
+export interface DashboardSalesByProduct {
+  product_id: number
+  product_name: string
+  quantity: number
+  total: number
+}
+
+
+export interface DashboardRecentSale {
+  sale_id: number
+  branch_id: number
+  branch_name: string
+  total: number
+  created_at: string
+}
+
+
+export interface DashboardResponse {
+  summary: DashboardSummary
+
+  sales_by_period: DashboardSalesByPeriod[]
+
+  sales_by_branch: DashboardSalesByBranch[]
+
+  sales_by_product: DashboardSalesByProduct[]
+
+  recent_sales: DashboardRecentSale[]
+}
+
+
+/**
+ * Obtiene toda la información necesaria para construir
+ * el Dashboard mediante una única petición.
+ */
+export async function getDashboard(): Promise<DashboardResponse> {
+  const response = await authenticatedFetch(
+    '/api/v1/reports/dashboard',
+  )
+
+  if (!response.ok) {
+    let message =
+      'No se pudo cargar la información del Dashboard.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si FastAPI
+      // no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+// ============================================================
 // USUARIOS
 // ============================================================
 //

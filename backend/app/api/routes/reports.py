@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import require_roles
 from app.services.report_service import (
+    get_dashboard_report,
     get_inventory_report,
     get_sales_report,
 )
@@ -38,3 +39,30 @@ def get_reports(
         "sales": sales,
         "inventory": inventory,
     }
+
+# ============================================================
+# Dashboard empresarial
+# ============================================================
+
+@router.get("/dashboard")
+def get_dashboard(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles(
+            "Administrador",
+            "Analista",
+            "Consulta",
+        )
+    ),
+):
+    """
+    Obtiene toda la información analítica necesaria
+    para construir el Dashboard de MatrixFlow.
+
+    La respuesta utiliza únicamente información real
+    almacenada en PostgreSQL.
+    """
+
+    return get_dashboard_report(
+        db
+    )
