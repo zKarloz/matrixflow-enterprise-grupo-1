@@ -2,7 +2,8 @@
 # MatrixFlow Enterprise
 # Servicio de sucursales
 # ============================================================
-# Contiene la lógica de negocio relacionada con las sucursales.
+#
+# Contiene la lógica de negocio relacionada con branches.
 # ============================================================
 
 from sqlalchemy.orm import Session
@@ -12,11 +13,15 @@ from app.repositories.branch_repository import (
     get_all_branches,
     get_branch_by_id,
     get_branches_by_company,
+    update_branch,
 )
 
 
 def list_branches(db: Session):
-    # Obtiene todas las sucursales.
+    """
+    Obtiene todas las sucursales.
+    """
+
     return get_all_branches(db)
 
 
@@ -24,12 +29,19 @@ def get_branch(
     db: Session,
     branch_id: int,
 ):
-    # Busca la sucursal solicitada.
-    branch = get_branch_by_id(db, branch_id)
+    """
+    Obtiene una sucursal específica.
+    """
 
-    # Si no existe, informamos al endpoint.
+    branch = get_branch_by_id(
+        db,
+        branch_id,
+    )
+
     if branch is None:
-        raise ValueError("La sucursal no existe.")
+        raise ValueError(
+            "La sucursal no existe."
+        )
 
     return branch
 
@@ -38,7 +50,10 @@ def list_branches_by_company(
     db: Session,
     company_id: int,
 ):
-    # Obtiene las sucursales de una empresa.
+    """
+    Obtiene las sucursales pertenecientes a una empresa.
+    """
+
     return get_branches_by_company(
         db,
         company_id,
@@ -52,23 +67,63 @@ def register_branch(
     address: str | None = None,
     phone: str | None = None,
 ):
-    # Validamos el nombre.
+    """
+    Registra una nueva sucursal.
+    """
+
     if not name or not name.strip():
         raise ValueError(
             "El nombre de la sucursal es obligatorio."
         )
 
-    # Validamos la empresa.
     if company_id <= 0:
         raise ValueError(
             "El identificador de empresa no es válido."
         )
 
-    # Creamos la sucursal mediante el repositorio.
     return create_branch(
         db=db,
         name=name.strip(),
         company_id=company_id,
         address=address,
         phone=phone,
+    )
+
+
+def modify_branch(
+    db: Session,
+    branch_id: int,
+    name: str,
+    address: str | None,
+    phone: str | None,
+    is_active: bool,
+):
+    """
+    Actualiza una sucursal existente.
+    """
+
+    # Primero comprobamos que la sucursal exista.
+    branch = get_branch_by_id(
+        db,
+        branch_id,
+    )
+
+    if branch is None:
+        raise ValueError(
+            "La sucursal no existe."
+        )
+
+    # El nombre continúa siendo obligatorio al editar.
+    if not name or not name.strip():
+        raise ValueError(
+            "El nombre de la sucursal es obligatorio."
+        )
+
+    return update_branch(
+        db=db,
+        branch=branch,
+        name=name.strip(),
+        address=address,
+        phone=phone,
+        is_active=is_active,
     )

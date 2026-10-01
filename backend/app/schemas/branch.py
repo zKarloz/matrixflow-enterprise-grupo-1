@@ -2,39 +2,57 @@
 # MatrixFlow Enterprise
 # Schemas de sucursales
 # ============================================================
-# Define los datos que la API recibe y devuelve para branches.
+#
+# Define los datos que FastAPI recibe y devuelve para
+# las operaciones relacionadas con sucursales.
 # ============================================================
 
 from pydantic import BaseModel
 
 
 class BranchBase(BaseModel):
-    # Nombre de la sucursal.
+    """
+    Datos comunes utilizados al registrar una sucursal.
+    """
+
     name: str
-
-    # Empresa a la que pertenece.
     company_id: int
-
-    # Dirección opcional de la sucursal.
     address: str | None = None
-
-    # Teléfono opcional.
     phone: str | None = None
 
 
 class BranchCreate(BranchBase):
-    # No requiere campos adicionales para crear una sucursal.
+    """
+    Datos requeridos para registrar una nueva sucursal.
+    """
+
     pass
 
 
-class BranchResponse(BranchBase):
-    # Identificador generado por PostgreSQL.
-    id: int
+class BranchUpdate(BaseModel):
+    """
+    Datos administrativos que pueden modificarse después
+    de crear una sucursal.
 
-    # Indica si la sucursal está activa.
+    company_id no se modifica para conservar la coherencia
+    con ventas, inventario y otros registros históricos.
+    """
+
+    name: str
+    address: str | None = None
+    phone: str | None = None
+    is_active: bool
+
+
+class BranchResponse(BranchBase):
+    """
+    Información pública devuelta por la API.
+    """
+
+    id: int
     is_active: bool
 
     class Config:
-        # Permite convertir objetos SQLAlchemy
-        # directamente en respuestas Pydantic.
+        # Permite convertir modelos SQLAlchemy directamente
+        # en respuestas Pydantic.
         from_attributes = True

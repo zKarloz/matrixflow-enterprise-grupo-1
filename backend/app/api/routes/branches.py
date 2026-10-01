@@ -2,7 +2,9 @@
 # MatrixFlow Enterprise
 # Rutas de sucursales
 # ============================================================
+#
 # Define los endpoints HTTP relacionados con branches.
+# El acceso administrativo continúa protegido mediante RBAC.
 # ============================================================
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,22 +16,27 @@ from app.core.security import require_roles
 from app.schemas.branch import (
     BranchCreate,
     BranchResponse,
+    BranchUpdate,
 )
 
 from app.services.branch_service import (
     get_branch,
     list_branches,
     list_branches_by_company,
+    modify_branch,
     register_branch,
 )
 
 
-# Router principal de sucursales.
 router = APIRouter(
     prefix="/branches",
     tags=["Sucursales"],
 )
 
+
+# ------------------------------------------------------------
+# OBTENER TODAS LAS SUCURSALES
+# ------------------------------------------------------------
 
 @router.get(
     "",
@@ -41,9 +48,16 @@ def get_branches(
         require_roles("Administrador")
     ),
 ):
-    # Devuelve todas las sucursales.
+    """
+    Devuelve todas las sucursales registradas.
+    """
+
     return list_branches(db)
 
+
+# ------------------------------------------------------------
+# OBTENER SUCURSALES DE UNA EMPRESA
+# ------------------------------------------------------------
 
 @router.get(
     "/company/{company_id}",
@@ -56,12 +70,19 @@ def get_company_branches(
         require_roles("Administrador")
     ),
 ):
-    # Devuelve las sucursales de una empresa.
+    """
+    Devuelve las sucursales pertenecientes a una empresa.
+    """
+
     return list_branches_by_company(
         db,
         company_id,
     )
 
+
+# ------------------------------------------------------------
+# OBTENER UNA SUCURSAL
+# ------------------------------------------------------------
 
 @router.get(
     "/{branch_id}",
@@ -74,7 +95,10 @@ def get_branch_by_id(
         require_roles("Administrador")
     ),
 ):
-    # Busca una sucursal por ID.
+    """
+    Obtiene una sucursal mediante su identificador.
+    """
+
     try:
         return get_branch(
             db,
@@ -88,9 +112,14 @@ def get_branch_by_id(
         )
 
 
+# ------------------------------------------------------------
+# CREAR SUCURSAL
+# ------------------------------------------------------------
+
 @router.post(
     "",
     response_model=BranchResponse,
+    status_code=201,
 )
 def create_branch(
     data: BranchCreate,
@@ -99,7 +128,10 @@ def create_branch(
         require_roles("Administrador")
     ),
 ):
-    # Registra una nueva sucursal.
+    """
+    Registra una nueva sucursal.
+    """
+
     try:
         return register_branch(
             db=db,
@@ -107,6 +139,51 @@ def create_branch(
             company_id=data.company_id,
             address=data.address,
             phone=data.phone,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+
+# ------------------------------------------------------------
+# ACTUALIZAR SUCURSAL
+# ------------------------------------------------------------
+
+@router.patch(
+    "/{branch_id}",
+    response_model=BranchResponse,
+)
+def update_existing_branch(
+    branch_id: int,
+    data: BranchUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
+):
+    """
+    Actualiza los datos administrativos de una sucursal.
+
+    Permite modificar:
+    - nombre
+    - dirección
+    - teléfono
+    - estado activo/inactivo
+
+    La empresa asociada no puede cambiarse desde esta operación.
+    """
+
+    try:
+        return modify_branch(
+            db=db,
+            branch_id=branch_id,
+            name=data.name,
+            address=data.address,
+            phone=data.phone,
+            is_active=data.is_active,
         )
 
     except ValueError as error:
