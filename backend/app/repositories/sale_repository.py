@@ -56,72 +56,59 @@ def get_sales_by_branch(
         .all()
     )
 
-
-def create_sale(
+def create_sale_with_details(
     db: Session,
     company_id: int,
     branch_id: int,
     user_id: int,
     total: float,
+    details: list[dict],
 ):
     """
-    Crea el encabezado de una venta.
-
-    Estos campos corresponden directamente a la tabla
-    sales de PostgreSQL.
+    Guarda la cabecera y todos los detalles de una venta
+    dentro de una única transacción.
     """
 
-    # Creamos la venta con todos los campos obligatorios.
-    sale = Sale(
-        company_id=company_id,
-        branch_id=branch_id,
-        user_id=user_id,
-        total=total,
-    )
+    try:
+        sale = Sale(
+            company_id=company_id,
+            branch_id=branch_id,
+            user_id=user_id,
+            total=total,
+        )
 
-    # Agregamos el objeto a la sesión.
-    db.add(sale)
+        db.add(sale)
 
-    # Guardamos el registro en PostgreSQL.
-    db.commit()
+        # flush() obtiene el ID sin confirmar todavía
+        # definitivamente la transacción.
+        db.flush()
 
-    # Recuperamos el ID generado.
-    db.refresh(sale)
+        sale_details = []
 
-    return sale
+        for detail in details:
+            sale_detail = SaleDetail(
+                sale_id=sale.id,
+                product_id=detail["product_id"],
+                quantity=detail["quantity"],
+                unit_price=detail["unit_price"],
+                subtotal=detail["subtotal"],
+            )
 
+            db.add(sale_detail)
+            sale_details.append(sale_detail)
 
-def create_sale_detail(
-    db: Session,
-    sale_id: int,
-    product_id: int,
-    quantity: int,
-    unit_price: float,
-    subtotal: float,
-):
-    """
-    Agrega un producto a una venta.
+        # Cabecera y detalles se confirman juntos.
+        db.commit()
 
-    PostgreSQL requiere:
-    sale_id, product_id, quantity, unit_price y subtotal.
-    """
+        db.refresh(sale)
 
-    # Creamos el detalle completo de la venta.
-    detail = SaleDetail(
-        sale_id=sale_id,
-        product_id=product_id,
-        quantity=quantity,
-        unit_price=unit_price,
-        subtotal=subtotal,
-    )
+        for detail in sale_details:
+            db.refresh(detail)
 
-    # Agregamos el detalle a la sesión.
-    db.add(detail)
+        return sale, sale_details
 
-    # Guardamos el registro.
-    db.commit()
-
-    # Recuperamos el ID generado.
-    db.refresh(detail)
-
-    return detail
+    except Exception:
+        # Si cualquier parte falla, no debe quedar
+        # una venta incompleta en PostgreSQL.
+        db.rollback()
+        raise

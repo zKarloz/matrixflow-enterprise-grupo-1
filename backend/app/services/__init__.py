@@ -26,11 +26,10 @@ from app.services.product_service import (
 )
 
 from app.services.sale_service import (
-    list_sales,
     get_sale,
+    list_sales,
     list_sales_by_branch,
     register_sale,
-    register_sale_detail,
 )
 
 from app.services.inventory_service import (

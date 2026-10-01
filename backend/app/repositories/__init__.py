@@ -29,11 +29,10 @@ from app.repositories.product_repository import (
 )
 
 from app.repositories.sale_repository import (
+    create_sale_with_details,
     get_all_sales,
     get_sale_by_id,
     get_sales_by_branch,
-    create_sale,
-    create_sale_detail,
 )
 
 from app.repositories.inventory_repository import (

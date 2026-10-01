@@ -2,119 +2,67 @@
 # MatrixFlow Enterprise
 # Schemas de ventas
 # ============================================================
-#
-# Define los datos que la API recibe y devuelve para:
-#
-# - sales
-# - sale_details
-#
-# IMPORTANTE:
-# Los campos de la venta y los campos del detalle están
-# separados porque pertenecen a tablas diferentes.
-# ============================================================
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-
-# ============================================================
-# Venta
-# ============================================================
-
-class SaleCreate(BaseModel):
-    """
-    Datos necesarios para crear el encabezado de una venta.
-    """
-
-    # Empresa propietaria de la venta.
-    company_id: int
-
-    # Sucursal donde se realiza la venta.
-    branch_id: int
-
-    # Usuario que registra la venta.
-    user_id: int
-
-    # Total de la venta.
-    total: float
-
-
-class SaleResponse(BaseModel):
-    """
-    Datos que representa un registro de sales.
-    """
-
-    # Identificador de la venta.
-    id: int
-
-    # Empresa propietaria.
-    company_id: int
-
-    # Sucursal donde se realizó.
-    branch_id: int
-
-    # Usuario que registró la venta.
-    user_id: int
-
-    # Importe total.
-    total: float
-
-    # Fecha y hora de creación.
-    created_at: datetime
-
-    class Config:
-        # Permite convertir objetos SQLAlchemy
-        # directamente en respuestas Pydantic.
-        from_attributes = True
-
-
-# ============================================================
-# Detalle de venta
-# ============================================================
 
 class SaleDetailCreate(BaseModel):
     """
-    Datos necesarios para agregar un producto a una venta.
+    Producto incluido en una nueva venta.
+
+    El precio no lo envía React: se obtiene del producto
+    registrado en PostgreSQL para evitar manipulaciones.
     """
 
-    # Venta a la que pertenece el detalle.
-    sale_id: int
+    product_id: int = Field(gt=0)
+    quantity: int = Field(gt=0)
 
-    # Producto vendido.
-    product_id: int
 
-    # Cantidad vendida.
-    quantity: int
+class SaleCreate(BaseModel):
+    """
+    Datos necesarios para registrar una venta completa.
+    """
 
-    # Precio utilizado en el momento de la venta.
-    unit_price: float
+    company_id: int = Field(gt=0)
+    branch_id: int = Field(gt=0)
+    user_id: int = Field(gt=0)
+
+    # Una venta debe contener como mínimo un producto.
+    details: list[SaleDetailCreate] = Field(
+        min_length=1,
+    )
+
+
+class SaleResponse(BaseModel):
+    id: int
+    company_id: int
+    branch_id: int
+    user_id: int
+    total: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class SaleDetailResponse(BaseModel):
-    """
-    Datos que representa un registro de sale_details.
-    """
-
-    # Identificador del detalle.
     id: int
-
-    # Venta relacionada.
     sale_id: int
-
-    # Producto vendido.
     product_id: int
-
-    # Cantidad vendida.
     quantity: int
-
-    # Precio unitario.
     unit_price: float
-
-    # Subtotal calculado.
     subtotal: float
 
     class Config:
-        # Permite convertir objetos SQLAlchemy
-        # directamente en respuestas Pydantic.
         from_attributes = True
+
+
+class SaleCreatedResponse(BaseModel):
+    """
+    Respuesta de una venta recién registrada.
+    """
+
+    sale: SaleResponse
+    details: list[SaleDetailResponse]

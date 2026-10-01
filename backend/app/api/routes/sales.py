@@ -24,16 +24,16 @@ from app.core.security import require_roles
 
 from app.schemas.sale import (
     SaleCreate,
-    SaleResponse,
-    SaleDetailCreate,
+    SaleCreatedResponse,
     SaleDetailResponse,
+    SaleResponse,
 )
+
 from app.services.sale_service import (
     get_sale,
     list_sales,
     list_sales_by_branch,
     register_sale,
-    register_sale_detail,
 )
 
 
@@ -138,58 +138,47 @@ def get_sale_by_id(
 # Crear venta y detalle
 # ============================================================
 
-@router.post("")
+@router.post(
+    "",
+    response_model=SaleCreatedResponse,
+    status_code=201,
+)
 def create_sale(
-    sale_data: SaleCreate,
-    detail_data: SaleDetailCreate,
+    data: SaleCreate,
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador", "Analista")
+        require_roles(
+            "Administrador",
+            "Analista",
+        )
     ),
 ):
     """
-    Registra una venta y un detalle.
-
-    Primero se crea el encabezado de la venta.
-    Después se crea el detalle utilizando el ID generado.
+    Registra una venta completa con uno o más productos.
     """
 
     try:
-        # ----------------------------------------------------
-        # 1. Crear el encabezado de la venta.
-        # ----------------------------------------------------
-        sale = register_sale(
+        sale, details = register_sale(
             db=db,
-            company_id=sale_data.company_id,
-            branch_id=sale_data.branch_id,
-            user_id=sale_data.user_id,
-            total=sale_data.total,
+            company_id=data.company_id,
+            branch_id=data.branch_id,
+            user_id=data.user_id,
+            details=data.details,
         )
 
-        # ----------------------------------------------------
-        # 2. Crear el detalle de la venta.
-        # ----------------------------------------------------
-        detail = register_sale_detail(
-            db=db,
-            sale_id=sale.id,
-            product_id=detail_data.product_id,
-            quantity=detail_data.quantity,
-            unit_price=detail_data.unit_price,
-        )
-
-        # ----------------------------------------------------
-        # 3. Devolver ambos registros.
-        # ----------------------------------------------------
-        # Convertimos los objetos SQLAlchemy a schemas Pydantic.
-        # Esto permite que FastAPI serialice correctamente
-        # todos los campos de la venta y su detalle.
         return {
-            "sale": SaleResponse.model_validate(sale),
-            "detail": SaleDetailResponse.model_validate(detail),
+            "sale": SaleResponse.model_validate(
+                sale
+            ),
+            "details": [
+                SaleDetailResponse.model_validate(
+                    detail
+                )
+                for detail in details
+            ],
         }
 
     except ValueError as error:
-        # Convertimos los errores del servicio en HTTP 400.
         raise HTTPException(
             status_code=400,
             detail=str(error),

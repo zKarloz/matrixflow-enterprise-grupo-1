@@ -2,31 +2,27 @@
 # MatrixFlow Enterprise
 # Service de ventas
 # ============================================================
-#
-# Contiene la lógica de negocio relacionada con:
-#
-# - Encabezados de venta.
-# - Detalles de venta.
-# - Cálculo de subtotales.
-# ============================================================
 
 from sqlalchemy.orm import Session
 
+from app.repositories.branch_repository import (
+    get_branch_by_id,
+)
+from app.repositories.product_repository import (
+    get_product_by_id,
+)
 from app.repositories.sale_repository import (
-    create_sale,
-    create_sale_detail,
+    create_sale_with_details,
     get_all_sales,
     get_sale_by_id,
     get_sales_by_branch,
 )
+from app.repositories.user_repository import (
+    get_user_by_id,
+)
 
 
 def list_sales(db: Session):
-    """
-    Obtiene todas las ventas.
-    """
-
-    # Delegamos la consulta al repository.
     return get_all_sales(db)
 
 
@@ -34,17 +30,11 @@ def get_sale(
     db: Session,
     sale_id: int,
 ):
-    """
-    Obtiene una venta por ID.
-    """
-
-    # Buscamos la venta.
     sale = get_sale_by_id(
         db,
         sale_id,
     )
 
-    # Si no existe, informamos al endpoint.
     if sale is None:
         raise ValueError(
             "La venta no existe."
@@ -57,17 +47,11 @@ def list_sales_by_branch(
     db: Session,
     branch_id: int,
 ):
-    """
-    Obtiene las ventas de una sucursal.
-    """
-
-    # Validamos el identificador.
     if branch_id <= 0:
         raise ValueError(
             "El identificador de sucursal no es válido."
         )
 
-    # Consultamos las ventas.
     return get_sales_by_branch(
         db,
         branch_id,
@@ -79,93 +63,117 @@ def register_sale(
     company_id: int,
     branch_id: int,
     user_id: int,
-    total: float,
+    details,
 ):
     """
-    Registra el encabezado de una venta.
+    Registra una venta completa.
+
+    El backend obtiene los precios reales de PostgreSQL
+    y calcula subtotales y total.
     """
 
-    # Validamos la empresa.
-    if company_id <= 0:
+    # --------------------------------------------------------
+    # Validar sucursal
+    # --------------------------------------------------------
+
+    branch = get_branch_by_id(
+        db,
+        branch_id,
+    )
+
+    if branch is None:
         raise ValueError(
-            "El identificador de empresa no es válido."
+            "La sucursal seleccionada no existe."
         )
 
-    # Validamos la sucursal.
-    if branch_id <= 0:
+    if not branch.is_active:
         raise ValueError(
-            "El identificador de sucursal no es válido."
+            "La sucursal seleccionada está inactiva."
         )
 
-    # Validamos el usuario.
-    if user_id <= 0:
+    if branch.company_id != company_id:
         raise ValueError(
-            "El identificador de usuario no es válido."
+            "La sucursal no pertenece a la empresa seleccionada."
         )
 
-    # Una venta no puede tener un total negativo.
-    if total < 0:
+    # --------------------------------------------------------
+    # Validar usuario
+    # --------------------------------------------------------
+
+    user = get_user_by_id(
+        db,
+        user_id,
+    )
+
+    if user is None:
         raise ValueError(
-            "El total de la venta no puede ser negativo."
+            "El usuario no existe."
         )
 
-    # Creamos el encabezado mediante el repository.
-    return create_sale(
+    if not user.is_active:
+        raise ValueError(
+            "El usuario está inactivo."
+        )
+
+    # --------------------------------------------------------
+    # Validar productos y calcular importes
+    # --------------------------------------------------------
+
+    processed_details = []
+    total = 0.0
+    product_ids = set()
+
+    for detail in details:
+        # Evitamos ingresar el mismo producto dos veces
+        # dentro de una misma venta.
+        if detail.product_id in product_ids:
+            raise ValueError(
+                "Un producto no puede repetirse en la misma venta."
+            )
+
+        product_ids.add(
+            detail.product_id,
+        )
+
+        product = get_product_by_id(
+            db,
+            detail.product_id,
+        )
+
+        if product is None:
+            raise ValueError(
+                f"El producto {detail.product_id} no existe."
+            )
+
+        if not product.is_active:
+            raise ValueError(
+                f'El producto "{product.name}" está inactivo.'
+            )
+
+        # El precio sale de PostgreSQL y no del navegador.
+        unit_price = float(product.price)
+
+        subtotal = (
+            detail.quantity
+            * unit_price
+        )
+
+        total += subtotal
+
+        processed_details.append(
+            {
+                "product_id": product.id,
+                "quantity": detail.quantity,
+                "unit_price": unit_price,
+                "subtotal": subtotal,
+            }
+        )
+
+    return create_sale_with_details(
         db=db,
         company_id=company_id,
         branch_id=branch_id,
         user_id=user_id,
         total=total,
-    )
-
-
-def register_sale_detail(
-    db: Session,
-    sale_id: int,
-    product_id: int,
-    quantity: int,
-    unit_price: float,
-):
-    """
-    Registra un producto dentro de una venta.
-
-    El subtotal se calcula automáticamente:
-        subtotal = quantity * unit_price
-    """
-
-    # Validamos el ID de la venta.
-    if sale_id <= 0:
-        raise ValueError(
-            "El identificador de venta no es válido."
-        )
-
-    # Validamos el producto.
-    if product_id <= 0:
-        raise ValueError(
-            "El identificador de producto no es válido."
-        )
-
-    # La cantidad debe ser positiva.
-    if quantity <= 0:
-        raise ValueError(
-            "La cantidad debe ser mayor que cero."
-        )
-
-    # El precio no puede ser negativo.
-    if unit_price < 0:
-        raise ValueError(
-            "El precio unitario no puede ser negativo."
-        )
-
-    # Calculamos el subtotal del detalle.
-    subtotal = quantity * unit_price
-
-    # Guardamos el detalle completo.
-    return create_sale_detail(
-        db=db,
-        sale_id=sale_id,
-        product_id=product_id,
-        quantity=quantity,
-        unit_price=unit_price,
-        subtotal=subtotal,
+        details=processed_details,
     )

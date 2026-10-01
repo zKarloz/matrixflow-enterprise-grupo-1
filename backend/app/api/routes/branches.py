@@ -45,7 +45,7 @@ router = APIRouter(
 def get_branches(
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador")
+        require_roles("Administrador", "Analista")
     ),
 ):
     """
@@ -67,7 +67,7 @@ def get_company_branches(
     company_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador")
+        require_roles("Administrador", "Analista")
     ),
 ):
     """
@@ -92,7 +92,7 @@ def get_branch_by_id(
     branch_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador")
+        require_roles("Administrador", "Analista")
     ),
 ):
     """

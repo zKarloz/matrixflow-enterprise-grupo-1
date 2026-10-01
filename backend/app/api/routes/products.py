@@ -41,7 +41,7 @@ router = APIRouter(
 def get_products(
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador")
+        require_roles("Administrador", "Analista")
     ),
 ):
     # Devuelve todos los productos junto con
@@ -55,7 +55,7 @@ def get_products(
 def get_active_product_list(
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador")
+        require_roles("Administrador", "Analista")
     ),
 ):
     # Devuelve únicamente los productos activos.
@@ -70,7 +70,7 @@ def get_product_by_id(
     product_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador")
+        require_roles("Administrador", "Analista")
     ),
 ):
     # Busca un producto mediante su ID.
