@@ -2,11 +2,12 @@
 # MatrixFlow Enterprise
 # Repositorio de productos
 # ============================================================
-# Este archivo contiene las operaciones de persistencia
-# relacionadas con la tabla "products".
 #
-# El stock NO se guarda en products.
-# Para consultar stock utilizamos la tabla inventory.
+# Contiene las operaciones de persistencia relacionadas con
+# la tabla "products".
+#
+# El stock NO se modifica desde este repositorio.
+# Para consultar existencias utilizamos la tabla inventory.
 # ============================================================
 
 from sqlalchemy import func
@@ -18,11 +19,12 @@ from app.models.product import Product
 
 
 def get_all_products(db: Session):
-    # Obtiene todos los productos junto con:
-    # - nombre de la categoría
-    # - stock total disponible
-    #
-    # El stock se calcula sumando inventory.stock.
+    """
+    Obtiene todos los productos junto con:
+    - nombre de categoría
+    - stock total disponible
+    """
+
     return (
         db.query(
             Product,
@@ -52,7 +54,10 @@ def get_product_by_id(
     db: Session,
     product_id: int,
 ):
-    # Busca un producto por su identificador.
+    """
+    Busca un producto por su identificador.
+    """
+
     return (
         db.query(Product)
         .filter(Product.id == product_id)
@@ -60,8 +65,29 @@ def get_product_by_id(
     )
 
 
+def get_product_by_sku(
+    db: Session,
+    sku: str,
+):
+    """
+    Busca un producto mediante su SKU único.
+
+    Se utiliza para impedir registros duplicados antes
+    de ejecutar INSERT o UPDATE.
+    """
+
+    return (
+        db.query(Product)
+        .filter(Product.sku == sku)
+        .first()
+    )
+
+
 def get_active_products(db: Session):
-    # Obtiene únicamente los productos activos.
+    """
+    Obtiene únicamente los productos activos.
+    """
+
     return (
         db.query(Product)
         .filter(Product.is_active == True)
@@ -77,8 +103,13 @@ def create_product(
     sku: str,
     description: str | None = None,
 ):
-    # Creamos únicamente las columnas que pertenecen
-    # realmente a la tabla products.
+    """
+    Registra un producto nuevo.
+
+    El stock no se guarda aquí porque pertenece
+    a la tabla inventory.
+    """
+
     product = Product(
         name=name,
         category_id=category_id,
@@ -88,13 +119,38 @@ def create_product(
         is_active=True,
     )
 
-    # Agregamos el producto a la sesión.
     db.add(product)
-
-    # Guardamos el registro en PostgreSQL.
     db.commit()
+    db.refresh(product)
 
-    # Recuperamos el ID generado.
+    return product
+
+
+def update_product(
+    db: Session,
+    product: Product,
+    name: str,
+    category_id: int,
+    price: float,
+    sku: str,
+    description: str | None,
+    is_active: bool,
+):
+    """
+    Actualiza la información comercial de un producto.
+
+    El stock queda fuera de esta operación porque pertenece
+    exclusivamente al módulo de inventario.
+    """
+
+    product.name = name
+    product.category_id = category_id
+    product.price = price
+    product.sku = sku
+    product.description = description
+    product.is_active = is_active
+
+    db.commit()
     db.refresh(product)
 
     return product

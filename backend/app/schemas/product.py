@@ -2,48 +2,57 @@
 # MatrixFlow Enterprise
 # Schemas de productos
 # ============================================================
-# Define los datos que la API recibe y devuelve para la tabla
-# "products".
+#
+# Define los datos que la API recibe y devuelve para products.
 #
 # IMPORTANTE:
-# El stock NO pertenece a products.
-# El stock pertenece a la tabla inventory.
+# El stock pertenece a inventory y nunca se modifica desde
+# los schemas del catálogo de productos.
 # ============================================================
 
 from pydantic import BaseModel
 
 
 class ProductBase(BaseModel):
-    # Nombre del producto.
+    """
+    Datos principales del catálogo de productos.
+    """
+
     name: str
-
-    # Identificador de la categoría.
     category_id: int
-
-    # Precio unitario del producto.
     price: float
-
-    # SKU único del producto.
     sku: str
-
-    # Descripción opcional.
     description: str | None = None
 
 
 class ProductCreate(ProductBase):
-    # No se necesitan campos adicionales para crear
-    # un producto.
+    """
+    Datos utilizados para registrar un producto.
+    """
+
     pass
 
 
-class ProductResponse(ProductBase):
-    # Identificador generado por PostgreSQL.
-    id: int
+class ProductUpdate(ProductBase):
+    """
+    Datos que pueden modificarse en un producto existente.
 
-    # Estado actual del producto.
+    is_active también forma parte de la actualización para
+    permitir activar o desactivar productos sin eliminarlos.
+    """
+
+    is_active: bool
+
+
+class ProductResponse(ProductBase):
+    """
+    Información del producto devuelta por la API.
+    """
+
+    id: int
     is_active: bool
 
     class Config:
-        # Permite convertir objetos SQLAlchemy
-        # directamente en respuestas Pydantic.
+        # Permite convertir modelos SQLAlchemy directamente
+        # en respuestas Pydantic.
         from_attributes = True

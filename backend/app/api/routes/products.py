@@ -16,12 +16,14 @@ from app.core.security import require_roles
 from app.schemas.product import (
     ProductCreate,
     ProductResponse,
+    ProductUpdate,
 )
 
 from app.services.product_service import (
     get_product,
     list_active_products,
     list_products,
+    modify_product,
     register_product,
 )
 
@@ -88,6 +90,7 @@ def get_product_by_id(
 @router.post(
     "",
     response_model=ProductResponse,
+    status_code=201,
 )
 def create_product(
     data: ProductCreate,
@@ -110,6 +113,63 @@ def create_product(
             price=data.price,
             sku=data.sku,
             description=data.description,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+# ------------------------------------------------------------
+# ACTUALIZAR PRODUCTO
+# ------------------------------------------------------------
+
+@router.patch(
+    "/{product_id}",
+    response_model=ProductResponse,
+)
+def update_existing_product(
+    product_id: int,
+    data: ProductUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
+):
+    """
+    Actualiza la información comercial de un producto.
+
+    El stock no se modifica desde este endpoint porque
+    pertenece exclusivamente al módulo de inventario.
+    """
+
+    # Comprobamos primero que el producto exista para poder
+    # devolver HTTP 404 de forma clara.
+    try:
+        get_product(
+            db,
+            product_id,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
+
+    # Las demás validaciones de negocio, como un SKU duplicado,
+    # se consideran solicitudes inválidas.
+    try:
+        return modify_product(
+            db=db,
+            product_id=product_id,
+            name=data.name,
+            category_id=data.category_id,
+            price=data.price,
+            sku=data.sku,
+            description=data.description,
+            is_active=data.is_active,
         )
 
     except ValueError as error:
