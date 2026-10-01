@@ -195,23 +195,39 @@ export async function login(
 // ============================================================
 
 export interface AuditLog {
-  // Identificador del registro de auditoría.
+  // Identificador del evento de auditoría.
   id: number
 
-  // Identificador del usuario que realizó la acción.
+  // Usuario relacionado con la acción.
   user_id: number | null
 
-  // Acción realizada por el usuario.
+  // Acción registrada.
   action: string
 
-  // Tabla relacionada con la acción.
+  // Tabla o módulo relacionado.
   table_name: string | null
 
-  // Registro afectado por la acción.
+  // Registro afectado, cuando corresponde.
   record_id: number | null
 
-  // Información adicional, incluida la IP.
+  // Descripción general del evento.
   description: string | null
+
+  // Dirección IP capturada durante el acceso.
+  ip_address: string | null
+
+  // Ubicación aproximada obtenida desde la IP.
+  city: string | null
+  region: string | null
+  country: string | null
+
+  // Coordenadas aproximadas para representar
+  // visualmente el acceso.
+  latitude: number | null
+  longitude: number | null
+
+  // Información enviada por el navegador.
+  user_agent: string | null
 
   // Fecha y hora del evento.
   created_at: string
