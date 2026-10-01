@@ -62,36 +62,42 @@ def get_audit_logs_by_table(
 def create_audit_log(
     db: Session,
     action: str,
-    table_name: str | None = None,
+    table_name: str,
+    user_id: int,
     record_id: int | None = None,
     description: str | None = None,
-    user_id: int | None = None,
+    ip_address: str | None = None,
+    city: str | None = None,
+    region: str | None = None,
+    country: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+    user_agent: str | None = None,
 ):
     """
-    Crea un nuevo registro de auditoría.
+    Crea un registro de auditoría.
 
-    La información adicional, como la IP del usuario,
-    se puede guardar dentro de 'description'.
+    Los datos geográficos son opcionales porque solamente
+    se utilizan en eventos relacionados con accesos.
     """
 
-    # Creamos el registro utilizando únicamente las columnas
-    # que realmente existen en la tabla audit_logs.
     audit_log = AuditLog(
         user_id=user_id,
         action=action,
         table_name=table_name,
         record_id=record_id,
         description=description,
+        ip_address=ip_address,
+        city=city,
+        region=region,
+        country=country,
+        latitude=latitude,
+        longitude=longitude,
+        user_agent=user_agent,
     )
 
-    # Agregamos el registro a la sesión de SQLAlchemy.
     db.add(audit_log)
-
-    # Guardamos los cambios en PostgreSQL.
     db.commit()
-
-    # Actualizamos el objeto con el ID y la fecha generados
-    # por la base de datos.
     db.refresh(audit_log)
 
     return audit_log

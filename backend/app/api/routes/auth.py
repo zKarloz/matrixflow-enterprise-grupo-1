@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import create_access_token
 from app.schemas.auth import LoginRequest, LoginResponse
-from app.services.auth_service import find_user_for_login
+from app.services.auth_service import find_user_for_login, geolocate_ip
 
 # Permite registrar el inicio de sesión en audit_logs.
 from app.repositories.audit_repository import create_audit_log
@@ -68,44 +68,82 @@ def login(
         )
 
         # ----------------------------------------------------
-        # 2. Obtener la IP del cliente
+        # 2. Obtener la IP real del cliente
         # ----------------------------------------------------
 
-        # FastAPI obtiene la dirección IP de la conexión HTTP.
-        #
-        # En desarrollo local normalmente aparecerá:
-        # 127.0.0.1
-        #
-        # Cuando el sistema esté desplegado, aquí podrá aparecer
-        # la IP pública del cliente, dependiendo de la configuración
-        # del servidor/proxy.
-        client_ip = (
-            request.client.host
-            if request.client
-            else "IP desconocida"
+        # Render se encuentra detrás de proxies y balanceadores.
+        # X-Forwarded-For contiene la cadena de IPs por las que
+        # pasó la petición. En Render, la primera corresponde
+        # al cliente original.
+        forwarded_for = request.headers.get(
+            "x-forwarded-for"
+        )
+
+        if forwarded_for:
+            client_ip = (
+                forwarded_for
+                .split(",")[0]
+                .strip()
+            )
+        elif request.client:
+            # Este caso se utiliza principalmente durante
+            # desarrollo local.
+            client_ip = request.client.host
+        else:
+            client_ip = "IP desconocida"
+
+
+        # ----------------------------------------------------
+        # 3. Obtener ubicación aproximada
+        # ----------------------------------------------------
+
+        location = geolocate_ip(
+            client_ip
+        )
+
+        city = location["city"]
+        region = location["region"]
+        country = location["country"]
+        latitude = location["latitude"]
+        longitude = location["longitude"]
+
+
+        # ----------------------------------------------------
+        # 4. Obtener información del navegador
+        # ----------------------------------------------------
+
+        # User-Agent identifica de forma general el navegador,
+        # sistema operativo o dispositivo que realizó la petición.
+        user_agent = request.headers.get(
+            "user-agent"
         )
 
         # ----------------------------------------------------
-        # 3. Registrar el inicio de sesión
+        # 5. Registrar el acceso
         # ----------------------------------------------------
 
-        # La tabla audit_logs no tiene una columna específica
-        # para IP, por lo que guardamos la información dentro
-        # de la columna description.
         create_audit_log(
             db=db,
             user_id=user.id,
             action="Inicio de sesión",
             table_name="users",
             record_id=user.id,
-            description=(
-                f"Inicio de sesión exitoso. "
-                f"IP: {client_ip}"
-            ),
+
+            # Conservamos una descripción legible para auditoría.
+            description="Inicio de sesión exitoso.",
+
+            # Datos estructurados utilizados por Seguridad y accesos.
+            ip_address=client_ip,
+            city=city,
+            region=region,
+            country=country,
+            latitude=latitude,
+            longitude=longitude,
+            user_agent=user_agent,
         )
 
         # ----------------------------------------------------
-        # 4. Generar el JWT
+        # 6. Generar el JWT
         # ----------------------------------------------------
 
         access_token = create_access_token(
@@ -116,7 +154,7 @@ def login(
         )
 
         # ----------------------------------------------------
-        # 5. Devolver el token
+        # 7. Devolver el token
         # ----------------------------------------------------
 
         return {

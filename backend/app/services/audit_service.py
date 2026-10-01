@@ -61,39 +61,38 @@ def list_audit_logs_by_module(
 def register_audit(
     db: Session,
     action: str,
-    module: str,
-    status: str,
-    user_id: int | None = None,
-    ip_address: str | None = None,
-    result: str | None = None,
+    table_name: str,
+    user_id: int,
+    record_id: int | None = None,
+    description: str | None = None,
 ):
     """
-    Registra una acción en la auditoría.
+    Registra una acción general en audit_logs.
+
+    La información específica de ubicación se incorpora
+    directamente durante el inicio de sesión.
     """
 
-    # Validamos los datos principales.
     if not action.strip():
         raise ValueError(
             "La acción es obligatoria."
         )
 
-    if not module.strip():
+    if not table_name.strip():
         raise ValueError(
-            "El módulo es obligatorio."
+            "La tabla relacionada es obligatoria."
         )
 
-    if not status.strip():
+    if user_id <= 0:
         raise ValueError(
-            "El estado es obligatorio."
+            "El usuario no es válido."
         )
 
-    # Guardamos el registro mediante el repository.
     return create_audit_log(
         db=db,
-        action=action,
-        module=module,
-        status=status,
+        action=action.strip(),
+        table_name=table_name.strip(),
         user_id=user_id,
-        ip_address=ip_address,
-        result=result,
+        record_id=record_id,
+        description=description,
     )

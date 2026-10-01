@@ -105,3 +105,78 @@ def find_user_for_login(
     # Si todas las comprobaciones fueron correctas,
     # devolvemos el usuario y su rol.
     return user, role
+
+# ============================================================
+# Geolocalización aproximada de accesos
+# ============================================================
+
+import ipaddress
+
+import httpx
+
+
+def geolocate_ip(ip_address: str) -> dict:
+    """
+    Obtiene una ubicación aproximada a partir de una IP pública.
+
+    La geolocalización es complementaria:
+    si el servicio externo falla, el inicio de sesión
+    debe continuar funcionando normalmente.
+    """
+
+    empty_location = {
+        "city": None,
+        "region": None,
+        "country": None,
+        "latitude": None,
+        "longitude": None,
+    }
+
+    try:
+        # Validamos primero que realmente tengamos
+        # una dirección IPv4 o IPv6.
+        ip = ipaddress.ip_address(
+            ip_address,
+        )
+
+        # Direcciones locales, privadas o reservadas no tienen
+        # una ubicación pública útil para este módulo.
+        if not ip.is_global:
+            return empty_location
+
+    except ValueError:
+        return empty_location
+
+    try:
+        # Realizamos una consulta breve para no retrasar
+        # demasiado el proceso de autenticación.
+        response = httpx.get(
+            f"https://ipwho.is/{ip_address}",
+            timeout=3.0,
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        # ipwho.is puede responder HTTP 200 incluso cuando
+        # la IP no pudo localizarse.
+        if data.get("success") is not True:
+            return empty_location
+
+        return {
+            "city": data.get("city"),
+            "region": data.get("region"),
+            "country": data.get("country"),
+            "latitude": data.get("latitude"),
+            "longitude": data.get("longitude"),
+        }
+
+    except (
+        httpx.HTTPError,
+        ValueError,
+        TypeError,
+    ):
+        # La autenticación nunca debe fallar solamente
+        # porque el proveedor de geolocalización no responda.
+        return empty_location

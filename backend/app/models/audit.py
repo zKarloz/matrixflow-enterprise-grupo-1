@@ -18,7 +18,15 @@
 # tengan un valor.
 # ============================================================
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 
 from sqlalchemy.sql import func
 
@@ -77,6 +85,46 @@ class AuditLog(Base):
 
     # Descripción adicional de la acción.
     description = Column(
+        Text,
+        nullable=True,
+    )
+
+    # Dirección IP pública asociada al acceso.
+    ip_address = Column(
+        String(45),
+        nullable=True,
+    )
+
+    # Ubicación aproximada obtenida a partir de la IP.
+    city = Column(
+        String(100),
+        nullable=True,
+    )
+
+    region = Column(
+        String(100),
+        nullable=True,
+    )
+
+    country = Column(
+        String(100),
+        nullable=True,
+    )
+
+    # Coordenadas aproximadas utilizadas únicamente
+    # para representar visualmente el acceso.
+    latitude = Column(
+        Numeric(9, 6),
+        nullable=True,
+    )
+
+    longitude = Column(
+        Numeric(9, 6),
+        nullable=True,
+    )
+
+    # Navegador/dispositivo informado por la petición HTTP.
+    user_agent = Column(
         Text,
         nullable=True,
     )
