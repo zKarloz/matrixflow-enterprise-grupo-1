@@ -960,6 +960,20 @@ export interface CreateUserData {
 }
 
 /**
+ * Datos que pueden modificarse en una cuenta existente.
+ *
+ * La contraseña no se incluye porque tendrá un flujo
+ * independiente de cambio de contraseña.
+ */
+export interface UpdateUserData {
+  username: string
+  email: string
+  full_name: string
+  role_id: number
+  is_active: boolean
+}
+
+/**
  * Obtiene todos los usuarios.
  *
  * Endpoint:
@@ -1036,6 +1050,45 @@ export async function createUser(
   }
 
   // Devolvemos el usuario creado por FastAPI.
+  return response.json()
+}
+
+/**
+ * Actualiza un usuario existente.
+ *
+ * Endpoint:
+ * PATCH /api/v1/users/{userId}
+ */
+export async function updateUser(
+  userId: number,
+  data: UpdateUserData,
+): Promise<User> {
+  // El JWT se agrega automáticamente mediante authenticatedFetch().
+  const response = await authenticatedFetch(
+    `/api/v1/users/${userId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo actualizar el usuario.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si FastAPI
+      // no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
   return response.json()
 }
 
