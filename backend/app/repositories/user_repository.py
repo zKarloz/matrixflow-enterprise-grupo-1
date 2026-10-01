@@ -1,9 +1,14 @@
-# Este archivo contiene las funciones que permiten consultar
-# y crear usuarios en la base de datos.
+# ============================================================
+# MatrixFlow Enterprise
+# Repositorio de usuarios
+# ============================================================
 #
-# IMPORTANTE:
-# Este repositorio trabaja únicamente con SQLAlchemy.
-# El frontend nunca accede directamente a Supabase.
+# Este archivo contiene las operaciones de acceso a datos
+# relacionadas con la tabla "users".
+#
+# Trabaja únicamente con SQLAlchemy.
+# El frontend nunca accede directamente a PostgreSQL/Supabase.
+# ============================================================
 
 from sqlalchemy.orm import Session
 
@@ -15,14 +20,7 @@ def get_user_by_id(
     user_id: int,
 ):
     """
-    Busca un usuario por su ID.
-
-    Parámetros:
-        db: sesión activa de SQLAlchemy.
-        user_id: identificador del usuario.
-
-    Retorna:
-        El usuario encontrado o None si no existe.
+    Busca un usuario por su identificador.
     """
 
     return (
@@ -37,10 +35,7 @@ def get_user_by_email(
     email: str,
 ):
     """
-    Busca un usuario utilizando su correo electrónico.
-
-    El correo es único en la tabla users, por lo que
-    como máximo debería existir un usuario con ese email.
+    Busca un usuario por su correo electrónico.
     """
 
     return (
@@ -55,10 +50,7 @@ def get_user_by_username(
     username: str,
 ):
     """
-    Busca un usuario utilizando su nombre de usuario.
-
-    Esto será útil posteriormente si el sistema permite
-    iniciar sesión también mediante username.
+    Busca un usuario por su nombre de usuario.
     """
 
     return (
@@ -89,16 +81,12 @@ def create_user(
     """
     Crea un nuevo usuario.
 
-    IMPORTANTE:
-    El parámetro "password" debe recibir un HASH,
+    El parámetro "password" debe contener un hash seguro,
     nunca una contraseña en texto plano.
-
-    El hash debe generarse previamente utilizando
-    get_password_hash() del módulo de seguridad.
     """
 
-    # Creamos el objeto User utilizando exactamente
-    # los nombres de columnas de la BD oficial.
+    # Creamos el registro con los campos definidos
+    # en el modelo SQLAlchemy de users.
     user = User(
         username=username,
         email=email,
@@ -108,13 +96,43 @@ def create_user(
         is_active=True,
     )
 
-    # Agregamos el usuario a la sesión.
+    # Persistimos el usuario en PostgreSQL.
     db.add(user)
-
-    # Guardamos los cambios en PostgreSQL/Supabase.
     db.commit()
 
-    # Actualizamos el objeto con el ID generado por la BD.
+    # Recuperamos los valores generados por la base de datos,
+    # como el identificador del usuario.
+    db.refresh(user)
+
+    return user
+
+
+def update_user(
+    db: Session,
+    user: User,
+    username: str,
+    email: str,
+    full_name: str,
+    role_id: int,
+    is_active: bool,
+):
+    """
+    Actualiza los datos administrativos de un usuario.
+
+    La contraseña no se modifica mediante esta función.
+    """
+
+    user.username = username
+    user.email = email
+    user.full_name = full_name
+    user.role_id = role_id
+    user.is_active = is_active
+
+    # Guardamos los cambios realizados.
+    db.commit()
+
+    # Actualizamos el objeto con el estado persistido
+    # actualmente en PostgreSQL.
     db.refresh(user)
 
     return user

@@ -64,3 +64,10 @@ from app.schemas.operation import (
 
 # Esquemas de reportes.
 from app.schemas.report import ReportResponse
+
+# Esquemas de usuarios.
+from app.schemas.user import (
+    UserCreate,
+    UserUpdate,
+    UserResponse,
+)

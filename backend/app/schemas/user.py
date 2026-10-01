@@ -1,79 +1,71 @@
-# Este archivo contiene los schemas Pydantic relacionados
-# con los usuarios de MatrixFlow Enterprise.
+# ============================================================
+# MatrixFlow Enterprise
+# Schemas de usuarios
+# ============================================================
 #
-# Los schemas sirven para:
-# - Validar los datos que recibe FastAPI.
-# - Definir qué información devuelve la API.
-# - Evitar exponer información sensible como contraseñas
-#   o hashes de contraseñas.
+# Estos schemas validan los datos recibidos y devueltos
+# por los endpoints del módulo de usuarios.
+#
+# La contraseña nunca se devuelve mediante la API.
+# ============================================================
 
-
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 # ------------------------------------------------------------
-# Schema para crear un usuario
+# CREAR USUARIO
 # ------------------------------------------------------------
 
 class UserCreate(BaseModel):
     """
-    Datos necesarios para registrar un nuevo usuario.
-
-    La contraseña se recibe temporalmente en texto plano
-    únicamente para poder generar su hash.
-    Nunca debe almacenarse directamente en la BD.
+    Datos necesarios para registrar una nueva cuenta.
     """
 
-    # Nombre de usuario único.
     username: str
-
-    # Correo electrónico único.
     email: EmailStr
-
-    # Contraseña que posteriormente será convertida
-    # en un hash mediante bcrypt.
     password: str
-
-    # Nombre completo del usuario.
     full_name: str
-
-    # Identificador del rol que tendrá el usuario.
     role_id: int
 
 
 # ------------------------------------------------------------
-# Schema para devolver información de un usuario
+# ACTUALIZAR USUARIO
+# ------------------------------------------------------------
+
+class UserUpdate(BaseModel):
+    """
+    Campos administrativos que pueden modificarse.
+
+    No incluimos la contraseña porque posteriormente
+    tendrá un endpoint independiente.
+    """
+
+    username: str
+    email: EmailStr
+    full_name: str
+    role_id: int
+    is_active: bool
+
+
+# ------------------------------------------------------------
+# RESPUESTA PÚBLICA
 # ------------------------------------------------------------
 
 class UserResponse(BaseModel):
     """
-    Información pública de un usuario.
+    Información pública de una cuenta.
 
-    IMPORTANTE:
-    No incluimos "password" porque nunca debemos devolver
-    la contraseña ni su hash mediante la API.
+    La contraseña y su hash nunca forman parte de
+    las respuestas del backend.
     """
 
-    # Identificador del usuario.
     id: int
-
-    # Nombre de usuario.
     username: str
-
-    # Correo electrónico.
     email: EmailStr
-
-    # Nombre completo.
     full_name: str
-
-    # Estado de la cuenta.
     is_active: bool
-
-    # Identificador del rol.
     role_id: int
 
-    # Permite que Pydantic pueda convertir directamente
-    # objetos SQLAlchemy en este schema.
     model_config = ConfigDict(
         from_attributes=True,
     )

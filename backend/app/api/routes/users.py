@@ -1,9 +1,12 @@
-# Este archivo contiene los endpoints relacionados con usuarios.
+# ============================================================
+# MatrixFlow Enterprise
+# Endpoints del módulo de usuarios
+# ============================================================
 #
-# La comunicación sigue esta arquitectura:
+# Flujo:
 #
 # React
-#   ↓ HTTP/JSON
+#   ↓ HTTP / JSON
 # FastAPI
 #   ↓
 # Repository
@@ -13,7 +16,7 @@
 # PostgreSQL / Supabase
 #
 # El frontend nunca accede directamente a Supabase.
-
+# ============================================================
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -21,13 +24,18 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_password_hash, require_roles
-from app.repositories.user_repository import create_user, get_all_users
-from app.schemas.user import UserCreate, UserResponse
+from app.repositories.user_repository import (
+    create_user,
+    get_all_users,
+    get_user_by_id,
+    update_user,
+)
+from app.schemas.user import (
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+)
 
-
-# ------------------------------------------------------------
-# Router del módulo de usuarios
-# ------------------------------------------------------------
 
 router = APIRouter(
     prefix="/users",
@@ -36,7 +44,7 @@ router = APIRouter(
 
 
 # ------------------------------------------------------------
-# Obtener todos los usuarios
+# OBTENER USUARIOS
 # ------------------------------------------------------------
 
 @router.get(
@@ -52,16 +60,14 @@ def get_users(
     """
     Obtiene todos los usuarios registrados.
 
-    La contraseña y su hash no se devuelven porque
-    UserResponse no contiene ese campo.
+    La contraseña y su hash nunca se devuelven.
     """
 
-    # Consultamos los usuarios mediante el repository.
     return get_all_users(db)
 
 
 # ------------------------------------------------------------
-# Crear usuario
+# CREAR USUARIO
 # ------------------------------------------------------------
 
 @router.post(
@@ -77,34 +83,16 @@ def create_new_user(
     ),
 ):
     """
-    Crea un nuevo usuario.
+    Registra una nueva cuenta de usuario.
 
-    El proceso es:
-
-        contraseña recibida
-              ↓
-        bcrypt / hash
-              ↓
-        users.password
-              ↓
-        PostgreSQL / Supabase
-
-    La contraseña original nunca se almacena.
+    La contraseña recibida se convierte en un hash
+    antes de almacenarse en PostgreSQL.
     """
 
-    # --------------------------------------------------------
-    # 1. Convertir la contraseña en un hash seguro
-    # --------------------------------------------------------
-
-    # IMPORTANTE:
-    # Nunca guardamos data.password directamente.
+    # La contraseña en texto plano nunca se almacena.
     password_hash = get_password_hash(
         data.password
     )
-
-    # --------------------------------------------------------
-    # 2. Crear el usuario
-    # --------------------------------------------------------
 
     try:
         user = create_user(
@@ -117,9 +105,8 @@ def create_new_user(
         )
 
     except IntegrityError:
-        # Si username o email ya existen, PostgreSQL
-        # rechazará la operación debido a sus restricciones
-        # UNIQUE.
+        # PostgreSQL impide usernames y correos duplicados
+        # mediante restricciones UNIQUE.
         db.rollback()
 
         raise HTTPException(
@@ -130,8 +117,70 @@ def create_new_user(
             ),
         )
 
-    # --------------------------------------------------------
-    # 3. Devolver únicamente información pública
-    # --------------------------------------------------------
-
     return user
+
+
+# ------------------------------------------------------------
+# ACTUALIZAR USUARIO
+# ------------------------------------------------------------
+
+@router.patch(
+    "/{user_id}",
+    response_model=UserResponse,
+)
+def update_existing_user(
+    user_id: int,
+    data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
+):
+    """
+    Actualiza una cuenta existente.
+
+    Permite modificar:
+    - nombre completo
+    - nombre de usuario
+    - correo electrónico
+    - rol
+    - estado activo/inactivo
+
+    La contraseña se gestionará mediante otra operación.
+    """
+
+    # Buscamos el usuario antes de modificarlo.
+    user = get_user_by_id(
+        db,
+        user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="El usuario no existe.",
+        )
+
+    try:
+        return update_user(
+            db=db,
+            user=user,
+            username=data.username,
+            email=data.email,
+            full_name=data.full_name,
+            role_id=data.role_id,
+            is_active=data.is_active,
+        )
+
+    except IntegrityError:
+        # Puede ocurrir si el nuevo username o correo
+        # pertenece a otra cuenta.
+        db.rollback()
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "El nombre de usuario o correo electrónico "
+                "ya está registrado."
+            ),
+        )
