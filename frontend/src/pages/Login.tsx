@@ -19,6 +19,10 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import {
+    Workflow,
+} from 'lucide-react'
+
 import { login } from '../services/api'
 
 function Login() {
@@ -35,6 +39,11 @@ function Login() {
     // Controla el estado visual mientras se procesa el acceso.
     const [loading, setLoading] = useState(false)
 
+    // Controla la transición visual entre el Login
+    // y la aplicación después de autenticarse.
+    const [isExiting, setIsExiting] =
+        useState(false)
+
     // Guarda el mensaje que se mostrará cuando ocurra un error.
     const [error, setError] = useState('')
 
@@ -46,50 +55,53 @@ function Login() {
     // ----------------------------------------------------------
 
     async function handleSubmit(
-        event: FormEvent<HTMLFormElement>
+        event: FormEvent<HTMLFormElement>,
     ) {
-        // Evitamos que el navegador recargue toda la página.
+        // Evitamos que el navegador recargue la página.
         event.preventDefault()
 
-        // Limpiamos cualquier error anterior.
         setError('')
-
-        // Activamos el estado de procesamiento.
         setLoading(true)
 
         try {
-            // Enviamos las credenciales para validar el acceso.
+            // Validamos las credenciales contra FastAPI.
             const response = await login({
                 email,
                 password,
             })
 
-            // Guardamos el token de acceso para las siguientes
-            // solicitudes autenticadas de la aplicación.
+            // Guardamos el JWT de la sesión.
             localStorage.setItem(
                 'matrixflow-access-token',
-                response.access_token
+                response.access_token,
             )
 
-            // Guardamos el tipo de token recibido.
             localStorage.setItem(
                 'matrixflow-token-type',
-                response.token_type
+                response.token_type,
             )
 
-            // Redirigimos al Dashboard después del acceso correcto.
-            navigate('/')
+            // Iniciamos la transición visual.
+            setIsExiting(true)
+
+            // Dejamos que la animación termine antes
+            // de mostrar el Dashboard.
+            window.setTimeout(() => {
+                navigate('/', {
+                    replace: true,
+                })
+            }, 650)
         } catch (err) {
-            // Mostramos un mensaje amigable cuando las credenciales
-            // no pueden ser procesadas correctamente.
             if (err instanceof Error) {
                 setError(err.message)
             } else {
-                setError('No se pudo iniciar sesión.')
+                setError(
+                    'No se pudo iniciar sesión.',
+                )
             }
-        } finally {
-            // Finalizamos el estado de carga independientemente
-            // del resultado de la operación.
+
+            // Solo reactivamos el formulario cuando
+            // la autenticación realmente falló.
             setLoading(false)
         }
     }
@@ -104,31 +116,83 @@ function Login() {
             {/* ==================================================
                 CONTENEDOR PRINCIPAL
                 ================================================== */}
-            <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="min-h-screen lg:flex">
 
                 {/* ==================================================
                     PANEL DE IDENTIDAD
                     ================================================== */}
-                <section className="relative hidden overflow-hidden bg-slate-950 lg:flex">
+                <section
+                    className={`
+    relative
+    hidden
+    shrink-0
+    overflow-hidden
+    bg-slate-950
+
+    transition-[width]
+    duration-[650ms]
+    ease-in-out
+
+    lg:flex
+
+    ${isExiting
+                            ? 'w-64'
+                            : 'w-[52.5%]'
+                        }
+
+    motion-reduce:transition-none
+  `}
+                >
                     {/* Elementos decorativos sutiles para reforzar
                         la identidad visual sin distraer del formulario. */}
                     <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-slate-800/60 blur-3xl" />
                     <div className="absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-cyan-950/40 blur-3xl" />
 
-                    <div className="relative z-10 flex w-full flex-col justify-between p-12 xl:p-16">
+                    <div
+                        className={`
+    relative
+    z-10
+    flex
+    w-full
+    flex-col
+    justify-between
+
+    transition-all
+    duration-[650ms]
+
+    ${isExiting
+                                ? 'p-5'
+                                : 'p-12 xl:p-16'
+                            }
+  `}
+                    >
 
                         {/* Marca */}
                         <div>
                             <div className="flex items-center gap-3">
                                 {/* Marca gráfica simple construida con
                                     elementos Tailwind, sin imágenes externas. */}
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-950">
-                                    MF
+                                <div
+                                    className="
+    flex
+    h-10
+    w-10
+    shrink-0
+    items-center
+    justify-center
+    rounded-xl
+    bg-blue-600
+    text-white
+    shadow-sm
+    shadow-blue-950/40
+  "
+                                >
+                                    <Workflow size={21} />
                                 </div>
 
                                 <div>
-                                    <p className="text-lg font-bold tracking-tight text-white">
-                                        MatrixFlow
+                                    <p className="text-[15px] font-bold tracking-[0.08em] text-white">
+                                        MATRIXFLOW
                                     </p>
 
                                     <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
@@ -139,7 +203,26 @@ function Login() {
                         </div>
 
                         {/* Mensaje principal */}
-                        <div className="max-w-xl">
+                        <div
+                            className={`
+    max-w-xl
+
+    transition-all
+    duration-300
+
+    ${isExiting
+                                    ? `
+          -translate-x-6
+          opacity-0
+          pointer-events-none
+        `
+                                    : `
+          translate-x-0
+          opacity-100
+        `
+                                }
+  `}
+                        >
                             <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">
                                 Gestión empresarial
                             </p>
@@ -193,7 +276,20 @@ function Login() {
                         </div>
 
                         {/* Pie del panel */}
-                        <p className="text-xs text-slate-500">
+                        <p
+                            className={`
+    text-xs
+    text-slate-500
+
+    transition-opacity
+    duration-200
+
+    ${isExiting
+                                    ? 'opacity-0'
+                                    : 'opacity-100'
+                                }
+  `}
+                        >
                             MatrixFlow Enterprise · Plataforma de gestión y análisis
                         </p>
                     </div>
@@ -202,13 +298,57 @@ function Login() {
                 {/* ==================================================
                     PANEL DE ACCESO
                     ================================================== */}
-                <main className="flex items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
-                    <div className="w-full max-w-md">
+                <main
+                    className={`
+    flex
+    min-w-0
+    flex-1
+    items-center
+    justify-center
+
+    px-5
+    py-10
+
+    transition-all
+    duration-[650ms]
+    ease-in-out
+
+    sm:px-8
+    lg:px-12
+
+    ${isExiting
+                            ? 'bg-slate-50'
+                            : ''
+                        }
+  `}
+                >
+                    <div
+                        className={`
+    w-full
+    max-w-md
+
+    transition-all
+    duration-300
+
+    ${isExiting
+                                ? `
+          -translate-x-8
+          scale-[0.98]
+          opacity-0
+        `
+                                : `
+          translate-x-0
+          scale-100
+          opacity-100
+        `
+                            }
+  `}
+                    >
 
                         {/* Marca visible en dispositivos pequeños */}
                         <div className="mb-10 flex items-center justify-center gap-3 lg:hidden">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white">
-                                MF
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
+                                <Workflow size={21} />
                             </div>
 
                             <div>

@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -29,9 +30,19 @@ function SalesByProductChart({
     )
   }
 
+  // Colores utilizados para diferenciar visualmente
+  // los productos dentro del gráfico.
+  const PRODUCT_COLORS = [
+    '#2563EB',
+    '#06B6D4',
+    '#6366F1',
+    '#0EA5E9',
+    '#14B8A6',
+    '#8B5CF6',
+  ]
 
   const chartData =
-    data.map((item) => ({
+    data.map((item, index) => ({
       product:
         item.product_name,
 
@@ -40,6 +51,14 @@ function SalesByProductChart({
 
       quantity:
         Number(item.quantity),
+
+      // Guardamos el color junto con los datos para poder
+      // reutilizarlo tanto en la barra como en el tooltip.
+      color:
+        PRODUCT_COLORS[
+        index %
+        PRODUCT_COLORS.length
+        ],
     }))
 
 
@@ -76,29 +95,30 @@ function SalesByProductChart({
           <Tooltip
             formatter={(
               value,
-              name,
-            ) => {
-              if (
-                name === 'total'
-              ) {
-                return [
-                  `S/ ${Number(
+              _name,
+              item,
+            ) => [
+                <span
+                  style={{
+                    // El valor utiliza exactamente el mismo
+                    // color asignado a la barra del producto.
+                    color:
+                      item.payload.color,
+                    fontWeight: 600,
+                  }}
+                >
+                  S/{' '}
+                  {Number(
                     value,
                   ).toLocaleString(
                     'es-PE',
                     {
                       minimumFractionDigits: 2,
                     },
-                  )}`,
-                  'Ventas',
-                ]
-              }
-
-              return [
-                value,
-                name,
-              ]
-            }}
+                  )}
+                </span>,
+                'Ventas',
+              ]}
           />
 
           <Bar
@@ -110,7 +130,24 @@ function SalesByProductChart({
               6,
               0,
             ]}
-          />
+          >
+            {chartData.map(
+              (item, index) => (
+                <Cell
+                  key={item.product}
+
+                  // Reutilizamos la paleta si existen
+                  // más productos que colores disponibles.
+                  fill={
+                    PRODUCT_COLORS[
+                    index %
+                    PRODUCT_COLORS.length
+                    ]
+                  }
+                />
+              ),
+            )}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

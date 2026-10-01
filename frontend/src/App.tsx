@@ -9,15 +9,21 @@
 // 2. Mostrar el Login como ruta pública.
 // 3. Proteger las rutas internas mediante ProtectedRoute.
 // 4. Mostrar Sidebar y Header en la aplicación principal.
-// 5. Mantener la configuración del modo oscuro.
+// 5. Coordinar las transiciones de sesión.
 // 6. Comprobar la conexión con FastAPI.
 // ============================================================
 
-import { useEffect, type ReactNode } from 'react'
+import {
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react'
+
 import {
   BrowserRouter,
-  Routes,
   Route,
+  Routes,
+  useNavigate,
 } from 'react-router-dom'
 
 // Función utilizada para comprobar la conexión con FastAPI.
@@ -60,46 +66,54 @@ import Configuracion from './pages/Configuracion'
 // Página de seguridad y consulta de accesos.
 import Seguridad from './pages/Seguridad'
 
+
+// ============================================================
+// CONFIGURACIÓN DE TRANSICIONES
+// ============================================================
+
+// Debe coincidir con la duración utilizada en Login.tsx.
+// De esta manera ambas animaciones se sienten simétricas.
+const LOGOUT_ANIMATION_MS = 650
+
+
 // ============================================================
 // RUTA PROTEGIDA POR ROL
 // ============================================================
 //
-// Este componente complementa a ProtectedRoute.
-//
 // ProtectedRoute comprueba que exista una sesión.
-// RoleProtectedRoute comprueba además que el usuario tenga
-// uno de los roles autorizados para la página.
+//
+// RoleProtectedRoute añade además la comprobación visual
+// del rol autorizado.
 //
 // El backend continúa siendo la autoridad definitiva.
 // ============================================================
 
-type UserRole = 'Administrador' | 'Analista' | 'Consulta'
+type UserRole =
+  | 'Administrador'
+  | 'Analista'
+  | 'Consulta'
+
 
 interface RoleProtectedRouteProps {
   // Página que queremos proteger.
   children: ReactNode
 
-  // Roles que pueden acceder a la página.
+  // Roles autorizados para acceder.
   allowedRoles: UserRole[]
 }
+
 
 function RoleProtectedRoute({
   children,
   allowedRoles,
 }: RoleProtectedRouteProps) {
-
   return (
-    <ProtectedRoute allowedRoles={allowedRoles}>
+    <ProtectedRoute
+      allowedRoles={allowedRoles}
+    >
       {children}
     </ProtectedRoute>
   )
-}
-
-// ============================================================
-// PROPIEDADES DEL LAYOUT PRINCIPAL
-// ============================================================
-
-interface AppLayoutProps {
 }
 
 
@@ -107,30 +121,207 @@ interface AppLayoutProps {
 // LAYOUT PRINCIPAL
 // ============================================================
 //
-// Contiene los elementos visuales comunes de las páginas
-// internas:
+// Contiene:
 //
-// - Sidebar
-// - Header
-// - Contenido de cada módulo
+// - Sidebar.
+// - Header.
+// - Contenido de cada módulo.
+// - Transición visual de cierre de sesión.
 //
-// La autenticación se controla mediante ProtectedRoute.
+// Para mejorar la fluidez evitamos animar propiedades que
+// obliguen al navegador a recalcular continuamente el layout.
 // ============================================================
 
-function AppLayout({}: AppLayoutProps) {
+function AppLayout() {
+  // Permite navegar al Login después de finalizar
+  // la transición visual.
+  const navigate =
+    useNavigate()
+
+  // Controla la animación Dashboard -> Login.
+  const [
+    isLoggingOut,
+    setIsLoggingOut,
+  ] = useState(false)
+
+
+  // ==========================================================
+  // CERRAR SESIÓN
+  // ==========================================================
+
+  function handleLogout() {
+    // Evitamos ejecutar dos veces el cierre de sesión
+    // si el usuario pulsa repetidamente el botón.
+    if (isLoggingOut) {
+      return
+    }
+
+    // Primero iniciamos únicamente la transición visual.
+    setIsLoggingOut(true)
+
+    // El JWT permanece disponible mientras se ejecuta
+    // la animación para que ProtectedRoute no desmonte
+    // prematuramente la aplicación.
+    window.setTimeout(() => {
+      // Eliminamos las credenciales de la sesión.
+      localStorage.removeItem(
+        'matrixflow-access-token',
+      )
+
+      localStorage.removeItem(
+        'matrixflow-token-type',
+      )
+
+      // Cuando termina la transición mostramos Login.
+      navigate('/login', {
+        replace: true,
+      })
+    }, LOGOUT_ANIMATION_MS)
+  }
+
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div
+      className="
+        min-h-screen
+        overflow-x-hidden
+        bg-slate-50
+        text-slate-900
+      "
+    >
 
-      {/* Menú lateral principal. */}
-      <Sidebar />
+      {/* ====================================================
+          PANEL VISUAL DE TRANSICIÓN
+          ====================================================
 
-      {/* Barra superior. */}
-      <Header />
+          Este panel se encuentra detrás del Sidebar.
 
-      {/* Contenido principal. */}
-      <main className="ml-64 pt-20">
+          Normalmente solo son visibles 16rem, exactamente
+          el ancho del Sidebar.
 
+          Durante el logout utilizamos clip-path para revelar
+          progresivamente el resto del panel oscuro.
+
+          De esta forma evitamos animar width y no forzamos
+          un recálculo completo del layout en cada frame.
+          ==================================================== */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+
+          fixed
+          inset-y-0
+          left-0
+
+          z-35
+
+          w-[52.5vw]
+
+          bg-slate-950
+
+          transition-[clip-path]
+          duration-[650ms]
+          ease-in-out
+
+          motion-reduce:transition-none
+        "
+        style={{
+          clipPath: isLoggingOut
+            ? 'inset(0 0 0 0)'
+            : 'inset(0 calc(100% - 16rem) 0 0)',
+
+          // Indicamos al navegador que esta propiedad
+          // cambiará durante la animación.
+          willChange: 'clip-path',
+        }}
+      />
+
+
+      {/* ====================================================
+          SIDEBAR
+          ====================================================
+
+          El Sidebar real conserva su ancho de 256px.
+
+          Su menú desaparece durante el logout mientras
+          el panel visual situado detrás se expande.
+          ==================================================== */}
+
+      <Sidebar
+        isLoggingOut={isLoggingOut}
+        onLogout={handleLogout}
+      />
+
+
+      {/* ====================================================
+          HEADER
+          ====================================================
+
+          El Header ya utiliza position: fixed.
+
+          Evitamos aplicar transform a su contenedor porque
+          podría alterar el comportamiento de posicionamiento.
+
+          Solamente lo hacemos desaparecer.
+          ==================================================== */}
+
+      <div
+        className={`
+          transition-opacity
+          duration-300
+          ease-out
+
+          ${isLoggingOut
+            ? `
+                opacity-0
+                pointer-events-none
+              `
+            : `
+                opacity-100
+              `
+          }
+        `}
+      >
+        <Header />
+      </div>
+
+
+      {/* ====================================================
+          CONTENIDO PRINCIPAL
+          ====================================================
+
+          El margen izquierdo permanece siempre en 16rem.
+
+          Solamente animamos transform y opacity para evitar
+          recalcular todo el layout del Dashboard.
+          ==================================================== */}
+
+      <main
+        className={`
+          ml-64
+          pt-20
+
+          transition-[opacity,transform]
+          duration-300
+          ease-out
+
+          ${isLoggingOut
+            ? `
+                -translate-x-4
+                opacity-0
+                pointer-events-none
+              `
+            : `
+                translate-x-0
+                opacity-100
+              `
+          }
+
+          motion-reduce:transition-none
+        `}
+      >
         <div className="p-8">
 
           <Routes>
@@ -138,9 +329,10 @@ function AppLayout({}: AppLayoutProps) {
             {/* ==================================================
                 DASHBOARD
                 ==================================================
-      
-            Los tres roles pueden visualizar el Dashboard.
-            */}
+
+                Los tres roles pueden visualizar el Dashboard.
+                ================================================== */}
+
             <Route
               path="/"
               element={<Dashboard />}
@@ -150,38 +342,45 @@ function AppLayout({}: AppLayoutProps) {
             {/* ==================================================
                 EMPRESA
                 ==================================================
-      
-                Estas funciones corresponden exclusivamente
-                al Administrador.
-            */}
+
+                Funciones administrativas.
+                ================================================== */}
 
             <Route
               path="/empresa"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador']}
+                  allowedRoles={[
+                    'Administrador',
+                  ]}
                 >
                   <Empresa />
                 </RoleProtectedRoute>
               }
             />
 
+
             <Route
               path="/empresa/sucursales"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador']}
+                  allowedRoles={[
+                    'Administrador',
+                  ]}
                 >
                   <Sucursales />
                 </RoleProtectedRoute>
               }
             />
 
+
             <Route
               path="/empresa/productos"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador']}
+                  allowedRoles={[
+                    'Administrador',
+                  ]}
                 >
                   <Productos />
                 </RoleProtectedRoute>
@@ -191,16 +390,16 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 VENTAS
-                ==================================================
-                
-                Administrador y Analista pueden trabajar con ventas.
-            */}
+                ================================================== */}
 
             <Route
               path="/ventas"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <Ventas />
                 </RoleProtectedRoute>
@@ -210,16 +409,16 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 INVENTARIO
-                ==================================================
-                
-                Administrador y Analista pueden trabajar con inventario.
-            */}
+                ================================================== */}
 
             <Route
               path="/inventario"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <Inventario />
                 </RoleProtectedRoute>
@@ -229,61 +428,76 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 ANÁLISIS MATEMÁTICO
-                ==================================================
-                
-                Administrador y Analista pueden utilizar las
-                herramientas matemáticas.
-            */}
+                ================================================== */}
 
             <Route
               path="/analisis-matematico"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <Vectores />
                 </RoleProtectedRoute>
               }
             />
+
 
             <Route
               path="/analisis-matematico/vectores"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <Vectores />
                 </RoleProtectedRoute>
               }
             />
 
+
             <Route
               path="/analisis-matematico/matrices"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <Matrices />
                 </RoleProtectedRoute>
               }
             />
 
+
             <Route
               path="/analisis-matematico/operaciones"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <Operaciones />
                 </RoleProtectedRoute>
               }
             />
 
+
             <Route
               path="/analisis-matematico/combinaciones-lineales"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <CombinacionesLineales />
                 </RoleProtectedRoute>
@@ -293,17 +507,16 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 HISTORIAL
-                ==================================================
-                
-                El historial corresponde a la trazabilidad de las
-                operaciones realizadas por los usuarios autorizados.
-            */}
+                ================================================== */}
 
             <Route
               path="/historial"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador', 'Analista']}
+                  allowedRoles={[
+                    'Administrador',
+                    'Analista',
+                  ]}
                 >
                   <Historial />
                 </RoleProtectedRoute>
@@ -313,11 +526,7 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 REPORTES
-                ==================================================
-                
-                Los tres roles pueden consultar los reportes
-                autorizados.
-            */}
+                ================================================== */}
 
             <Route
               path="/reportes"
@@ -337,16 +546,15 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 USUARIOS
-                ==================================================
-                
-                Exclusivo del Administrador.
-            */}
+                ================================================== */}
 
             <Route
               path="/usuarios"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador']}
+                  allowedRoles={[
+                    'Administrador',
+                  ]}
                 >
                   <Usuarios />
                 </RoleProtectedRoute>
@@ -356,16 +564,15 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 SEGURIDAD Y ACCESOS
-                ==================================================
-                
-                Exclusivo del Administrador.
-            */}
+                ================================================== */}
 
             <Route
               path="/seguridad"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador']}
+                  allowedRoles={[
+                    'Administrador',
+                  ]}
                 >
                   <Seguridad />
                 </RoleProtectedRoute>
@@ -375,16 +582,15 @@ function AppLayout({}: AppLayoutProps) {
 
             {/* ==================================================
                 CONFIGURACIÓN
-                ==================================================
-                
-                Exclusivo del Administrador.
-            */}
+                ================================================== */}
 
             <Route
               path="/configuracion"
               element={
                 <RoleProtectedRoute
-                  allowedRoles={['Administrador']}
+                  allowedRoles={[
+                    'Administrador',
+                  ]}
                 >
                   <Configuracion />
                 </RoleProtectedRoute>
@@ -394,7 +600,6 @@ function AppLayout({}: AppLayoutProps) {
           </Routes>
 
         </div>
-
       </main>
 
     </div>
@@ -413,28 +618,22 @@ function App() {
   // ==========================================================
 
   useEffect(() => {
-
     // Comprobamos que FastAPI esté funcionando.
     checkBackend()
 
       .then((data) => {
-
-        // Mostramos la respuesta del backend en consola.
         console.log(
           'Backend conectado correctamente:',
-          data
+          data,
         )
       })
 
       .catch((error) => {
-
-        // Mostramos el error si FastAPI no responde.
         console.error(
           'Error conectando con el backend:',
-          error
+          error,
         )
       })
-
   }, [])
 
 
@@ -452,10 +651,7 @@ function App() {
             ====================================================
 
             Esta es la única ruta pública.
-
-            El usuario puede entrar al Login aunque no tenga
-            un JWT guardado.
-        */}
+            ==================================================== */}
 
         <Route
           path="/login"
@@ -470,11 +666,11 @@ function App() {
             Todas las demás rutas pasan por ProtectedRoute.
 
             Si existe JWT:
-                → se muestra la aplicación.
+                -> se muestra la aplicación.
 
             Si no existe JWT:
-                → se redirige automáticamente a /login.
-        */}
+                -> se redirige automáticamente a /login.
+            ==================================================== */}
 
         <Route
           path="*"

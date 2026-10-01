@@ -81,6 +81,10 @@ function SalesByBranchChart({
 
           <Bar
             dataKey="sales"
+
+            // Azul principal de MatrixFlow.
+            fill="#2563EB"
+
             radius={[
               6,
               6,
