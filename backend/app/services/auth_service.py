@@ -117,11 +117,10 @@ import httpx
 
 def geolocate_ip(ip_address: str) -> dict:
     """
-    Obtiene una ubicación aproximada a partir de una IP pública.
+    Obtiene una ubicación aproximada desde una IP pública.
 
-    La geolocalización es complementaria:
-    si el servicio externo falla, el inicio de sesión
-    debe continuar funcionando normalmente.
+    Si la geolocalización falla, el login continúa funcionando.
+    Los mensajes de diagnóstico permiten identificar el motivo.
     """
 
     empty_location = {
@@ -133,18 +132,86 @@ def geolocate_ip(ip_address: str) -> dict:
     }
 
     try:
-        # Validamos primero que realmente tengamos
-        # una dirección IPv4 o IPv6.
-        ip = ipaddress.ip_address(
-            ip_address,
+        ip = ipaddress.ip_address(ip_address)
+
+        print(
+            f"[GEO] IP recibida: {ip_address} | "
+            f"is_global={ip.is_global}"
         )
 
-        # Direcciones locales, privadas o reservadas no tienen
-        # una ubicación pública útil para este módulo.
         if not ip.is_global:
+            print(
+                "[GEO] La IP no es pública. "
+                "No se intentará geolocalizar."
+            )
             return empty_location
 
     except ValueError:
+        print(
+            f"[GEO] Dirección IP inválida: {ip_address}"
+        )
+        return empty_location
+
+    try:
+        response = httpx.get(
+            f"https://ipwho.is/{ip_address}",
+            timeout=5.0,
+            follow_redirects=True,
+            headers={
+                "User-Agent": "MatrixFlow-Enterprise/1.0",
+            },
+        )
+
+        print(
+            f"[GEO] Proveedor respondió HTTP "
+            f"{response.status_code}"
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        print(
+            "[GEO] Respuesta:",
+            {
+                "success": data.get("success"),
+                "city": data.get("city"),
+                "region": data.get("region"),
+                "country": data.get("country"),
+                "latitude": data.get("latitude"),
+                "longitude": data.get("longitude"),
+                "message": data.get("message"),
+            },
+        )
+
+        if data.get("success") is not True:
+            print(
+                "[GEO] El proveedor no pudo "
+                "geolocalizar la IP."
+            )
+            return empty_location
+
+        return {
+            "city": data.get("city"),
+            "region": data.get("region"),
+            "country": data.get("country"),
+            "latitude": data.get("latitude"),
+            "longitude": data.get("longitude"),
+        }
+
+    except httpx.HTTPError as error:
+        print(
+            f"[GEO] Error HTTP: {error}"
+        )
+        return empty_location
+
+    except (
+        ValueError,
+        TypeError,
+    ) as error:
+        print(
+            f"[GEO] Error procesando respuesta: {error}"
+        )
         return empty_location
 
     try:
