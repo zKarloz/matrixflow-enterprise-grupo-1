@@ -14,6 +14,7 @@ from app.repositories.category_repository import (
     get_active_categories,
     get_all_categories,
     get_category_by_id,
+    get_category_by_name,
 )
 
 
@@ -51,15 +52,35 @@ def register_category(
     name: str,
     description: str | None = None,
 ):
-    # Validamos que el nombre exista.
+    """
+    Registra una nueva categoría de productos.
+    """
+
     if not name or not name.strip():
         raise ValueError(
             "El nombre de la categoría es obligatorio."
         )
 
-    # Creamos la categoría mediante el repository.
+    clean_name = name.strip()
+
+    # Evitamos que PostgreSQL tenga que rechazar directamente
+    # un nombre que ya existe.
+    existing_category = get_category_by_name(
+        db,
+        clean_name,
+    )
+
+    if existing_category is not None:
+        raise ValueError(
+            "Ya existe una categoría con ese nombre."
+        )
+
     return create_category(
         db=db,
-        name=name.strip(),
-        description=description,
+        name=clean_name,
+        description=(
+            description.strip()
+            if description and description.strip()
+            else None
+        ),
     )

@@ -36,6 +36,22 @@ def get_active_categories(db: Session):
         .all()
     )
 
+def get_category_by_name(
+    db: Session,
+    name: str,
+):
+    """
+    Busca una categoría mediante su nombre.
+
+    Se utiliza para evitar nombres duplicados antes
+    de intentar guardar el registro en PostgreSQL.
+    """
+
+    return (
+        db.query(Category)
+        .filter(Category.name == name)
+        .first()
+    )
 
 def create_category(
     db: Session,
