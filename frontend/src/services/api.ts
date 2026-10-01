@@ -601,6 +601,23 @@ export interface Category {
 }
 
 /**
+ * Datos necesarios para crear una categoría.
+ */
+export interface CreateCategoryData {
+  name: string
+  description?: string | null
+}
+
+/**
+ * Datos que pueden modificarse en una categoría existente.
+ */
+export interface UpdateCategoryData {
+  name: string
+  description?: string | null
+  is_active: boolean
+}
+
+/**
  * Obtiene las categorías activas.
  *
  * Endpoint:
@@ -620,6 +637,117 @@ export async function getActiveCategories(): Promise<Category[]> {
   }
 
   // Convertimos la respuesta JSON en un arreglo de categorías.
+  return response.json()
+}
+
+/**
+ * Registra una nueva categoría.
+ *
+ * Endpoint:
+ * POST /api/v1/categories
+ */
+export async function createCategory(
+  data: CreateCategoryData,
+): Promise<Category> {
+  // authenticatedFetch agrega automáticamente
+  // el JWT del Administrador.
+  const response = await authenticatedFetch(
+    '/api/v1/categories',
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo crear la categoría.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si FastAPI
+      // no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+/**
+ * Actualiza una categoría existente.
+ *
+ * Endpoint:
+ * PATCH /api/v1/categories/{categoryId}
+ */
+export async function updateCategory(
+  categoryId: number,
+  data: UpdateCategoryData,
+): Promise<Category> {
+  // authenticatedFetch agrega automáticamente
+  // el JWT del usuario Administrador.
+  const response = await authenticatedFetch(
+    `/api/v1/categories/${categoryId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo actualizar la categoría.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si FastAPI
+      // no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+/**
+ * Obtiene todas las categorías registradas,
+ * incluyendo las categorías inactivas.
+ *
+ * Endpoint:
+ * GET /api/v1/categories
+ */
+export async function getCategories(): Promise<Category[]> {
+  const response = await authenticatedFetch(
+    '/api/v1/categories',
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudieron cargar las categorías.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si FastAPI
+      // no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
   return response.json()
 }
 
@@ -690,6 +818,21 @@ export interface CreateProductData {
 }
 
 /**
+ * Datos que pueden modificarse en un producto existente.
+ *
+ * El stock no se incluye porque pertenece al módulo
+ * de inventario, no al catálogo de productos.
+ */
+export interface UpdateProductData {
+  name: string
+  category_id: number
+  price: number
+  sku: string
+  description?: string | null
+  is_active: boolean
+}
+
+/**
  * Obtiene todos los productos.
  *
  * Endpoint:
@@ -753,6 +896,46 @@ export async function createProduct(
   }
 
   // Devolvemos el producto creado.
+  return response.json()
+}
+
+/**
+ * Actualiza la información comercial de un producto.
+ *
+ * Endpoint:
+ * PATCH /api/v1/products/{productId}
+ */
+export async function updateProduct(
+  productId: number,
+  data: UpdateProductData,
+): Promise<Product> {
+  // authenticatedFetch agrega automáticamente
+  // el JWT de la sesión actual.
+  const response = await authenticatedFetch(
+    `/api/v1/products/${productId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo actualizar el producto.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si la API
+      // no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
   return response.json()
 }
 
