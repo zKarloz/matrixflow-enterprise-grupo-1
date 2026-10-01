@@ -1,80 +1,76 @@
 import { useEffect, useState } from 'react'
+
 import {
   createOperation,
   getOperations,
   type Operation,
 } from '../services/api'
 
-// Empresa utilizada durante el desarrollo local.
-// Debe coincidir con la empresa que venimos utilizando en MatrixFlow.
+// Empresa utilizada actualmente por MatrixFlow.
 const DEFAULT_COMPANY_ID = 2
 
-// Operaciones matemáticas que actualmente soporta el backend.
+// Operaciones matemáticas disponibles en el módulo.
 type OperationType =
   | 'sum_vector'
   | 'subtract_vector'
   | 'dot_product'
   | 'scalar_multiply'
 
-// Página principal del módulo de operaciones.
+// Página principal del módulo de operaciones matemáticas.
 function Operaciones() {
-  // Valores de entrada introducidos por el usuario.
+  // Valores utilizados como entrada para las operaciones.
   const [a, setA] = useState<number>(10)
   const [b, setB] = useState<number>(5)
-
-  // Escalar utilizado para la multiplicación escalar.
   const [scalar, setScalar] = useState<number>(2)
 
-  // Historial obtenido realmente desde el backend.
+  // Historial real de operaciones registradas.
   const [history, setHistory] = useState<Operation[]>([])
 
   // Resultado de la última operación ejecutada.
   const [result, setResult] = useState<unknown>(null)
 
-  // Indica si estamos consultando o ejecutando una operación.
+  // Estados de carga y error.
   const [loading, setLoading] = useState(false)
-
-  // Mensaje de error mostrado al usuario.
   const [error, setError] = useState<string | null>(null)
 
-  // Carga el historial real almacenado por el backend.
+  // Carga el historial de operaciones registradas.
   const loadHistory = async () => {
     try {
       setError(null)
 
-      // Consultamos las operaciones registradas.
+      // Consultamos las operaciones existentes.
       const operations = await getOperations()
 
-      // Mostramos las operaciones recibidas.
+      // Guardamos los resultados recibidos.
       setHistory(operations)
     } catch (err) {
-      // Mostramos un mensaje comprensible si falla la petición.
+      // Mostramos un mensaje comprensible al usuario.
       setError(
         err instanceof Error
           ? err.message
-          : 'No se pudo cargar el historial.'
+          : 'No se pudo cargar el historial.',
       )
     }
   }
 
-  // Cargamos el historial cuando se abre la página.
+  // Cargamos el historial al entrar al módulo.
   useEffect(() => {
     loadHistory()
   }, [])
 
-  // Ejecuta una operación utilizando FastAPI.
+  // Ejecuta una operación matemática y actualiza el historial.
   const executeOperation = async (
     operationType: OperationType,
     operationName: string,
     firstValues: number[][],
     secondValues?: number[][] | null,
-    operationScalar?: number | null
+    operationScalar?: number | null,
   ) => {
     try {
       setLoading(true)
       setError(null)
 
-      // Enviamos los datos al backend.
+      // Registramos la operación con sus valores correspondientes.
       const response = await createOperation({
         company_id: DEFAULT_COMPANY_ID,
         name: operationName,
@@ -84,18 +80,17 @@ function Operaciones() {
         scalar: operationScalar ?? null,
       })
 
-      // Guardamos el resultado calculado por FastAPI.
+      // Mostramos el resultado calculado.
       setResult(response.result)
 
-      // Volvemos a consultar el historial para mostrar
-      // la operación que acaba de registrarse en PostgreSQL.
+      // Actualizamos el historial después de ejecutar la operación.
       await loadHistory()
     } catch (err) {
-      // Mostramos el error devuelto por el backend.
+      // Mostramos el error sin modificar la lógica existente.
       setError(
         err instanceof Error
           ? err.message
-          : 'No se pudo ejecutar la operación.'
+          : 'No se pudo ejecutar la operación.',
       )
     } finally {
       // Finalizamos el estado de carga.
@@ -104,314 +99,402 @@ function Operaciones() {
   }
 
   // Limpia únicamente el resultado mostrado actualmente.
-  // El historial permanece almacenado en el backend.
   const clearResult = () => {
     setResult(null)
   }
 
+  // Convierte el resultado en un texto seguro para mostrarlo.
+  const formatResult = (value: unknown) => {
+    if (value === undefined || value === null) {
+      return 'Resultado no disponible'
+    }
+
+    return Array.isArray(value) ? JSON.stringify(value) : String(value)
+  }
+
   return (
-    <div>
-      {/* Encabezado principal del módulo. */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Operaciones
-        </h1>
+    <div className="min-h-full bg-slate-50 p-6">
+      <div className="mx-auto max-w-7xl">
+        {/* Encabezado principal del módulo. */}
+        <div className="mb-8">
+          <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+            Análisis matemático
+          </p>
 
-        <p className="mt-2 text-slate-500">
-          Centro de operaciones matemáticas de MATRIXFLOW.
-        </p>
-      </div>
+          <div className="mt-2 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+                Operaciones
+              </h1>
 
-      {/* Mensaje de error del backend. */}
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+              <p className="mt-2 max-w-2xl text-sm text-slate-500">
+                Ejecuta operaciones vectoriales y analiza sus resultados.
+              </p>
+            </div>
 
-      {/* Valores de entrada. */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900">
-          Valores de entrada
-        </h2>
+            {/* Indicador compacto del historial disponible. */}
+            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Operaciones registradas
+              </p>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Introduce los valores que deseas utilizar.
-        </p>
-
-        <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
-          {/* Valor A. */}
-          <div>
-            <label className="text-sm font-medium text-slate-600">
-              Valor A
-            </label>
-
-            <input
-              type="number"
-              value={a}
-              onChange={(event) => setA(Number(event.target.value))}
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          {/* Valor B. */}
-          <div>
-            <label className="text-sm font-medium text-slate-600">
-              Valor B
-            </label>
-
-            <input
-              type="number"
-              value={b}
-              onChange={(event) => setB(Number(event.target.value))}
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          {/* Escalar. */}
-          <div>
-            <label className="text-sm font-medium text-slate-600">
-              Escalar
-            </label>
-
-            <input
-              type="number"
-              value={scalar}
-              onChange={(event) =>
-                setScalar(Number(event.target.value))
-              }
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-            />
+              <p className="mt-1 text-xl font-bold text-slate-900">
+                {history.length}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Operaciones disponibles en el backend. */}
-      <div className="mt-8">
-        <h2 className="mb-4 text-xl font-bold text-slate-900">
-          Operaciones disponibles
-        </h2>
-
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {/* Suma. */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Suma
-            </p>
-
-            <p className="mt-2 text-lg font-semibold text-slate-900">
-              A + B
-            </p>
-
-            <p className="mt-1 text-sm text-slate-400">
-              {a} + {b}
-            </p>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() =>
-                executeOperation(
-                  'sum_vector',
-                  `Suma ${a} + ${b}`,
-                  [[a]],
-                  [[b]]
-                )
-              }
-              className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Ejecutar suma
-            </button>
+        {/* Mensaje de error general. */}
+        {error && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <span className="font-semibold">Error</span>
+            <span>{error}</span>
           </div>
+        )}
 
-          {/* Resta. */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Resta
+        {/* Panel de valores de entrada. */}
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Parámetros
             </p>
 
-            <p className="mt-2 text-lg font-semibold text-slate-900">
-              A - B
-            </p>
-
-            <p className="mt-1 text-sm text-slate-400">
-              {a} - {b}
-            </p>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() =>
-                executeOperation(
-                  'subtract_vector',
-                  `Resta ${a} - ${b}`,
-                  [[a]],
-                  [[b]]
-                )
-              }
-              className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Ejecutar resta
-            </button>
-          </div>
-
-          {/* Producto punto. */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Producto punto
-            </p>
-
-            <p className="mt-2 text-lg font-semibold text-slate-900">
-              A · B
-            </p>
-
-            <p className="mt-1 text-sm text-slate-400">
-              {a} · {b}
-            </p>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() =>
-                executeOperation(
-                  'dot_product',
-                  `Producto punto ${a} · ${b}`,
-                  [[a]],
-                  [[b]]
-                )
-              }
-              className="mt-4 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Ejecutar producto punto
-            </button>
-          </div>
-
-          {/* Multiplicación por escalar. */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Multiplicación por escalar
-            </p>
-
-            <p className="mt-2 text-lg font-semibold text-slate-900">
-              A × escalar
-            </p>
-
-            <p className="mt-1 text-sm text-slate-400">
-              {a} × {scalar}
-            </p>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() =>
-                executeOperation(
-                  'scalar_multiply',
-                  `Multiplicación ${a} × ${scalar}`,
-                  [[a]],
-                  null,
-                  scalar
-                )
-              }
-              className="mt-4 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Ejecutar multiplicación
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Resultado recibido desde FastAPI. */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Resultado
+            <h2 className="mt-1 text-xl font-bold text-slate-900">
+              Valores de entrada
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Resultado calculado por el backend.
+              Define los valores que utilizarás en las operaciones.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={clearResult}
-            disabled={result === null}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Limpiar
-          </button>
-        </div>
+          <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-3">
+            {/* Valor A. */}
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Valor A
+              </label>
 
-        <div className="mt-6 rounded-lg bg-slate-50 p-6 text-center">
-          {result === null ? (
-            <p className="text-sm text-slate-400">
-              Ejecuta una operación para ver el resultado.
-            </p>
-          ) : (
-            <p className="text-3xl font-bold text-blue-600">
-              {Array.isArray(result)
-                ? JSON.stringify(result)
-                : String(result)}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Historial persistido en el backend. */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 p-6">
-          <h2 className="text-xl font-bold text-slate-900">
-            Historial de operaciones
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Operaciones registradas por MATRIXFLOW.
-          </p>
-        </div>
-
-        <div className="p-6">
-          {history.length === 0 ? (
-            <div className="rounded-lg bg-slate-50 p-8 text-center">
-              <p className="font-medium text-slate-600">
-                No hay operaciones registradas.
-              </p>
+              <input
+                type="number"
+                value={a}
+                onChange={(event) => setA(Number(event.target.value))}
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+              />
             </div>
-          ) : (
-            <div className="space-y-3">
-              {history.map((operation) => (
-                <div
-                  key={operation.id}
-                  className="flex flex-col gap-2 rounded-lg border border-slate-200 p-4 md:flex-row md:items-center md:justify-between"
-                >
-                  <div>
-                    <p className="font-medium text-slate-700">
-                      {/* Mostramos un texto alternativo si el registro antiguo no tiene nombre. */}
-                      {operation.name || 'Operación matemática'}
-                    </p>
 
-                    <p className="mt-1 text-xs text-slate-400">
-                      {operation.operation_type}
-                    </p>
-                  </div>
+            {/* Valor B. */}
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Valor B
+              </label>
 
-                  <p className="text-lg font-bold text-blue-600">
-                    {/*
-                      Convertimos el resultado del backend en un texto seguro.
-                      Así evitamos mostrar "undefined" cuando una operación antigua
-                      no tenga un resultado disponible.
-                    */}
-                    {operation.result === undefined || operation.result === null
-                      ? 'Resultado no disponible'
-                      : Array.isArray(operation.result)
-                        ? JSON.stringify(operation.result)
-                        : String(operation.result)}
+              <input
+                type="number"
+                value={b}
+                onChange={(event) => setB(Number(event.target.value))}
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+              />
+            </div>
+
+            {/* Escalar utilizado únicamente en la multiplicación escalar. */}
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Escalar
+              </label>
+
+              <input
+                type="number"
+                value={scalar}
+                onChange={(event) => setScalar(Number(event.target.value))}
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Operaciones disponibles. */}
+        <section className="mt-8">
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Herramientas
+            </p>
+
+            <h2 className="mt-1 text-xl font-bold text-slate-900">
+              Operaciones disponibles
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {/* Operación de suma. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-500">
+                    Suma
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    A + B
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-400">
+                    {a} + {b}
                   </p>
                 </div>
-              ))}
+
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
+                  +
+                </span>
+              </div>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() =>
+                  executeOperation(
+                    'sum_vector',
+                    `Suma ${a} + ${b}`,
+                    [[a]],
+                    [[b]],
+                  )
+                }
+                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Ejecutar suma
+              </button>
             </div>
-          )}
-        </div>
+
+            {/* Operación de resta. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-500">
+                    Resta
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    A − B
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-400">
+                    {a} − {b}
+                  </p>
+                </div>
+
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
+                  −
+                </span>
+              </div>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() =>
+                  executeOperation(
+                    'subtract_vector',
+                    `Resta ${a} - ${b}`,
+                    [[a]],
+                    [[b]],
+                  )
+                }
+                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Ejecutar resta
+              </button>
+            </div>
+
+            {/* Producto punto. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-500">
+                    Producto punto
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    A · B
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-400">
+                    {a} · {b}
+                  </p>
+                </div>
+
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
+                  ·
+                </span>
+              </div>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() =>
+                  executeOperation(
+                    'dot_product',
+                    `Producto punto ${a} · ${b}`,
+                    [[a]],
+                    [[b]],
+                  )
+                }
+                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Ejecutar producto punto
+              </button>
+            </div>
+
+            {/* Multiplicación por escalar. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-500">
+                    Multiplicación por escalar
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    A × escalar
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-400">
+                    {a} × {scalar}
+                  </p>
+                </div>
+
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
+                  ×
+                </span>
+              </div>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() =>
+                  executeOperation(
+                    'scalar_multiply',
+                    `Multiplicación ${a} × ${scalar}`,
+                    [[a]],
+                    null,
+                    scalar,
+                  )
+                }
+                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Ejecutar multiplicación
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Resultado de la última operación. */}
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Resultado
+              </p>
+
+              <h2 className="mt-1 text-xl font-bold text-slate-900">
+                Última operación
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearResult}
+              disabled={result === null}
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Limpiar
+            </button>
+          </div>
+
+          <div className="mt-6 flex min-h-32 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6">
+            {result === null ? (
+              <p className="text-sm text-slate-400">
+                Ejecuta una operación para visualizar el resultado.
+              </p>
+            ) : (
+              <div className="text-center">
+                <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  Calculado
+                </span>
+
+                <p className="mt-3 break-all text-3xl font-bold text-slate-900">
+                  {formatResult(result)}
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Historial de operaciones realizadas. */}
+        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Registro
+            </p>
+
+            <h2 className="mt-1 text-xl font-bold text-slate-900">
+              Historial de operaciones
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Consulta las operaciones realizadas anteriormente.
+            </p>
+          </div>
+
+          <div className="p-6">
+            {history.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+                <p className="font-semibold text-slate-600">
+                  No hay operaciones registradas.
+                </p>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  Las operaciones realizadas aparecerán aquí.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <div className="hidden grid-cols-[1.5fr_1fr_1fr] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 md:grid">
+                  <span>Operación</span>
+                  <span>Tipo</span>
+                  <span className="text-right">Resultado</span>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {history.map((operation) => (
+                    <div
+                      key={operation.id}
+                      className="grid gap-3 px-5 py-4 md:grid-cols-[1.5fr_1fr_1fr] md:items-center"
+                    >
+                      <div>
+                        <p className="font-semibold text-slate-800">
+                          {operation.name || 'Operación matemática'}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          Registro #{operation.id}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                          {operation.operation_type}
+                        </span>
+                      </div>
+
+                      <p className="break-all text-left text-lg font-bold text-slate-900 md:text-right">
+                        {formatResult(operation.result)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )

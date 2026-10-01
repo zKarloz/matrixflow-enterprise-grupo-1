@@ -1,123 +1,161 @@
 @import "tailwindcss";
 
-/* ================================
-   MATRIXFLOW - MODO OSCURO GLOBAL
-   ================================ */
+/*
+ * ============================================================
+ * MATRIXFLOW ENTERPRISE - TEMA CLARO GLOBAL
+ * ============================================================
+ *
+ * Este archivo define únicamente estilos globales para el
+ * frontend de MatrixFlow Enterprise.
+ *
+ * La aplicación utilizará exclusivamente un tema claro,
+ * siguiendo la identidad visual definida en el Plan Maestro:
+ *
+ * - Fondo general: #F8FAFC
+ * - Superficies: #FFFFFF
+ * - Texto principal: #0F172A
+ * - Texto secundario: #64748B
+ * - Bordes: #E2E8F0
+ *
+ * Los estilos específicos de cada página se mantienen en sus
+ * propios componentes mediante clases de Tailwind.
+ * ============================================================
+ */
 
+/*
+ * ============================================================
+ * CONFIGURACIÓN GLOBAL DEL DOCUMENTO
+ * ============================================================
+ *
+ * Eliminamos cualquier dependencia de un modo oscuro.
+ * La transición únicamente suaviza cambios visuales normales
+ * de fondo y color.
+ */
 html,
 body {
+  background-color: #f8fafc;
+  color: #0f172a;
+
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
 }
 
-.dark body {
-  background-color: #020617;
-  color: #f1f5f9;
+/*
+ * ============================================================
+ * CUERPO PRINCIPAL
+ * ============================================================
+ *
+ * El fondo general de MatrixFlow será gris muy claro para que
+ * las tarjetas, tablas y paneles blancos destaquen visualmente.
+ */
+body {
+  margin: 0;
+  min-width: 320px;
+  background-color: #f8fafc;
 }
 
-/* Fondos */
-.dark .bg-white {
-  background-color: #0f172a !important;
+/*
+ * ============================================================
+ * SELECCIÓN DE TEXTO
+ * ============================================================
+ *
+ * Mantiene una selección discreta y coherente con la interfaz
+ * empresarial.
+ */
+::selection {
+  background-color: #e2e8f0;
+  color: #0f172a;
 }
 
-.dark .bg-slate-50 {
-  background-color: #020617 !important;
-}
-
-.dark .bg-slate-100 {
-  background-color: #1e293b !important;
-}
-
-.dark .bg-slate-200 {
-  background-color: #334155 !important;
-}
-
-/* Textos */
-.dark .text-slate-900 {
-  color: #f8fafc !important;
-}
-
-.dark .text-slate-800 {
-  color: #e2e8f0 !important;
-}
-
-.dark .text-slate-700 {
-  color: #cbd5e1 !important;
-}
-
-.dark .text-slate-600 {
-  color: #cbd5e1 !important;
-}
-
-.dark .text-slate-500 {
-  color: #94a3b8 !important;
-}
-
-/* Bordes */
-.dark .border-slate-200 {
-  border-color: #334155 !important;
-}
-
-.dark .border-slate-300 {
-  border-color: #475569 !important;
-}
-
-/* Inputs */
-.dark input,
-.dark textarea,
-.dark select {
-  background-color: #0f172a;
-  color: #f8fafc;
-  border-color: #475569;
-}
-
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: #64748b;
-}
-
-/* Tablas */
-.dark table {
-  color: #e2e8f0;
-}
-
-.dark th {
-  background-color: #1e293b;
-  color: #f8fafc;
-}
-
-.dark td {
-  border-color: #334155;
-}
-
-/* Sombras */
-.dark .shadow-sm,
-.dark .shadow-md {
-  box-shadow:
-    0 4px 6px -1px rgb(0 0 0 / 0.25),
-    0 2px 4px -2px rgb(0 0 0 / 0.25);
-}
-
-/* Hover */
-.dark .hover\:bg-slate-50:hover {
-  background-color: #1e293b !important;
-}
-
-.dark .hover\:bg-slate-100:hover {
-  background-color: #334155 !important;
-}
-
-/* Scrollbar */
-.dark ::-webkit-scrollbar {
+/*
+ * ============================================================
+ * SCROLLBAR
+ * ============================================================
+ *
+ * Scrollbar clara y discreta para mantener la apariencia
+ * profesional de la aplicación.
+ */
+::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
-.dark ::-webkit-scrollbar-track {
-  background: #0f172a;
+/* Fondo de la barra de desplazamiento. */
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
+/* Elemento que representa la posición actual del scroll. */
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
   border-radius: 999px;
 }
+
+/* Estado hover del scrollbar. */
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/*
+ * ============================================================
+ * ELEMENTOS DE FORMULARIO
+ * ============================================================
+ *
+ * Estos estilos establecen una base visual clara para inputs,
+ * selects y textareas.
+ *
+ * Los componentes pueden sobrescribir estos estilos mediante
+ * clases de Tailwind cuando necesiten un comportamiento
+ * específico.
+ */
+input,
+textarea,
+select {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+/*
+ * Texto de ayuda dentro de los campos.
+ */
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+}
+
+/*
+ * ============================================================
+ * TABLAS
+ * ============================================================
+ *
+ * La tabla utiliza fondo blanco para diferenciarse del fondo
+ * general gris claro de la aplicación.
+ */
+table {
+  background-color: #ffffff;
+}
+
+/*
+ * ============================================================
+ * ENLACES
+ * ============================================================
+ *
+ * No imponemos un color azul globalmente. Cada módulo podrá
+ * definir sus enlaces según el contexto.
+ */
+a {
+  text-decoration: none;
+}
+
+/*
+ * ============================================================
+ * BOTONES
+ * ============================================================
+ *
+ * No establecemos un color global para botones porque cada
+ * acción puede tener una importancia diferente.
+ *
+ * Los botones se definirán mediante Tailwind en cada componente.
+ * ============================================================
+ */

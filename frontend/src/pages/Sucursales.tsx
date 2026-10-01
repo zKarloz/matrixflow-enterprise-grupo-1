@@ -1,29 +1,3 @@
-// ============================================================
-// MatrixFlow Enterprise
-// Página de administración de sucursales
-// ============================================================
-//
-// Esta página trabaja con datos reales del backend.
-//
-// Flujo:
-//
-// React
-//   ↓
-// getCompanies() / getBranches()
-//   ↓
-// authenticatedFetch()
-//   ↓
-// JWT
-//   ↓
-// FastAPI
-//   ↓
-// PostgreSQL
-//
-// IMPORTANTE:
-// La autorización real continúa en FastAPI.
-// Esta pantalla está destinada al Administrador.
-// ============================================================
-
 import { useEffect, useState } from 'react'
 
 import {
@@ -34,45 +8,35 @@ import {
   type Company,
 } from '../services/api'
 
-// ============================================================
-// COMPONENTE PRINCIPAL
-// ============================================================
-
 function Sucursales() {
-  // ----------------------------------------------------------
-  // DATOS OBTENIDOS DEL BACKEND
-  // ----------------------------------------------------------
+  // ============================================================
+  // ESTADO PRINCIPAL
+  // ============================================================
 
-  // Lista real de sucursales almacenadas en PostgreSQL.
+  // Lista de sucursales disponibles.
   const [branches, setBranches] = useState<Branch[]>([])
 
-  // Lista real de empresas almacenadas en PostgreSQL.
-  // Se utiliza para seleccionar company_id al crear
-  // una sucursal.
+  // Lista de empresas disponibles para asociar una sucursal.
   const [companies, setCompanies] = useState<Company[]>([])
 
-  // ----------------------------------------------------------
-  // ESTADOS DE INTERFAZ
-  // ----------------------------------------------------------
-
-  // Indica si estamos cargando los datos iniciales.
+  // Controla el estado de carga inicial.
   const [loading, setLoading] = useState(true)
 
-  // Contiene errores producidos al consultar o registrar datos.
+  // Guarda los mensajes de error que deben mostrarse al usuario.
   const [error, setError] = useState('')
 
-  // Controla la visibilidad del formulario.
+  // Controla la apertura del formulario.
   const [showForm, setShowForm] = useState(false)
 
-  // Indica si se está enviando el formulario.
+  // Indica si el formulario está procesando el registro.
   const [saving, setSaving] = useState(false)
 
-  // Texto utilizado para filtrar la tabla.
+  // Texto utilizado para filtrar las sucursales.
   const [search, setSearch] = useState('')
 
-  // ----------------------------------------------------------
+  // ============================================================
   // CAMPOS DEL FORMULARIO
-  // ----------------------------------------------------------
+  // ============================================================
 
   // Empresa seleccionada.
   const [companyId, setCompanyId] = useState('')
@@ -83,41 +47,37 @@ function Sucursales() {
   // Dirección física.
   const [address, setAddress] = useState('')
 
-  // Teléfono.
+  // Teléfono de contacto.
   const [phone, setPhone] = useState('')
 
-  // ==========================================================
-  // CARGAR DATOS DESDE EL BACKEND
-  // ==========================================================
+  // ============================================================
+  // CARGA INICIAL
+  // ============================================================
 
   useEffect(() => {
-    // Esta función obtiene empresas y sucursales reales.
     const loadData = async () => {
       try {
-        // Mostramos estado de carga.
+        // Activamos el estado de carga.
         setLoading(true)
 
         // Limpiamos errores anteriores.
         setError('')
 
-        // Consultamos ambos recursos en paralelo.
-        const [
-          companiesData,
-          branchesData,
-        ] = await Promise.all([
+        // Empresas y sucursales pueden consultarse en paralelo.
+        const [companiesData, branchesData] = await Promise.all([
           getCompanies(),
           getBranches(),
         ])
 
-        // Guardamos los resultados en el estado de React.
+        // Guardamos los resultados.
         setCompanies(companiesData)
         setBranches(branchesData)
       } catch (err) {
-        // Convertimos el error a un mensaje visible.
+        // Convertimos el error en un mensaje comprensible.
         setError(
           err instanceof Error
             ? err.message
-            : 'No se pudieron cargar los datos.'
+            : 'No se pudieron cargar las sucursales.',
         )
       } finally {
         // Finalizamos el estado de carga.
@@ -125,61 +85,56 @@ function Sucursales() {
       }
     }
 
-    // Ejecutamos la carga inicial.
     loadData()
   }, [])
 
-  // ==========================================================
+  // ============================================================
   // SUCURSALES FILTRADAS
-  // ==========================================================
+  // ============================================================
 
-  const filteredBranches = branches.filter(
-    (branch) => {
-      // Buscamos también por nombre de la empresa.
-      const company = companies.find(
-        (item) => item.id === branch.company_id
-      )
+  const filteredBranches = branches.filter((branch) => {
+    // Buscamos la empresa asociada a la sucursal.
+    const company = companies.find(
+      (item) => item.id === branch.company_id,
+    )
 
-      const companyName =
-        company?.name ?? ''
+    // Obtenemos el nombre de la empresa para permitir
+    // búsquedas también por este dato.
+    const companyName = company?.name ?? ''
 
-      // Construimos el texto que será utilizado
-      // por el buscador.
-      const searchableText = [
-        branch.name,
-        branch.address ?? '',
-        branch.phone ?? '',
-        companyName,
-      ]
-        .join(' ')
-        .toLowerCase()
+    // Construimos un único texto de búsqueda.
+    const searchableText = [
+      branch.name,
+      branch.address ?? '',
+      branch.phone ?? '',
+      companyName,
+    ]
+      .join(' ')
+      .toLowerCase()
 
-      return searchableText.includes(
-        search.toLowerCase()
-      )
-    }
-  )
+    return searchableText.includes(search.toLowerCase())
+  })
 
-  // ==========================================================
+  // ============================================================
   // INDICADORES
-  // ==========================================================
+  // ============================================================
 
-  // Número de sucursales activas.
+  // Cantidad total de sucursales registradas.
   const activeBranches = branches.filter(
-    (branch) => branch.is_active
+    (branch) => branch.is_active,
   ).length
 
-  // Número de empresas que tienen sucursales registradas.
+  // Cantidad de empresas que tienen al menos una sucursal.
   const companiesWithBranches = new Set(
-    branches.map((branch) => branch.company_id)
+    branches.map((branch) => branch.company_id),
   ).size
 
-  // ==========================================================
+  // ============================================================
   // LIMPIAR FORMULARIO
-  // ==========================================================
+  // ============================================================
 
   const resetForm = () => {
-    // Limpiamos todos los campos.
+    // Restablecemos todos los campos.
     setCompanyId('')
     setName('')
     setAddress('')
@@ -188,39 +143,37 @@ function Sucursales() {
     // Cerramos el formulario.
     setShowForm(false)
 
-    // Limpiamos errores anteriores.
+    // Limpiamos mensajes anteriores.
     setError('')
   }
 
-  // ==========================================================
+  // ============================================================
   // REGISTRAR SUCURSAL
-  // ==========================================================
+  // ============================================================
 
   const handleSave = async () => {
-    // Validamos la empresa.
+    // Validamos que exista una empresa seleccionada.
     if (!companyId) {
       setError(
-        'Selecciona la empresa a la que pertenece la sucursal.'
+        'Selecciona la empresa a la que pertenece la sucursal.',
       )
       return
     }
 
-    // Validamos el nombre.
+    // Validamos que exista un nombre.
     if (!name.trim()) {
-      setError(
-        'El nombre de la sucursal es obligatorio.'
-      )
+      setError('El nombre de la sucursal es obligatorio.')
       return
     }
 
     try {
-      // Indicamos que estamos guardando.
+      // Activamos el estado de guardado.
       setSaving(true)
 
       // Limpiamos errores anteriores.
       setError('')
 
-      // Enviamos los datos al backend.
+      // Registramos la nueva sucursal.
       await createBranch({
         name: name.trim(),
         company_id: Number(companyId),
@@ -228,417 +181,463 @@ function Sucursales() {
         phone: phone.trim() || null,
       })
 
-      // Después de crear la sucursal,
-      // volvemos a consultar PostgreSQL.
-      //
-      // Esto evita depender de una simulación local.
+      // Volvemos a consultar las sucursales para mostrar
+      // inmediatamente el registro actualizado.
       const updatedBranches = await getBranches()
-
-      // Actualizamos la tabla con los datos reales.
       setBranches(updatedBranches)
 
       // Limpiamos y cerramos el formulario.
       resetForm()
     } catch (err) {
-      // Mostramos el mensaje proporcionado por FastAPI.
+      // Mostramos el mensaje correspondiente.
       setError(
         err instanceof Error
           ? err.message
-          : 'No se pudo registrar la sucursal.'
+          : 'No se pudo registrar la sucursal.',
       )
     } finally {
-      // Terminamos el estado de guardado.
+      // Finalizamos el estado de guardado.
       setSaving(false)
     }
   }
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  // ============================================================
+  // RENDERIZADO
+  // ============================================================
 
   return (
-    <div>
+    <div className="min-h-full bg-slate-50 p-6">
+      <div className="mx-auto max-w-7xl">
 
-      {/* ====================================================
-          ENCABEZADO
-          ==================================================== */}
+        {/* ========================================================
+            ENCABEZADO
+            ======================================================== */}
 
-      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <div>
+            <p className="mb-1 text-sm font-medium text-slate-500">
+              Gestión empresarial
+            </p>
 
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Sucursales
-          </h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Sucursales
+            </h1>
 
-          <p className="mt-2 text-slate-500">
-            Administración de las sucursales de MATRIXFLOW.
-          </p>
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+              Administra las sedes y puntos de operación de las empresas.
+            </p>
+          </div>
+
+          {/* Botón principal para registrar una nueva sucursal. */}
+          <button
+            type="button"
+            onClick={() => {
+              // Limpiamos cualquier error antes de abrir el formulario.
+              setError('')
+
+              // Abrimos el formulario.
+              setShowForm(true)
+            }}
+            disabled={companies.length === 0}
+            className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            + Nueva sucursal
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setError('')
-            setShowForm(true)
-          }}
-          className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          + Nueva sucursal
-        </button>
+        {/* ========================================================
+            INDICADORES
+            ======================================================== */}
 
-      </div>
+        <div className="mb-6 grid gap-4 md:grid-cols-3">
 
-      {/* ====================================================
-          ERROR GENERAL
-          ==================================================== */}
+          {/* Total de sucursales. */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Sucursales registradas
+                </p>
 
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {branches.length}
+                </p>
+              </div>
 
-      {/* ====================================================
-          RESUMEN
-          ==================================================== */}
-
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Total de sucursales
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            {branches.length}
-          </p>
-
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Sucursales activas
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-green-600">
-            {activeBranches}
-          </p>
-
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-
-          <p className="text-sm text-slate-500">
-            Empresas con sucursales
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-blue-600">
-            {companiesWithBranches}
-          </p>
-
-        </div>
-
-      </div>
-
-      {/* ====================================================
-          BUSCADOR
-          ==================================================== */}
-
-      <div className="mb-6">
-
-        <input
-          type="text"
-          value={search}
-          onChange={(event) =>
-            setSearch(event.target.value)
-          }
-          placeholder="Buscar sucursal, empresa, dirección..."
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500 md:max-w-md"
-        />
-
-      </div>
-
-      {/* ====================================================
-          TABLA
-          ==================================================== */}
-
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-
-        <div className="overflow-x-auto">
-
-          {loading ? (
-            <div className="p-8 text-center text-slate-500">
-              Cargando sucursales...
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-600">
+                S
+              </div>
             </div>
-          ) : (
-            <table className="w-full text-left">
+          </div>
 
-              <thead className="border-b bg-slate-50">
+          {/* Sucursales activas. */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Sucursales activas
+                </p>
 
+                <p className="mt-2 text-2xl font-bold text-emerald-600">
+                  {activeBranches}
+                </p>
+              </div>
+
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                ✓
+              </div>
+            </div>
+          </div>
+
+          {/* Empresas con al menos una sucursal. */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Empresas con sucursales
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {companiesWithBranches}
+                </p>
+              </div>
+
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-600">
+                E
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================
+            ERROR GENERAL
+            ======================================================== */}
+
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 font-semibold text-red-600">
+                !
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-red-800">
+                  No fue posible completar la operación
+                </h2>
+
+                <p className="mt-1 text-sm text-red-700">
+                  {error}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TABLA Y BUSCADOR
+            ======================================================== */}
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+          {/* Cabecera de la tabla. */}
+          <div className="flex flex-col gap-4 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">
+                Registro de sucursales
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Consulta las sedes, empresas y datos de contacto.
+              </p>
+            </div>
+
+            {/* Buscador integrado en la tabla. */}
+            <div className="relative w-full md:max-w-sm">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                ⌕
+              </span>
+
+              <input
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Buscar sucursal, empresa o dirección..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* ======================================================
+              TABLA
+              ====================================================== */}
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[850px] text-left">
+              <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
-
-                  <th className="px-6 py-4 text-sm font-semibold">
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Sucursal
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold">
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Empresa
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold">
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Dirección
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold">
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Teléfono
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold">
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Estado
                   </th>
-
                 </tr>
-
               </thead>
 
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-slate-100">
 
-                {filteredBranches.map(
-                  (branch) => {
-                    // Buscamos el nombre de la empresa
-                    // correspondiente al company_id.
-                    const company =
-                      companies.find(
-                        (item) =>
-                          item.id ===
-                          branch.company_id
-                      )
+                {/* Estado de carga con filas provisionales. */}
+                {loading ? (
+                  [1, 2, 3, 4].map((row) => (
+                    <tr key={row}>
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <td key={index} className="px-6 py-5">
+                          <div className="h-4 animate-pulse rounded bg-slate-100" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  filteredBranches.map((branch) => {
+                    // Buscamos la empresa relacionada con la sucursal.
+                    const company = companies.find(
+                      (item) => item.id === branch.company_id,
+                    )
 
                     return (
                       <tr
                         key={branch.id}
-                        className="hover:bg-slate-50"
+                        className="transition-colors hover:bg-slate-50"
                       >
+                        {/* Nombre de la sucursal. */}
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-slate-900">
+                            {branch.name}
+                          </p>
 
-                        <td className="px-6 py-4 font-medium text-slate-800">
-                          {branch.name}
+                          <p className="mt-1 text-xs text-slate-400">
+                            ID #{branch.id}
+                          </p>
                         </td>
 
+                        {/* Empresa relacionada. */}
                         <td className="px-6 py-4 text-sm text-slate-600">
                           {company?.name ??
                             `Empresa #${branch.company_id}`}
                         </td>
 
+                        {/* Dirección de la sucursal. */}
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {branch.address ||
-                            'Sin dirección'}
+                          {branch.address || (
+                            <span className="text-slate-400">
+                              Sin dirección
+                            </span>
+                          )}
                         </td>
 
+                        {/* Teléfono de contacto. */}
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {branch.phone ||
-                            'Sin teléfono'}
+                          {branch.phone || (
+                            <span className="text-slate-400">
+                              Sin teléfono
+                            </span>
+                          )}
                         </td>
 
+                        {/* Estado actual de la sucursal. */}
                         <td className="px-6 py-4">
-
                           <span
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${branch.is_active
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${branch.is_active
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-slate-100 text-slate-500'
                               }`}
                           >
                             {branch.is_active
                               ? 'Activa'
                               : 'Inactiva'}
                           </span>
-
                         </td>
-
                       </tr>
                     )
-                  }
+                  })
                 )}
-
               </tbody>
-
             </table>
-          )}
 
-          {!loading &&
-            filteredBranches.length === 0 && (
-              <div className="p-8 text-center text-slate-500">
-                No se encontraron sucursales.
+            {/* Estado vacío cuando no existen coincidencias. */}
+            {!loading && filteredBranches.length === 0 && (
+              <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                  —
+                </div>
+
+                <h3 className="font-semibold text-slate-900">
+                  No se encontraron sucursales
+                </h3>
+
+                <p className="mt-1 max-w-sm text-sm text-slate-500">
+                  Prueba con otro nombre, empresa, dirección o teléfono.
+                </p>
               </div>
             )}
-
+          </div>
         </div>
 
-      </div>
+        {/* ========================================================
+            MODAL DE NUEVA SUCURSAL
+            ======================================================== */}
 
-      {/* ====================================================
-          MODAL DE NUEVA SUCURSAL
-          ==================================================== */}
+        {showForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+            <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
 
-      {showForm && (
+              {/* Encabezado del formulario. */}
+              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Red empresarial
+                  </p>
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                  <h2 className="mt-1 text-xl font-bold text-slate-900">
+                    Nueva sucursal
+                  </h2>
+                </div>
 
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-
-            <div className="mb-6 flex items-center justify-between">
-
-              <h2 className="text-xl font-bold text-slate-900">
-                Nueva sucursal
-              </h2>
-
-              <button
-                type="button"
-                onClick={resetForm}
-                className="text-xl text-slate-400 hover:text-slate-700"
-              >
-                ×
-              </button>
-
-            </div>
-
-            <div className="space-y-4">
-
-              {/* EMPRESA */}
-
-              <div>
-
-                <label className="text-sm font-medium text-slate-700">
-                  Empresa
-                </label>
-
-                <select
-                  value={companyId}
-                  onChange={(event) =>
-                    setCompanyId(
-                      event.target.value
-                    )
-                  }
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500"
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={saving}
+                  aria-label="Cerrar formulario"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed"
                 >
+                  ×
+                </button>
+              </div>
 
-                  <option value="">
-                    Selecciona una empresa
-                  </option>
+              {/* Campos del formulario. */}
+              <div className="space-y-5 p-6">
 
-                  {companies.map(
-                    (company) => (
+                {/* Empresa. */}
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Empresa
+                  </label>
+
+                  <select
+                    value={companyId}
+                    onChange={(event) =>
+                      setCompanyId(event.target.value)
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                  >
+                    <option value="">
+                      Selecciona una empresa
+                    </option>
+
+                    {companies.map((company) => (
                       <option
                         key={company.id}
                         value={company.id}
                       >
                         {company.name}
                       </option>
-                    )
-                  )}
+                    ))}
+                  </select>
+                </div>
 
-                </select>
+                {/* Nombre. */}
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Nombre de la sucursal
+                  </label>
 
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(event) =>
+                      setName(event.target.value)
+                    }
+                    placeholder="Ej. Sucursal Cusco"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                  />
+                </div>
+
+                {/* Dirección. */}
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Dirección
+                  </label>
+
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(event) =>
+                      setAddress(event.target.value)
+                    }
+                    placeholder="Av. Principal 123"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                  />
+                </div>
+
+                {/* Teléfono. */}
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Teléfono
+                  </label>
+
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(event) =>
+                      setPhone(event.target.value)
+                    }
+                    placeholder="999 999 999"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                  />
+                </div>
+
+                {/* Acciones del formulario. */}
+                <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    disabled={saving}
+                    className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={
+                      saving || companies.length === 0
+                    }
+                    className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {saving ? 'Guardando...' : 'Guardar sucursal'}
+                  </button>
+                </div>
               </div>
-
-              {/* NOMBRE */}
-
-              <div>
-
-                <label className="text-sm font-medium text-slate-700">
-                  Nombre
-                </label>
-
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(event) =>
-                    setName(event.target.value)
-                  }
-                  placeholder="Sucursal Cusco"
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-                />
-
-              </div>
-
-              {/* DIRECCIÓN */}
-
-              <div>
-
-                <label className="text-sm font-medium text-slate-700">
-                  Dirección
-                </label>
-
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(event) =>
-                    setAddress(event.target.value)
-                  }
-                  placeholder="Av. Principal 123"
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-                />
-
-              </div>
-
-              {/* TELÉFONO */}
-
-              <div>
-
-                <label className="text-sm font-medium text-slate-700">
-                  Teléfono
-                </label>
-
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(event) =>
-                    setPhone(event.target.value)
-                  }
-                  placeholder="999 999 999"
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-                />
-
-              </div>
-
             </div>
-
-            {/* BOTONES */}
-
-            <div className="mt-6 flex justify-end gap-3">
-
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-                className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={
-                  saving ||
-                  companies.length === 0
-                }
-                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving
-                  ? 'Guardando...'
-                  : 'Guardar'}
-              </button>
-
-            </div>
-
           </div>
-
-        </div>
-
-      )}
-
+        )}
+      </div>
     </div>
   )
 }
