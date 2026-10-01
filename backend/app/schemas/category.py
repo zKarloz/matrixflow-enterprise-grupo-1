@@ -2,35 +2,51 @@
 # MatrixFlow Enterprise
 # Schemas de categorías
 # ============================================================
-# Define los datos que la API recibe y devuelve para la tabla
-# "categories".
+#
+# Define los datos que FastAPI recibe y devuelve
+# para las operaciones relacionadas con categorías.
 # ============================================================
 
 from pydantic import BaseModel
 
 
 class CategoryBase(BaseModel):
-    # Nombre de la categoría.
-    name: str
+    """
+    Datos principales de una categoría.
+    """
 
-    # Descripción opcional.
+    name: str
     description: str | None = None
 
 
 class CategoryCreate(CategoryBase):
-    # No necesita campos adicionales para crear
-    # una categoría.
+    """
+    Datos utilizados para registrar una nueva categoría.
+    """
+
     pass
 
 
-class CategoryResponse(CategoryBase):
-    # Identificador generado por PostgreSQL.
-    id: int
+class CategoryUpdate(CategoryBase):
+    """
+    Datos que pueden modificarse en una categoría existente.
 
-    # Estado de la categoría.
+    is_active permite activar o desactivar la categoría
+    sin eliminarla físicamente de PostgreSQL.
+    """
+
+    is_active: bool
+
+
+class CategoryResponse(CategoryBase):
+    """
+    Información de la categoría devuelta por la API.
+    """
+
+    id: int
     is_active: bool
 
     class Config:
-        # Permite convertir objetos SQLAlchemy
-        # directamente en respuestas Pydantic.
+        # Permite convertir modelos SQLAlchemy directamente
+        # en respuestas Pydantic.
         from_attributes = True

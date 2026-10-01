@@ -15,12 +15,14 @@ from app.core.security import require_roles
 from app.schemas.category import (
     CategoryCreate,
     CategoryResponse,
+    CategoryUpdate,
 )
 
 from app.services.category_service import (
     get_category,
     list_active_categories,
     list_categories,
+    modify_category,
     register_category,
 )
 
@@ -107,6 +109,65 @@ def create_category(
 
     # Los errores de validación de negocio
     # se convierten en HTTP 400.
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+# ------------------------------------------------------------
+# ACTUALIZAR CATEGORÍA
+# ------------------------------------------------------------
+
+@router.patch(
+    "/{category_id}",
+    response_model=CategoryResponse,
+)
+def update_existing_category(
+    category_id: int,
+    data: CategoryUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
+):
+    """
+    Actualiza una categoría existente.
+
+    Permite modificar:
+    - nombre
+    - descripción
+    - estado activo/inactivo
+
+    La categoría no se elimina físicamente para conservar
+    las relaciones con productos existentes.
+    """
+
+    # Primero comprobamos que la categoría exista para
+    # devolver HTTP 404 de forma clara.
+    try:
+        get_category(
+            db,
+            category_id,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
+
+    # Las demás validaciones de negocio, como un nombre
+    # duplicado, se consideran solicitudes inválidas.
+    try:
+        return modify_category(
+            db=db,
+            category_id=category_id,
+            name=data.name,
+            description=data.description,
+            is_active=data.is_active,
+        )
+
     except ValueError as error:
         raise HTTPException(
             status_code=400,

@@ -78,3 +78,26 @@ def create_category(
     db.refresh(category)
 
     return category
+
+def update_category(
+    db: Session,
+    category: Category,
+    name: str,
+    description: str | None,
+    is_active: bool,
+):
+    """
+    Actualiza los datos de una categoría existente.
+
+    La categoría no se elimina físicamente. El campo
+    is_active permite activarla o desactivarla.
+    """
+
+    category.name = name
+    category.description = description
+    category.is_active = is_active
+
+    db.commit()
+    db.refresh(category)
+
+    return category

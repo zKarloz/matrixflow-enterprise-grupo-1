@@ -15,6 +15,7 @@ from app.repositories.category_repository import (
     get_all_categories,
     get_category_by_id,
     get_category_by_name,
+    update_category,
 )
 
 
@@ -83,4 +84,66 @@ def register_category(
             if description and description.strip()
             else None
         ),
+    )
+
+def modify_category(
+    db: Session,
+    category_id: int,
+    name: str,
+    description: str | None,
+    is_active: bool,
+):
+    """
+    Actualiza una categoría existente.
+
+    Permite modificar:
+    - nombre
+    - descripción
+    - estado activo/inactivo
+    """
+
+    # Comprobamos que la categoría exista.
+    category = get_category_by_id(
+        db,
+        category_id,
+    )
+
+    if category is None:
+        raise ValueError(
+            "La categoría no existe."
+        )
+
+    # El nombre sigue siendo obligatorio al editar.
+    if not name or not name.strip():
+        raise ValueError(
+            "El nombre de la categoría es obligatorio."
+        )
+
+    clean_name = name.strip()
+
+    # Comprobamos si ese nombre ya pertenece
+    # a otra categoría distinta.
+    category_with_name = get_category_by_name(
+        db,
+        clean_name,
+    )
+
+    if (
+        category_with_name is not None
+        and category_with_name.id != category_id
+    ):
+        raise ValueError(
+            "Ya existe una categoría con ese nombre."
+        )
+
+    return update_category(
+        db=db,
+        category=category,
+        name=clean_name,
+        description=(
+            description.strip()
+            if description and description.strip()
+            else None
+        ),
+        is_active=is_active,
     )
