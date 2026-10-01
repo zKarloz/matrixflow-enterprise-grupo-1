@@ -20,6 +20,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 
 from sqlalchemy.sql import func
@@ -34,6 +35,16 @@ class Inventory(Base):
 
     # Nombre exacto de la tabla en PostgreSQL.
     __tablename__ = "inventory"
+
+    # Una sucursal solo puede tener un registro
+    # de inventario por cada producto.
+    __table_args__ = (
+        UniqueConstraint(
+            "branch_id",
+            "product_id",
+            name="uq_inventory_branch_product",
+        ),
+    )
 
     # Identificador único del registro de inventario.
     id = Column(

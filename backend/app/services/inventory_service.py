@@ -13,7 +13,10 @@ from app.repositories.inventory_repository import (
     create_inventory_movement,
     get_inventory,
     get_inventory_by_branch,
+    get_inventory_by_branch_product,
+    get_inventory_by_id,
     get_inventory_by_product,
+    update_inventory,
 )
 
 
@@ -95,6 +98,20 @@ def register_inventory(
             "El costo unitario no puede ser negativo."
         )
 
+    # Una sucursal no debe tener dos registros de inventario
+    # para el mismo producto.
+    existing_inventory = get_inventory_by_branch_product(
+        db=db,
+        branch_id=branch_id,
+        product_id=product_id,
+    )
+
+    if existing_inventory is not None:
+        raise ValueError(
+            "Este producto ya tiene inventario registrado "
+            "en la sucursal seleccionada."
+        )
+
     # Delegamos la creación al repository.
     return create_inventory(
         db=db,
@@ -142,4 +159,48 @@ def register_inventory_movement(
         movement_type=movement_type,
         quantity=quantity,
         description=description,
+    )
+
+def modify_inventory(
+    db: Session,
+    inventory_id: int,
+    stock: int,
+    minimum_stock: int,
+    unit_cost: float | None,
+):
+    """
+    Permite establecer manualmente el stock real de un producto.
+    """
+
+    inventory = get_inventory_by_id(
+        db,
+        inventory_id,
+    )
+
+    if inventory is None:
+        raise ValueError(
+            "El registro de inventario no existe."
+        )
+
+    if stock < 0:
+        raise ValueError(
+            "El stock no puede ser negativo."
+        )
+
+    if minimum_stock < 0:
+        raise ValueError(
+            "El stock mínimo no puede ser negativo."
+        )
+
+    if unit_cost is not None and unit_cost < 0:
+        raise ValueError(
+            "El costo unitario no puede ser negativo."
+        )
+
+    return update_inventory(
+        db=db,
+        inventory=inventory,
+        stock=stock,
+        minimum_stock=minimum_stock,
+        unit_cost=unit_cost,
     )

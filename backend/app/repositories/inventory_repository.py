@@ -95,11 +95,116 @@ def create_inventory_movement(
     description: str | None = None,
 ):
     """
-    Registra un movimiento sobre un inventario.
+    Registra un movimiento independiente de inventario.
     """
 
-    # Creamos el movimiento utilizando las columnas
-    # reales de inventory_movements.
+    movement = add_inventory_movement(
+        db=db,
+        inventory_id=inventory_id,
+        movement_type=movement_type,
+        quantity=quantity,
+        description=description,
+    )
+
+    db.commit()
+    db.refresh(movement)
+
+    return movement
+
+def get_inventory_by_id(
+    db: Session,
+    inventory_id: int,
+):
+    """
+    Obtiene un registro de inventario por ID.
+    """
+
+    return (
+        db.query(Inventory)
+        .filter(Inventory.id == inventory_id)
+        .first()
+    )
+
+
+def get_inventory_by_branch_product(
+    db: Session,
+    branch_id: int,
+    product_id: int,
+):
+    """
+    Busca el inventario exacto de un producto
+    dentro de una sucursal.
+    """
+
+    return (
+        db.query(Inventory)
+        .filter(
+            Inventory.branch_id == branch_id,
+            Inventory.product_id == product_id,
+        )
+        .first()
+    )
+
+
+def get_inventory_for_update(
+    db: Session,
+    branch_id: int,
+    product_id: int,
+):
+    """
+    Obtiene y bloquea temporalmente la fila de inventario.
+
+    FOR UPDATE evita que dos ventas simultáneas utilicen
+    las mismas unidades disponibles.
+    """
+
+    return (
+        db.query(Inventory)
+        .filter(
+            Inventory.branch_id == branch_id,
+            Inventory.product_id == product_id,
+        )
+        .with_for_update()
+        .first()
+    )
+
+
+def update_inventory(
+    db: Session,
+    inventory: Inventory,
+    stock: int,
+    minimum_stock: int,
+    unit_cost: float | None,
+):
+    """
+    Actualiza las cantidades configuradas del inventario.
+    """
+
+    inventory.stock = stock
+    inventory.minimum_stock = minimum_stock
+    inventory.unit_cost = unit_cost
+
+    db.commit()
+    db.refresh(inventory)
+
+    return inventory
+
+
+def add_inventory_movement(
+    db: Session,
+    inventory_id: int,
+    movement_type: str,
+    quantity: int,
+    description: str | None = None,
+):
+    """
+    Agrega un movimiento a la transacción actual
+    sin ejecutar commit.
+
+    Se utiliza especialmente durante una venta para que
+    venta, detalle, movimiento y descuento sean atómicos.
+    """
+
     movement = InventoryMovement(
         inventory_id=inventory_id,
         movement_type=movement_type,
@@ -107,13 +212,6 @@ def create_inventory_movement(
         description=description,
     )
 
-    # Agregamos el movimiento.
     db.add(movement)
-
-    # Guardamos los cambios.
-    db.commit()
-
-    # Actualizamos el objeto.
-    db.refresh(movement)
 
     return movement

@@ -21,6 +21,10 @@ from app.repositories.user_repository import (
     get_user_by_id,
 )
 
+from app.repositories.inventory_repository import (
+    add_inventory_movement,
+    get_inventory_for_update,
+)
 
 def list_sales(db: Session):
     return get_all_sales(db)
@@ -123,7 +127,26 @@ def register_sale(
     total = 0.0
     product_ids = set()
 
-    for detail in details:
+    # Una venta debe contener al menos un producto.
+    if not details:
+        raise ValueError(
+            "La venta debe contener al menos un producto."
+        )
+
+    # Ordenamos por producto para adquirir los bloqueos
+    # de inventario siempre en un orden consistente.
+    ordered_details = sorted(
+        details,
+        key=lambda detail: detail.product_id,
+    )
+
+    for detail in ordered_details:
+        # Validación defensiva de la cantidad.
+        if detail.quantity <= 0:
+            raise ValueError(
+                "La cantidad vendida debe ser mayor que cero."
+            )
+
         # Evitamos ingresar el mismo producto dos veces
         # dentro de una misma venta.
         if detail.product_id in product_ids:
@@ -160,14 +183,61 @@ def register_sale(
 
         total += subtotal
 
+        # Buscamos el stock específicamente en la sucursal
+        # donde se está realizando la venta.
+        inventory = get_inventory_for_update(
+            db=db,
+            branch_id=branch_id,
+            product_id=product.id,
+        )
+
+        if inventory is None:
+            raise ValueError(
+                f'El producto "{product.name}" no tiene '
+                "inventario registrado en esta sucursal."
+            )
+
+        if inventory.stock < detail.quantity:
+            raise ValueError(
+                f'Stock insuficiente para "{product.name}". '
+                f"Disponible: {inventory.stock}."
+            )
+
         processed_details.append(
             {
                 "product_id": product.id,
                 "quantity": detail.quantity,
                 "unit_price": unit_price,
                 "subtotal": subtotal,
+                "inventory": inventory,
             }
         )
+
+    # Todas las líneas ya fueron validadas.
+    # Ahora descontamos las unidades dentro de la misma
+    # transacción que posteriormente guardará la venta.
+    for detail in processed_details:
+        inventory = detail["inventory"]
+
+        inventory.stock -= detail["quantity"]
+
+        add_inventory_movement(
+            db=db,
+            inventory_id=inventory.id,
+            movement_type="salida_venta",
+            quantity=detail["quantity"],
+            description="Salida automática por venta.",
+        )
+
+    sale_details = [
+        {
+            "product_id": detail["product_id"],
+            "quantity": detail["quantity"],
+            "unit_price": detail["unit_price"],
+            "subtotal": detail["subtotal"],
+        }
+        for detail in processed_details
+    ]
 
     return create_sale_with_details(
         db=db,
@@ -175,5 +245,5 @@ def register_sale(
         branch_id=branch_id,
         user_id=user_id,
         total=total,
-        details=processed_details,
+        details=sale_details,
     )

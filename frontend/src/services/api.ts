@@ -989,6 +989,47 @@ export interface Sale {
 }
 
 /**
+ * Producto enviado al registrar una venta.
+ *
+ * El frontend únicamente envía producto y cantidad.
+ * El backend obtiene el precio real y calcula el subtotal.
+ */
+export interface CreateSaleDetailData {
+  product_id: number
+  quantity: number
+}
+
+/**
+ * Datos necesarios para registrar una venta completa.
+ */
+export interface CreateSaleData {
+  company_id: number
+  branch_id: number
+  user_id: number
+  details: CreateSaleDetailData[]
+}
+
+/**
+ * Detalle devuelto por FastAPI después de crear la venta.
+ */
+export interface SaleDetail {
+  id: number
+  sale_id: number
+  product_id: number
+  quantity: number
+  unit_price: number
+  subtotal: number
+}
+
+/**
+ * Respuesta completa del POST /sales.
+ */
+export interface CreatedSaleResponse {
+  sale: Sale
+  details: SaleDetail[]
+}
+
+/**
  * Obtiene las ventas registradas en PostgreSQL.
  *
  * Endpoint:
@@ -1032,6 +1073,43 @@ export async function getSales(): Promise<Sale[]> {
   return response.json()
 }
 
+/**
+ * Registra una venta completa con uno o más productos.
+ *
+ * El total y los precios finales son calculados
+ * nuevamente por FastAPI.
+ */
+export async function createSale(
+  data: CreateSaleData,
+): Promise<CreatedSaleResponse> {
+  const response = await authenticatedFetch(
+    '/api/v1/sales',
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo registrar la venta.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general cuando
+      // FastAPI no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
 // Representa un registro de inventario almacenado en PostgreSQL.
 export interface InventoryItem {
   id: number
@@ -1040,6 +1118,29 @@ export interface InventoryItem {
   stock: number
   minimum_stock: number
   unit_cost: number | null
+}
+
+/**
+ * Datos necesarios para crear un registro de inventario.
+ */
+export interface CreateInventoryData {
+  branch_id: number
+  product_id: number
+  stock: number
+  minimum_stock: number
+  unit_cost?: number | null
+}
+
+/**
+ * Datos administrables de un inventario existente.
+ *
+ * La sucursal y el producto no cambian porque forman
+ * la identidad lógica del registro.
+ */
+export interface UpdateInventoryData {
+  stock: number
+  minimum_stock: number
+  unit_cost?: number | null
 }
 
 // Obtiene el inventario real desde FastAPI.
@@ -1065,6 +1166,77 @@ export async function getInventory(): Promise<InventoryItem[]> {
   }
 
   // Convertimos la respuesta JSON al arreglo de inventario.
+  return response.json()
+}
+
+/**
+ * Registra las existencias iniciales de un producto
+ * dentro de una sucursal.
+ */
+export async function createInventory(
+  data: CreateInventoryData,
+): Promise<InventoryItem> {
+  const response = await authenticatedFetch(
+    '/api/v1/inventory',
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo crear el inventario.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si la respuesta
+      // del backend no contiene JSON.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+
+/**
+ * Actualiza stock, stock mínimo y costo unitario.
+ */
+export async function updateInventory(
+  inventoryId: number,
+  data: UpdateInventoryData,
+): Promise<InventoryItem> {
+  const response = await authenticatedFetch(
+    `/api/v1/inventory/${inventoryId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message = 'No se pudo actualizar el inventario.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Conservamos el mensaje general si FastAPI
+      // no devuelve una respuesta JSON.
+    }
+
+    throw new Error(message)
+  }
+
   return response.json()
 }
 

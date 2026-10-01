@@ -39,6 +39,17 @@ class InventoryCreate(InventoryBase):
     # No necesita campos adicionales por ahora.
     pass
 
+class InventoryUpdate(BaseModel):
+    """
+    Datos administrables de un registro de inventario.
+
+    branch_id y product_id no se modifican porque identifican
+    la combinación física producto-sucursal.
+    """
+
+    stock: int
+    minimum_stock: int
+    unit_cost: float | None = None
 
 class InventoryResponse(InventoryBase):
     # Identificador único del inventario.

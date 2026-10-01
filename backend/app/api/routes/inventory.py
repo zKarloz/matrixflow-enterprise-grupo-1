@@ -22,12 +22,14 @@ from app.schemas.inventory import (
     InventoryMovementCreate,
     InventoryMovementResponse,
     InventoryResponse,
+    InventoryUpdate,
 )
 
 from app.services.inventory_service import (
     list_inventory,
     list_inventory_by_branch,
     list_inventory_by_product,
+    modify_inventory,
     register_inventory,
     register_inventory_movement,
 )
@@ -134,6 +136,48 @@ def create_inventory(
             detail=str(error),
         )
 
+# ============================================================
+# Actualizar inventario
+# ============================================================
+
+@router.patch(
+    "/{inventory_id}",
+    response_model=InventoryResponse,
+)
+def update_existing_inventory(
+    inventory_id: int,
+    data: InventoryUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador", "Analista")
+    ),
+):
+    """
+    Actualiza manualmente un registro de inventario.
+
+    Permite modificar:
+    - stock actual
+    - stock mínimo
+    - costo unitario
+
+    La sucursal y el producto no cambian porque identifican
+    la combinación física del registro de inventario.
+    """
+
+    try:
+        return modify_inventory(
+            db=db,
+            inventory_id=inventory_id,
+            stock=data.stock,
+            minimum_stock=data.minimum_stock,
+            unit_cost=data.unit_cost,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
 # ============================================================
 # Registrar movimiento de inventario

@@ -1,474 +1,924 @@
-// ============================================================
-// MATRIXFLOW ENTERPRISE
-// Módulo de Inventario
-// ============================================================
-//
-// Esta página consulta y muestra el inventario real obtenido
-// desde el backend mediante getInventory().
-//
-// Importante:
-// - No se utilizan datos ficticios.
-// - No se modifica la información recibida del backend.
-// - Los indicadores superiores se calculan únicamente a partir
-//   de los registros reales.
-// - La interfaz utiliza exclusivamente el tema claro.
-// ============================================================
+import { useEffect, useMemo, useState } from 'react'
+import {
+  AlertCircle,
+  Boxes,
+  Building2,
+  CircleAlert,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Warehouse,
+  X,
+} from 'lucide-react'
 
-import { useEffect, useState } from 'react'
+import {
+  createInventory,
+  getBranches,
+  getInventory,
+  getProducts,
+  updateInventory,
+  type Branch,
+  type InventoryItem,
+  type Product,
+} from '../services/api'
 
-// Importamos la función que consulta el inventario real.
-import { getInventory } from '../services/api'
 
-// Importamos InventoryItem únicamente como tipo de TypeScript.
-import type { InventoryItem } from '../services/api'
+function formatCurrency(value: number | null) {
+  if (value == null) {
+    return 'Sin costo'
+  }
+
+  return new Intl.NumberFormat('es-PE', {
+    style: 'currency',
+    currency: 'PEN',
+  }).format(value)
+}
+
 
 function Inventario() {
-  // ==========================================================
-  // ESTADO
-  // ==========================================================
-
-  // Guardamos los registros reales recibidos desde PostgreSQL.
+  // Datos obtenidos desde FastAPI.
   const [items, setItems] = useState<InventoryItem[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [products, setProducts] = useState<Product[]>([])
 
-  // Indica si todavía estamos esperando la respuesta del backend.
+  // Estados generales de la página.
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
 
-  // Guarda cualquier error producido durante la consulta.
-  const [error, setError] = useState<string | null>(null)
+  // Estados del formulario.
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
-  // ==========================================================
-  // CONSULTA DEL INVENTARIO
-  // ==========================================================
+  const [branchId, setBranchId] = useState('')
+  const [productId, setProductId] = useState('')
+  const [stock, setStock] = useState('0')
+  const [minimumStock, setMinimumStock] = useState('0')
+  const [unitCost, setUnitCost] = useState('')
 
-  // Consultamos el inventario cuando se carga la página.
-  useEffect(() => {
-    async function loadInventory() {
-      try {
-        // Activamos el estado de carga antes de consultar.
-        setLoading(true)
 
-        // Limpiamos cualquier error anterior.
-        setError(null)
+  // ----------------------------------------------------------
+  // CARGA DE DATOS
+  // ----------------------------------------------------------
 
-        // Obtenemos los datos reales mediante FastAPI.
-        const data = await getInventory()
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError('')
 
-        // Guardamos los registros recibidos.
-        setItems(data)
-      } catch (err) {
-        // Mostramos el mensaje recibido desde el servicio.
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Ocurrió un error al obtener el inventario.',
-        )
-      } finally {
-        // Finalizamos el estado de carga.
-        setLoading(false)
-      }
+      const [
+        inventoryData,
+        branchesData,
+        productsData,
+      ] = await Promise.all([
+        getInventory(),
+        getBranches(),
+        getProducts(),
+      ])
+
+      setItems(inventoryData)
+      setBranches(branchesData)
+      setProducts(productsData)
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo cargar el inventario.',
+      )
+    } finally {
+      setLoading(false)
     }
+  }
 
-    loadInventory()
+
+  useEffect(() => {
+    void loadData()
   }, [])
 
-  // ==========================================================
-  // INDICADORES DERIVADOS
-  // ==========================================================
-  //
-  // Estos valores se calculan exclusivamente a partir de los
-  // registros reales obtenidos desde el backend.
-  // ==========================================================
 
-  // Cantidad total de unidades almacenadas.
-  const totalStock = items.reduce(
-    (total, item) => total + Number(item.stock),
-    0,
+  // ----------------------------------------------------------
+  // DATOS DERIVADOS
+  // ----------------------------------------------------------
+
+  const activeBranches = useMemo(
+    () =>
+      branches.filter(
+        (branch) => branch.is_active,
+      ),
+    [branches],
   )
 
-  // Cantidad de registros que se encuentran en stock bajo.
-  const lowStockItems = items.filter(
-    (item) => item.stock <= item.minimum_stock,
-  ).length
 
-  // ==========================================================
-  // ESTADO DE CARGA
-  // ==========================================================
+  const activeProducts = useMemo(
+    () =>
+      products.filter(
+        (product) => product.is_active,
+      ),
+    [products],
+  )
 
-  if (loading) {
-    return (
-      <div className="min-h-full bg-slate-50 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          {/* Encabezado simulado durante la carga. */}
-          <div className="mb-8">
-            <div className="h-8 w-56 animate-pulse rounded-lg bg-slate-200" />
 
-            <div className="mt-3 h-4 w-96 max-w-full animate-pulse rounded bg-slate-200" />
-          </div>
+  const totalStock = useMemo(
+    () =>
+      items.reduce(
+        (total, item) =>
+          total + Number(item.stock),
+        0,
+      ),
+    [items],
+  )
 
-          {/* Tarjeta simulada para representar la tabla. */}
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="space-y-4 p-6">
-              <div className="h-12 animate-pulse rounded-lg bg-slate-100" />
-              <div className="h-12 animate-pulse rounded-lg bg-slate-100" />
-              <div className="h-12 animate-pulse rounded-lg bg-slate-100" />
-              <div className="h-12 animate-pulse rounded-lg bg-slate-100" />
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+
+  const lowStockItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          Number(item.stock) <=
+          Number(item.minimum_stock),
+      ).length,
+    [items],
+  )
+
+
+  const outOfStockItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          Number(item.stock) === 0,
+      ).length,
+    [items],
+  )
+
+
+  const filteredItems = useMemo(() => {
+    const term = search
+      .trim()
+      .toLowerCase()
+
+    return items.filter((item) => {
+      const branch = branches.find(
+        (currentBranch) =>
+          currentBranch.id === item.branch_id,
+      )
+
+      const product = products.find(
+        (currentProduct) =>
+          currentProduct.id === item.product_id,
+      )
+
+      return [
+        item.id,
+        branch?.name ?? '',
+        product?.name ?? '',
+        product?.sku ?? '',
+        item.stock,
+        item.minimum_stock,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
+    })
+  }, [
+    items,
+    branches,
+    products,
+    search,
+  ])
+
+
+  // ----------------------------------------------------------
+  // FORMULARIO
+  // ----------------------------------------------------------
+
+  const resetForm = () => {
+    setShowForm(false)
+    setEditingId(null)
+    setSaving(false)
+    setFormError('')
+    setBranchId('')
+    setProductId('')
+    setStock('0')
+    setMinimumStock('0')
+    setUnitCost('')
   }
 
-  // ==========================================================
-  // ESTADO DE ERROR
-  // ==========================================================
 
-  if (error) {
-    return (
-      <div className="min-h-full bg-slate-50 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
-            <div className="flex items-start gap-4">
-              {/* Icono de advertencia. */}
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                <svg
-                  className="h-6 w-6"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="9" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-              </div>
+  const openCreateForm = () => {
+    setEditingId(null)
+    setFormError('')
 
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  No se pudo cargar el inventario
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-600">
-                  {error}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    setBranchId(
+      activeBranches.length > 0
+        ? String(activeBranches[0].id)
+        : '',
     )
+
+    setProductId('')
+    setStock('0')
+    setMinimumStock('0')
+    setUnitCost('')
+    setShowForm(true)
   }
 
-  // ==========================================================
-  // INTERFAZ PRINCIPAL
-  // ==========================================================
+
+  const openEditForm = (
+    item: InventoryItem,
+  ) => {
+    setEditingId(item.id)
+    setFormError('')
+
+    setBranchId(
+      String(item.branch_id),
+    )
+
+    setProductId(
+      String(item.product_id),
+    )
+
+    setStock(
+      String(item.stock),
+    )
+
+    setMinimumStock(
+      String(item.minimum_stock),
+    )
+
+    setUnitCost(
+      item.unit_cost != null
+        ? String(item.unit_cost)
+        : '',
+    )
+
+    setShowForm(true)
+  }
+
+
+  const handleSave = async () => {
+    const parsedStock = Number(stock)
+    const parsedMinimumStock =
+      Number(minimumStock)
+
+    const parsedUnitCost =
+      unitCost.trim() === ''
+        ? null
+        : Number(unitCost)
+
+    if (
+      !Number.isInteger(parsedStock) ||
+      parsedStock < 0
+    ) {
+      setFormError(
+        'El stock debe ser un número entero igual o mayor que cero.',
+      )
+      return
+    }
+
+    if (
+      !Number.isInteger(
+        parsedMinimumStock,
+      ) ||
+      parsedMinimumStock < 0
+    ) {
+      setFormError(
+        'El stock mínimo debe ser un número entero igual o mayor que cero.',
+      )
+      return
+    }
+
+    if (
+      parsedUnitCost !== null &&
+      (
+        Number.isNaN(parsedUnitCost) ||
+        parsedUnitCost < 0
+      )
+    ) {
+      setFormError(
+        'El costo unitario no puede ser negativo.',
+      )
+      return
+    }
+
+    try {
+      setSaving(true)
+      setFormError('')
+
+      if (editingId !== null) {
+        await updateInventory(
+          editingId,
+          {
+            stock: parsedStock,
+            minimum_stock:
+              parsedMinimumStock,
+            unit_cost:
+              parsedUnitCost,
+          },
+        )
+      } else {
+        const parsedBranchId =
+          Number(branchId)
+
+        const parsedProductId =
+          Number(productId)
+
+        if (
+          parsedBranchId <= 0 ||
+          parsedProductId <= 0
+        ) {
+          setFormError(
+            'Selecciona una sucursal y un producto.',
+          )
+          return
+        }
+
+        await createInventory({
+          branch_id:
+            parsedBranchId,
+          product_id:
+            parsedProductId,
+          stock:
+            parsedStock,
+          minimum_stock:
+            parsedMinimumStock,
+          unit_cost:
+            parsedUnitCost,
+        })
+      }
+
+      resetForm()
+
+      // Recargamos los datos para reflejar el valor
+      // almacenado realmente en PostgreSQL.
+      await loadData()
+    } catch (requestError) {
+      setFormError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo guardar el inventario.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+
+  const selectedCombinationExists =
+    editingId === null &&
+    items.some(
+      (item) =>
+        item.branch_id ===
+        Number(branchId) &&
+        item.product_id ===
+        Number(productId),
+    )
+
 
   return (
-    <div className="min-h-full bg-slate-50 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl space-y-6">
+      {/* El título principal ya pertenece al Header global. */}
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <p className="max-w-2xl text-sm text-slate-500">
+          Controla las existencias disponibles por producto y
+          sucursal antes de registrar operaciones comerciales.
+        </p>
 
-        {/* ====================================================
-            ENCABEZADO
-            ==================================================== */}
+        <button
+          type="button"
+          onClick={openCreateForm}
+          disabled={
+            loading ||
+            activeBranches.length === 0 ||
+            activeProducts.length === 0
+          }
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          <Plus size={18} />
+          Nuevo inventario
+        </button>
+      </div>
 
-        <div className="mb-8">
-          <div className="mb-3 flex items-center gap-2">
-            {/* Pequeño indicador visual de la sección. */}
-            <span className="h-1.5 w-8 rounded-full bg-slate-400" />
 
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Gestión empresarial
-            </span>
-          </div>
-
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Inventario
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-            Consulta y supervisa el estado actual del inventario
-            registrado en las sucursales de la empresa.
-          </p>
-        </div>
-
-        {/* ====================================================
-            INDICADORES
-            ==================================================== */}
-
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
-
-          {/* Cantidad de registros. */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">
-                  Registros de inventario
-                </p>
-
-                <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                  {items.length}
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Registros disponibles actualmente
-                </p>
-              </div>
-
-              {/* Icono neutro para mantener la paleta clara. */}
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  aria-hidden="true"
-                >
-                  <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z" />
-                  <path d="M4 7.5 12 12l8-4.5" />
-                  <path d="M12 12v9" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Cantidad total de unidades. */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">
-                  Unidades en inventario
-                </p>
-
-                <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                  {totalStock}
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Suma de existencias registradas
-                </p>
-              </div>
-
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  aria-hidden="true"
-                >
-                  <path d="M5 8h14" />
-                  <path d="M5 12h14" />
-                  <path d="M5 16h9" />
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Registros con stock bajo. */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">
-                  Stock bajo
-                </p>
-
-                <p
-                  className={`mt-2 text-3xl font-bold tracking-tight ${lowStockItems > 0
-                    ? 'text-amber-600'
-                    : 'text-slate-900'
-                    }`}
-                >
-                  {lowStockItems}
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Registros bajo el mínimo configurado
-                </p>
-              </div>
-
-              <div
-                className={`flex h-11 w-11 items-center justify-center rounded-xl ${lowStockItems > 0
-                  ? 'bg-amber-50 text-amber-600'
-                  : 'bg-slate-100 text-slate-600'
-                  }`}
-              >
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  aria-hidden="true"
-                >
-                  <path d="M12 3 2.8 19h18.4L12 3Z" />
-                  <path d="M12 9v4" />
-                  <path d="M12 16h.01" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ====================================================
-            TABLA PRINCIPAL
-            ==================================================== */}
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
-          {/* Cabecera de la sección. */}
-          <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
+      {/* Indicadores del inventario real. */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">
-                Existencias registradas
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Detalle de productos, stock mínimo y costo unitario.
+              <p className="text-sm font-medium text-slate-500">
+                Unidades disponibles
               </p>
+
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {totalStock}
+              </p>
+
+              <p className="mt-1 text-xs text-slate-400">
+                Existencias acumuladas
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Boxes size={20} />
             </div>
           </div>
+        </div>
 
-          {/* ==================================================
-              ESTADO VACÍO
-              ================================================== */}
 
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                Stock bajo
+              </p>
 
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                <svg
-                  className="h-7 w-7"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  aria-hidden="true"
-                >
-                  <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z" />
-                  <path d="M4 7.5 12 12l8-4.5" />
-                  <path d="M12 12v9" />
-                </svg>
-              </div>
+              <p className="mt-2 text-2xl font-bold text-amber-600">
+                {lowStockItems}
+              </p>
 
-              <h3 className="mt-4 text-base font-semibold text-slate-900">
-                No hay registros de inventario
-              </h3>
-
-              <p className="mt-1 max-w-md text-sm text-slate-500">
-                Actualmente no existen registros disponibles para
-                mostrar en esta sección.
+              <p className="mt-1 text-xs text-slate-400">
+                En o debajo del mínimo
               </p>
             </div>
-          ) : (
 
-            /* ==================================================
-               TABLA DE INVENTARIO
-               ================================================== */
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left">
-
-                {/* Encabezados de la tabla. */}
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80">
-
-                    <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      ID
-                    </th>
-
-                    <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Sucursal
-                    </th>
-
-                    <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Producto
-                    </th>
-
-                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Stock
-                    </th>
-
-                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Stock mínimo
-                    </th>
-
-                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Costo unitario
-                    </th>
-                  </tr>
-                </thead>
-
-                {/* Cuerpo de la tabla. */}
-                <tbody className="divide-y divide-slate-100">
-
-                  {items.map((item) => {
-
-                    // Calculamos únicamente un estado visual a
-                    // partir de los datos reales del backend.
-                    const lowStock =
-                      item.stock <= item.minimum_stock
-
-                    return (
-                      <tr
-                        key={item.id}
-                        className="transition-colors hover:bg-slate-50"
-                      >
-
-                        {/* ID del registro. */}
-                        <td className="whitespace-nowrap px-5 py-4 text-sm font-medium text-slate-700">
-                          #{item.id}
-                        </td>
-
-                        {/* Identificador de la sucursal. */}
-                        <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-600">
-                          {item.branch_id}
-                        </td>
-
-                        {/* Identificador del producto. */}
-                        <td className="whitespace-nowrap px-5 py-4 text-sm font-medium text-slate-800">
-                          {item.product_id}
-                        </td>
-
-                        {/* Stock actual con indicador visual. */}
-                        <td className="whitespace-nowrap px-5 py-4 text-right">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${lowStock
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'bg-emerald-50 text-emerald-700'
-                              }`}
-                          >
-                            {item.stock}
-                          </span>
-                        </td>
-
-                        {/* Stock mínimo configurado. */}
-                        <td className="whitespace-nowrap px-5 py-4 text-right text-sm text-slate-600">
-                          {item.minimum_stock}
-                        </td>
-
-                        {/* Costo unitario real. */}
-                        <td className="whitespace-nowrap px-5 py-4 text-right text-sm font-medium text-slate-800">
-                          {item.unit_cost != null
-                            ? `S/ ${Number(item.unit_cost).toFixed(2)}`
-                            : '—'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <CircleAlert size={20} />
             </div>
-          )}
+          </div>
+        </div>
+
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                Sin existencias
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-red-600">
+                {outOfStockItems}
+              </p>
+
+              <p className="mt-1 text-xs text-slate-400">
+                Productos con stock cero
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
+              <Warehouse size={20} />
+            </div>
+          </div>
         </div>
       </div>
+
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <div className="flex gap-3">
+            <AlertCircle
+              size={20}
+              className="mt-0.5 shrink-0 text-red-600"
+            />
+
+            <div>
+              <p className="font-semibold text-red-800">
+                No fue posible cargar el inventario
+              </p>
+
+              <p className="mt-1 text-sm text-red-700">
+                {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Existencias por sucursal
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Stock actual, mínimo configurado y costo unitario.
+            </p>
+          </div>
+
+          <div className="relative w-full md:max-w-sm">
+            <Search
+              size={17}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+
+            <input
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value,
+                )
+              }
+              placeholder="Buscar producto o sucursal..."
+              className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+            />
+          </div>
+        </div>
+
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Producto
+                </th>
+
+                <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Sucursal
+                </th>
+
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Stock
+                </th>
+
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Mínimo
+                </th>
+
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Costo
+                </th>
+
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+
+
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                [1, 2, 3].map((row) => (
+                  <tr key={row}>
+                    {Array.from({
+                      length: 6,
+                    }).map((_, index) => (
+                      <td
+                        key={index}
+                        className="px-5 py-5"
+                      >
+                        <div className="h-4 animate-pulse rounded bg-slate-100" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                filteredItems.map((item) => {
+                  const branch =
+                    branches.find(
+                      (currentBranch) =>
+                        currentBranch.id ===
+                        item.branch_id,
+                    )
+
+                  const product =
+                    products.find(
+                      (currentProduct) =>
+                        currentProduct.id ===
+                        item.product_id,
+                    )
+
+                  const lowStock =
+                    item.stock <=
+                    item.minimum_stock
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                            <Package size={17} />
+                          </div>
+
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">
+                              {product?.name ??
+                                `Producto ${item.product_id}`}
+                            </p>
+
+                            <p className="mt-0.5 text-xs text-slate-400">
+                              {product?.sku ??
+                                `ID ${item.product_id}`}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-700">
+                          <Building2
+                            size={16}
+                            className="text-slate-400"
+                          />
+
+                          {branch?.name ??
+                            `Sucursal ${item.branch_id}`}
+                        </div>
+                      </td>
+
+
+                      <td className="px-5 py-4 text-right">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${item.stock === 0
+                              ? 'bg-red-50 text-red-700'
+                              : lowStock
+                                ? 'bg-amber-50 text-amber-700'
+                                : 'bg-emerald-50 text-emerald-700'
+                            }`}
+                        >
+                          {item.stock}
+                        </span>
+                      </td>
+
+
+                      <td className="px-5 py-4 text-right text-sm text-slate-600">
+                        {item.minimum_stock}
+                      </td>
+
+
+                      <td className="px-5 py-4 text-right text-sm font-medium text-slate-800">
+                        {formatCurrency(
+                          item.unit_cost != null
+                            ? Number(
+                              item.unit_cost,
+                            )
+                            : null,
+                        )}
+                      </td>
+
+
+                      <td className="px-5 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openEditForm(
+                              item,
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        >
+                          <Pencil size={14} />
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+
+
+          {!loading &&
+            filteredItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                <Boxes
+                  size={34}
+                  className="text-slate-300"
+                />
+
+                <h3 className="mt-3 font-semibold text-slate-900">
+                  No se encontraron registros
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Registra inventario para comenzar a controlar existencias.
+                </p>
+              </div>
+            )}
+        </div>
+      </div>
+
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  {editingId !== null
+                    ? 'Editar inventario'
+                    : 'Nuevo inventario'}
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Define las existencias disponibles del producto.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={resetForm}
+                disabled={saving}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+
+            <div className="space-y-5 p-6">
+              {formError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Sucursal
+                  </label>
+
+                  <select
+                    value={branchId}
+                    onChange={(event) =>
+                      setBranchId(
+                        event.target.value,
+                      )
+                    }
+                    disabled={
+                      editingId !== null ||
+                      saving
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100"
+                  >
+                    {activeBranches.map(
+                      (branch) => (
+                        <option
+                          key={branch.id}
+                          value={branch.id}
+                        >
+                          {branch.name}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+
+
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Producto
+                  </label>
+
+                  <select
+                    value={productId}
+                    onChange={(event) =>
+                      setProductId(
+                        event.target.value,
+                      )
+                    }
+                    disabled={
+                      editingId !== null ||
+                      saving
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100"
+                  >
+                    <option value="">
+                      Selecciona un producto
+                    </option>
+
+                    {activeProducts.map(
+                      (product) => (
+                        <option
+                          key={product.id}
+                          value={product.id}
+                        >
+                          {product.name} · {product.sku}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+              </div>
+
+
+              {selectedCombinationExists && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                  Este producto ya tiene inventario registrado en la sucursal seleccionada.
+                </div>
+              )}
+
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Stock
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={stock}
+                    onChange={(event) =>
+                      setStock(
+                        event.target.value,
+                      )
+                    }
+                    disabled={saving}
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                  />
+                </div>
+
+
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Stock mínimo
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={minimumStock}
+                    onChange={(event) =>
+                      setMinimumStock(
+                        event.target.value,
+                      )
+                    }
+                    disabled={saving}
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                  />
+                </div>
+
+
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Costo unitario
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={unitCost}
+                    onChange={(event) =>
+                      setUnitCost(
+                        event.target.value,
+                      )
+                    }
+                    disabled={saving}
+                    placeholder="0.00"
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={resetForm}
+                disabled={saving}
+                className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  void handleSave()
+                }
+                disabled={
+                  saving ||
+                  selectedCombinationExists
+                }
+                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving
+                  ? 'Guardando...'
+                  : editingId !== null
+                    ? 'Guardar cambios'
+                    : 'Crear inventario'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-// Exportamos la página de Inventario.
+
 export default Inventario
