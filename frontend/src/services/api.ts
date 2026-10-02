@@ -1,19 +1,21 @@
 // ============================================================
-// MatrixFlow Enterprise
-// Cliente principal para comunicarse con el backend
+// URL DEL BACKEND
 // ============================================================
 //
-// Este archivo centraliza la comunicación entre React y FastAPI.
+// Vite utiliza variables de entorno diferentes según
+// el entorno donde se ejecute el frontend.
 //
-// Frontend:
-//     http://localhost:5173
+// Desarrollo:
+// React local -> FastAPI local.
 //
-// Backend:
-//     https://matrixflow-backend-oby4.onrender.com
+// Producción:
+// Vercel -> Backend desplegado en Render.
+//
+// De esta manera no necesitamos cambiar manualmente
+// la URL cada vez que desarrollamos o desplegamos.
 // ============================================================
 
-// URL del backend desplegado en Render para producción.
-const API_URL = "https://matrixflow-backend-oby4.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL
 
 // ============================================================
 // PETICIONES AUTENTICADAS

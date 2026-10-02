@@ -2,14 +2,22 @@
 # MatrixFlow Enterprise
 # Schemas de vectores
 # ============================================================
+#
 # Define los datos que la API recibe y devuelve para trabajar
 # con vectores matemáticos.
+#
+# Las validaciones coinciden con los límites reales definidos
+# en PostgreSQL.
 # ============================================================
 
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+
+# ============================================================
+# DATOS BASE DEL VECTOR
+# ============================================================
 
 class VectorBase(BaseModel):
     """
@@ -17,36 +25,61 @@ class VectorBase(BaseModel):
     """
 
     # Empresa propietaria del vector.
-    # PostgreSQL exige este campo en la tabla "vectors".
-    company_id: int
+    # Debe ser un identificador positivo.
+    company_id: int = Field(
+        gt=0,
+    )
 
     # Nombre utilizado para identificar el vector.
-    name: str
+    #
+    # La columna vectors.name admite hasta 150 caracteres.
+    name: str = Field(
+        min_length=1,
+        max_length=150,
+    )
 
     # Descripción opcional del vector.
-    description: str | None = None
+    #
+    # La columna vectors.description admite hasta
+    # 255 caracteres.
+    description: str | None = Field(
+        default=None,
+        max_length=255,
+    )
 
     # Valores numéricos que forman el vector.
-    values: List[float]
+    #
+    # Un vector debe contener al menos un componente.
+    values: List[float] = Field(
+        min_length=1,
+    )
 
+
+# ============================================================
+# CREACIÓN DE VECTOR
+# ============================================================
 
 class VectorCreate(VectorBase):
     """
-    Datos necesarios para crear un vector.
+    Datos necesarios para registrar un nuevo vector.
     """
 
     pass
 
+
+# ============================================================
+# RESPUESTA DE VECTOR
+# ============================================================
 
 class VectorResponse(VectorBase):
     """
     Datos que la API devuelve al consultar un vector.
     """
 
-    # Identificador único del vector.
+    # Identificador único generado por PostgreSQL.
     id: int
 
-    # Cantidad de elementos del vector.
+    # Cantidad de componentes del vector.
     dimension: int
 
     class Config:

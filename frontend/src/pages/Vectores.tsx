@@ -12,6 +12,9 @@ import {
 import {
   createOperation,
   createVector,
+  getDashboard,
+  getInventory,
+  getProducts,
   getVectors,
   type Vector,
 } from '../services/api'
@@ -39,6 +42,46 @@ const VECTOR_OPERATIONS = [
     label: 'Producto punto',
   },
 ]
+
+// ============================================================
+// FUENTES DE DATOS EMPRESARIALES
+// ============================================================
+//
+// Estas opciones permiten construir vectores utilizando datos
+// reales almacenados en PostgreSQL.
+//
+// El usuario ya no necesita escribir únicamente números
+// genéricos como "1, 2, 3, 4".
+// ============================================================
+
+const BUSINESS_VECTOR_SOURCES = [
+  {
+    value: 'sales_quantity',
+    label: 'Unidades vendidas por producto',
+  },
+  {
+    value: 'sales_total',
+    label: 'Importe vendido por producto',
+  },
+  {
+    value: 'inventory_stock',
+    label: 'Stock total por producto',
+  },
+  {
+    value: 'product_price',
+    label: 'Precio actual por producto',
+  },
+] as const
+
+type BusinessVectorSource =
+  typeof BUSINESS_VECTOR_SOURCES[number]['value']
+
+interface BusinessVectorPreview {
+  name: string
+  description: string
+  labels: string[]
+  values: number[]
+}
 
 // ============================================================
 // COMPONENTE
@@ -81,6 +124,25 @@ function Vectores() {
 
   // Resultado de la operación seleccionada.
   const [operationResult, setOperationResult] = useState<unknown>(null)
+
+  // ==========================================================
+  // VECTOR GENERADO DESDE DATOS EMPRESARIALES
+  // ==========================================================
+
+  // Fuente seleccionada por el usuario.
+  const [businessSource, setBusinessSource] =
+    useState<BusinessVectorSource>('sales_quantity')
+
+  // Vista previa antes de guardar el vector.
+  const [businessPreview, setBusinessPreview] =
+    useState<BusinessVectorPreview | null>(null)
+
+  // Estado de generación y guardado.
+  const [generatingBusinessVector, setGeneratingBusinessVector] =
+    useState(false)
+
+  const [savingBusinessVector, setSavingBusinessVector] =
+    useState(false)
 
   // ==========================================================
   // CARGAR VECTORES
@@ -165,6 +227,219 @@ function Vectores() {
     }
 
     return numbers
+  }
+
+  // ==========================================================
+  // GENERAR VECTOR DESDE DATOS EMPRESARIALES
+  // ==========================================================
+
+  const handleGenerateBusinessVector = async () => {
+    try {
+      setGeneratingBusinessVector(true)
+      setError('')
+      setSuccess('')
+      setBusinessPreview(null)
+
+      // ------------------------------------------------------
+      // VENTAS POR PRODUCTO
+      // ------------------------------------------------------
+
+      if (
+        businessSource === 'sales_quantity' ||
+        businessSource === 'sales_total'
+      ) {
+        // El Dashboard ya recibe información agregada
+        // desde sale_details mediante FastAPI.
+        const dashboard = await getDashboard()
+
+        // Ordenamos por ID para conservar siempre el mismo
+        // orden de productos entre distintos vectores.
+        const rows = [...dashboard.sales_by_product].sort(
+          (first, second) =>
+            first.product_id - second.product_id,
+        )
+
+        if (rows.length === 0) {
+          throw new Error(
+            'No existen ventas por producto para generar el vector.',
+          )
+        }
+
+        const labels = rows.map(
+          (item) => item.product_name,
+        )
+
+        if (businessSource === 'sales_quantity') {
+          setBusinessPreview({
+            name: 'Unidades vendidas por producto',
+
+            // Guardamos también el orden de los componentes.
+            // Esto permite interpretar posteriormente el vector.
+            description:
+              'Unidades vendidas por producto. Ordenado por ID de producto ascendente.',
+
+            labels,
+
+            values: rows.map(
+              (item) => Number(item.quantity),
+            ),
+          })
+        } else {
+          setBusinessPreview({
+            name: 'Importe vendido por producto',
+            description:
+              'Importe acumulado de ventas por producto. Ordenado por ID de producto ascendente.',
+            labels,
+            values: rows.map(
+              (item) => Number(item.total),
+            ),
+          })
+        }
+
+        return
+      }
+
+      // ------------------------------------------------------
+      // PRODUCTOS E INVENTARIO
+      // ------------------------------------------------------
+
+      const [products, inventory] = await Promise.all([
+        getProducts(),
+        getInventory(),
+      ])
+
+      // Ordenamos los productos por ID para que todos los
+      // vectores empresariales conserven el mismo orden.
+      const orderedProducts = [...products].sort(
+        (first, second) => first.id - second.id,
+      )
+
+      if (orderedProducts.length === 0) {
+        throw new Error(
+          'No existen productos para generar el vector.',
+        )
+      }
+
+      const labels = orderedProducts.map(
+        (product) => product.name,
+      )
+
+      // ------------------------------------------------------
+      // STOCK TOTAL POR PRODUCTO
+      // ------------------------------------------------------
+
+      if (businessSource === 'inventory_stock') {
+        const values = orderedProducts.map((product) => {
+          // Un producto puede estar presente en varias sucursales.
+          // Sumamos el stock disponible en todas ellas.
+          return inventory
+            .filter(
+              (item) =>
+                item.product_id === product.id,
+            )
+            .reduce(
+              (total, item) =>
+                total + Number(item.stock),
+              0,
+            )
+        })
+
+        setBusinessPreview({
+          name: 'Stock total por producto',
+
+          // Mantenemos la descripción corta porque PostgreSQL
+          // admite hasta 255 caracteres en vectors.description.
+          // El orden siempre corresponde al ID de producto ascendente.
+          description:
+            'Stock actual acumulado por producto. Ordenado por ID de producto ascendente.',
+
+          labels,
+          values,
+        })
+        return
+      }
+
+      // ------------------------------------------------------
+      // PRECIO ACTUAL POR PRODUCTO
+      // ------------------------------------------------------
+
+      setBusinessPreview({
+        name: 'Precio actual por producto',
+
+        // Evitamos almacenar una lista extensa de nombres
+        // dentro de la descripción del vector.
+        description:
+          'Precios actuales por producto. Ordenado por ID de producto ascendente.',
+
+        labels,
+
+        values: orderedProducts.map(
+          (product) => Number(product.price),
+        ),
+      })
+    } catch (requestError) {
+      console.error(
+        'Error al generar vector empresarial:',
+        requestError,
+      )
+
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo generar el vector empresarial.',
+      )
+    } finally {
+      setGeneratingBusinessVector(false)
+    }
+  }
+
+  // ==========================================================
+  // GUARDAR VECTOR EMPRESARIAL
+  // ==========================================================
+
+  const handleSaveBusinessVector = async () => {
+    if (!businessPreview) {
+      return
+    }
+
+    try {
+      setSavingBusinessVector(true)
+      setError('')
+      setSuccess('')
+
+      // Guardamos los valores reales utilizando el endpoint
+      // POST /api/v1/vectors.
+      await createVector({
+        company_id: DEFAULT_COMPANY_ID,
+        name: businessPreview.name,
+        description: businessPreview.description,
+        values: businessPreview.values,
+      })
+
+      // Volvemos a consultar PostgreSQL para actualizar
+      // inmediatamente la tabla de vectores.
+      const updatedVectors = await getVectors()
+
+      setVectors(updatedVectors)
+      setBusinessPreview(null)
+
+      setSuccess(
+        'Vector empresarial registrado correctamente.',
+      )
+    } catch (requestError) {
+      console.error(
+        'Error al guardar vector empresarial:',
+        requestError,
+      )
+
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo guardar el vector empresarial.',
+      )
+    } finally {
+      setSavingBusinessVector(false)
+    }
   }
 
   // ==========================================================
@@ -303,41 +578,19 @@ function Vectores() {
     <div className="min-h-full bg-slate-50 p-6">
       <div className="mx-auto max-w-7xl">
 
-        {/* Encabezado principal del módulo. */}
-        <div className="mb-8">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-cyan-500" />
+        {/* Resumen del módulo sin repetir el título del Header. */}
+        <div className="mb-6 flex justify-end">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <VectorSquare className="h-5 w-5 text-cyan-600" />
 
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Análisis matemático
-            </span>
-          </div>
-
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Vectores
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                Registra, consulta y combina vectores para realizar
-                análisis matemáticos sobre tus datos.
+              <p className="text-xs font-medium text-slate-500">
+                Vectores registrados
               </p>
-            </div>
 
-            {/* Indicador visual del módulo. */}
-            <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex">
-              <VectorSquare className="h-5 w-5 text-cyan-600" />
-
-              <div>
-                <p className="text-xs font-medium text-slate-500">
-                  Vectores registrados
-                </p>
-
-                <p className="text-lg font-bold text-slate-900">
-                  {vectors.length}
-                </p>
-              </div>
+              <p className="text-lg font-bold text-slate-900">
+                {vectors.length}
+              </p>
             </div>
           </div>
         </div>
@@ -369,6 +622,142 @@ function Vectores() {
             </span>
           </div>
         )}
+
+        {/* =====================================================
+    VECTOR DESDE DATOS EMPRESARIALES
+    ===================================================== */}
+        <section className="mb-6 overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm">
+          <div className="border-b border-cyan-100 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
+                <Sparkles className="h-5 w-5 text-cyan-600" />
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Generar vector desde datos empresariales
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Convierte información real de ventas, productos e inventario en vectores.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end">
+              <div className="flex-1">
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Fuente de información
+                </label>
+
+                <select
+                  value={businessSource}
+                  onChange={(event) => {
+                    setBusinessSource(
+                      event.target.value as BusinessVectorSource,
+                    )
+
+                    // Eliminamos la vista previa anterior
+                    // cuando cambia la fuente.
+                    setBusinessPreview(null)
+                  }}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"
+                >
+                  {BUSINESS_VECTOR_SOURCES.map((source) => (
+                    <option
+                      key={source.value}
+                      value={source.value}
+                    >
+                      {source.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGenerateBusinessVector}
+                disabled={generatingBusinessVector}
+                className="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:bg-slate-400"
+              >
+                {generatingBusinessVector
+                  ? 'Generando...'
+                  : 'Generar vector'}
+              </button>
+            </div>
+
+            {businessPreview && (
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <h3 className="font-bold text-slate-900">
+                  {businessPreview.name}
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Datos obtenidos directamente del sistema.
+                </p>
+
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
+                    <thead>
+                      <tr>
+                        {businessPreview.labels.map(
+                          (label) => (
+                            <th
+                              key={label}
+                              className="px-3 py-2 text-left text-xs font-semibold text-slate-500"
+                            >
+                              {label}
+                            </th>
+                          ),
+                        )}
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      <tr>
+                        {businessPreview.values.map(
+                          (value, index) => (
+                            <td
+                              key={`${index}-${value}`}
+                              className="px-3 py-2 font-mono text-sm font-bold text-slate-900"
+                            >
+                              {value}
+                            </td>
+                          ),
+                        )}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-5 rounded-xl bg-slate-900 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Vector resultante
+                  </p>
+
+                  <code className="mt-2 block text-sm text-white">
+                    [{businessPreview.values.join(', ')}]
+                  </code>
+                </div>
+
+                <div className="mt-5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveBusinessVector}
+                    disabled={savingBusinessVector}
+                    className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:bg-slate-400"
+                  >
+                    {savingBusinessVector
+                      ? 'Guardando...'
+                      : 'Guardar vector empresarial'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* =====================================================
             REGISTRO DE VECTOR

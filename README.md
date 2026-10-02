@@ -152,12 +152,13 @@ matrixflow-enterprise-grupo-1-definitivo
 │  │  │  │  ├─ SalesByProductChart.tsx
 │  │  │  │  ├─ SalesChart.tsx
 │  │  │  │  └─ StatCard.tsx
-│  │  │  └─ layout
-│  │  │     ├─ Header.tsx
-│  │  │     └─ Sidebar.tsx
+│  │  │  ├─ layout
+│  │  │  │  ├─ Header.tsx
+│  │  │  │  └─ Sidebar.tsx
+│  │  │  └─ security
+│  │  │     └─ PeruAccessMap.tsx
 │  │  ├─ data
-│  │  │  ├─ company.ts
-│  │  │  └─ users.ts
+│  │  │  └─ peru-departments.json
 │  │  ├─ index.css
 │  │  ├─ main.tsx
 │  │  ├─ pages
@@ -183,7 +184,10 @@ matrixflow-enterprise-grupo-1-definitivo
 │  ├─ tsconfig.json
 │  ├─ tsconfig.node.json
 │  ├─ vercel.json
+│  ├─ vite-env.d.ts
 │  └─ vite.config.ts
+├─ package-lock.json
+├─ package.json
 └─ README.md
 
 ```
