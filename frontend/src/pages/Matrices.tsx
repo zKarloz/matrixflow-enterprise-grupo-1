@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 
 import {
+  Sparkles,
+  Table2,
+} from 'lucide-react'
+
+import {
   createMatrix,
   createOperation,
+  getBranches,
+  getInventory,
   getMatrices,
+  getProducts,
   type Matrix,
 } from '../services/api'
 
@@ -18,6 +26,46 @@ type MatrixOperation =
   | 'multiply_matrix'
   | 'transpose_matrix'
   | 'scalar_multiply_matrix'
+
+// ============================================================
+// FUENTES DE DATOS EMPRESARIALES
+// ============================================================
+//
+// Cada fuente permite transformar información real de
+// PostgreSQL en una matriz Sucursal × Producto.
+// ============================================================
+
+const BUSINESS_MATRIX_SOURCES = [
+  {
+    value: 'inventory_stock',
+    label: 'Stock actual por sucursal y producto',
+  },
+  {
+    value: 'minimum_stock',
+    label: 'Stock mínimo por sucursal y producto',
+  },
+  {
+    value: 'inventory_value',
+    label: 'Valor del inventario por sucursal y producto',
+  },
+] as const
+
+type BusinessMatrixSource =
+  typeof BUSINESS_MATRIX_SOURCES[number]['value']
+
+interface BusinessMatrixPreview {
+  name: string
+  description: string
+
+  // Etiquetas de las filas: sucursales.
+  rowLabels: string[]
+
+  // Etiquetas de las columnas: productos.
+  columnLabels: string[]
+
+  // Matriz numérica que posteriormente se guardará.
+  values: number[][]
+}
 
 function Matrices() {
   // ============================================================
@@ -55,6 +103,25 @@ function Matrices() {
 
   // Cada línea representa una fila de la matriz.
   const [newValues, setNewValues] = useState('')
+
+  // ============================================================
+  // MATRIZ GENERADA DESDE DATOS EMPRESARIALES
+  // ============================================================
+
+  // Fuente empresarial seleccionada.
+  const [businessSource, setBusinessSource] =
+    useState<BusinessMatrixSource>('inventory_stock')
+
+  // Vista previa de la matriz antes de guardarla.
+  const [businessPreview, setBusinessPreview] =
+    useState<BusinessMatrixPreview | null>(null)
+
+  // Estados de carga específicos de esta funcionalidad.
+  const [generatingBusinessMatrix, setGeneratingBusinessMatrix] =
+    useState(false)
+
+  const [savingBusinessMatrix, setSavingBusinessMatrix] =
+    useState(false)
 
   // ============================================================
   // ESTADO DE LA INTERFAZ
@@ -146,6 +213,209 @@ function Matrices() {
     }
 
     return rows
+  }
+
+  // ============================================================
+  // GENERAR MATRIZ DESDE DATOS EMPRESARIALES
+  // ============================================================
+
+  async function handleGenerateBusinessMatrix() {
+    try {
+      setGeneratingBusinessMatrix(true)
+      setError('')
+      setBusinessPreview(null)
+
+      // Consultamos información real desde FastAPI.
+      const [branches, products, inventory] =
+        await Promise.all([
+          getBranches(),
+          getProducts(),
+          getInventory(),
+        ])
+
+      // Trabajamos únicamente con sucursales de la empresa
+      // actualmente utilizada por el módulo matemático.
+      const orderedBranches = branches
+        .filter(
+          (branch) =>
+            branch.company_id === DEFAULT_COMPANY_ID &&
+            branch.is_active,
+        )
+        .sort(
+          (first, second) =>
+            first.id - second.id,
+        )
+
+      // Utilizamos los productos activos y mantenemos un
+      // orden fijo por ID para que las columnas sean estables.
+      const orderedProducts = products
+        .filter((product) => product.is_active)
+        .sort(
+          (first, second) =>
+            first.id - second.id,
+        )
+
+      if (orderedBranches.length === 0) {
+        throw new Error(
+          'No existen sucursales activas para generar la matriz.',
+        )
+      }
+
+      if (orderedProducts.length === 0) {
+        throw new Error(
+          'No existen productos activos para generar la matriz.',
+        )
+      }
+
+      // Nombres que se mostrarán visualmente en la tabla.
+      const rowLabels = orderedBranches.map(
+        (branch) => branch.name,
+      )
+
+      const columnLabels = orderedProducts.map(
+        (product) => product.name,
+      )
+
+      // --------------------------------------------------------
+      // CONSTRUIR MATRIZ
+      // --------------------------------------------------------
+      //
+      // Cada fila representa una sucursal.
+      // Cada columna representa un producto.
+      //
+      // Cuando no existe inventario para una combinación,
+      // utilizamos cero.
+      // --------------------------------------------------------
+
+      const values = orderedBranches.map((branch) =>
+        orderedProducts.map((product) => {
+          const inventoryItem = inventory.find(
+            (item) =>
+              item.branch_id === branch.id &&
+              item.product_id === product.id,
+          )
+
+          if (!inventoryItem) {
+            return 0
+          }
+
+          if (businessSource === 'inventory_stock') {
+            return Number(inventoryItem.stock)
+          }
+
+          if (businessSource === 'minimum_stock') {
+            return Number(
+              inventoryItem.minimum_stock,
+            )
+          }
+
+          // Valor económico del inventario:
+          // stock × costo unitario.
+          const unitCost = Number(
+            inventoryItem.unit_cost ?? 0,
+          )
+
+          return Number(inventoryItem.stock) * unitCost
+        }),
+      )
+
+      // --------------------------------------------------------
+      // CONFIGURAR LA VISTA PREVIA
+      // --------------------------------------------------------
+
+      if (businessSource === 'inventory_stock') {
+        setBusinessPreview({
+          name: 'Stock por sucursal y producto',
+          description:
+            'Matriz de stock actual. Filas: sucursales. Columnas: productos.',
+          rowLabels,
+          columnLabels,
+          values,
+        })
+
+        return
+      }
+
+      if (businessSource === 'minimum_stock') {
+        setBusinessPreview({
+          name: 'Stock mínimo por sucursal y producto',
+          description:
+            'Matriz de stock mínimo. Filas: sucursales. Columnas: productos.',
+          rowLabels,
+          columnLabels,
+          values,
+        })
+
+        return
+      }
+
+      setBusinessPreview({
+        name: 'Valor de inventario por sucursal y producto',
+        description:
+          'Matriz de stock por costo unitario. Filas: sucursales. Columnas: productos.',
+        rowLabels,
+        columnLabels,
+        values,
+      })
+    } catch (err) {
+      console.error(
+        'Error al generar matriz empresarial:',
+        err,
+      )
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo generar la matriz empresarial.',
+      )
+    } finally {
+      setGeneratingBusinessMatrix(false)
+    }
+  }
+
+  // ============================================================
+  // GUARDAR MATRIZ EMPRESARIAL
+  // ============================================================
+
+  async function handleSaveBusinessMatrix() {
+    if (!businessPreview) {
+      return
+    }
+
+    try {
+      setSavingBusinessMatrix(true)
+      setError('')
+
+      // POST /api/v1/matrices
+      //
+      // FastAPI calculará automáticamente la cantidad
+      // de filas y columnas.
+      await createMatrix({
+        company_id: DEFAULT_COMPANY_ID,
+        name: businessPreview.name,
+        description: businessPreview.description,
+        values: businessPreview.values,
+      })
+
+      // Volvemos a consultar PostgreSQL para reflejar
+      // inmediatamente la matriz recién creada.
+      await loadMatrices()
+
+      setBusinessPreview(null)
+    } catch (err) {
+      console.error(
+        'Error al guardar matriz empresarial:',
+        err,
+      )
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo guardar la matriz empresarial.',
+      )
+    } finally {
+      setSavingBusinessMatrix(false)
+    }
   }
 
   // ============================================================
@@ -289,45 +559,6 @@ function Matrices() {
   return (
     <div className="min-h-full bg-slate-50 p-6">
       <div className="mx-auto max-w-7xl">
-        {/* =====================================================
-            ENCABEZADO
-            ===================================================== */}
-
-        <div className="mb-8">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-500">
-            Análisis matemático
-          </p>
-
-          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Matrices
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Crea, consulta y ejecuta operaciones sobre
-                matrices utilizadas en el análisis empresarial.
-              </p>
-            </div>
-
-            {/* Indicador compacto de matrices disponibles. */}
-            <div className="inline-flex w-fit items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 font-mono text-sm font-bold text-slate-700">
-                M
-              </div>
-
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Registradas
-                </p>
-
-                <p className="text-lg font-bold text-slate-900">
-                  {matrices.length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* =====================================================
             MENSAJE DE ERROR
@@ -350,6 +581,167 @@ function Matrices() {
             </div>
           </div>
         )}
+
+        {/* =====================================================
+    MATRIZ DESDE DATOS EMPRESARIALES
+    ===================================================== */}
+
+        <section className="mb-8 overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm">
+          <div className="border-b border-cyan-100 px-6 py-5">
+            <div className="flex items-center gap-3">
+
+              {/* Ícono visual del módulo empresarial. */}
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
+                <Sparkles className="h-5 w-5 text-cyan-600" />
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Generar matriz desde datos empresariales
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Organiza información real de inventario utilizando
+                  sucursales como filas y productos como columnas.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end">
+              <div className="flex-1">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Fuente de información
+                </label>
+
+                <select
+                  value={businessSource}
+                  onChange={(event) => {
+                    setBusinessSource(
+                      event.target.value as BusinessMatrixSource,
+                    )
+
+                    // Eliminamos la vista previa anterior.
+                    setBusinessPreview(null)
+                  }}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"
+                >
+                  {BUSINESS_MATRIX_SOURCES.map(
+                    (source) => (
+                      <option
+                        key={source.value}
+                        value={source.value}
+                      >
+                        {source.label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGenerateBusinessMatrix}
+                disabled={generatingBusinessMatrix}
+                className="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:bg-slate-400"
+              >
+                {generatingBusinessMatrix
+                  ? 'Generando...'
+                  : 'Generar matriz'}
+              </button>
+            </div>
+
+            {businessPreview && (
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <h3 className="font-bold text-slate-900">
+                  {businessPreview.name}
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Filas: sucursales · Columnas: productos
+                </p>
+
+                {/* Tabla utilizada para interpretar empresarialmente
+            cada posición de la matriz. */}
+                <div className="mt-5 overflow-x-auto">
+                  <table className="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="border border-slate-200 bg-white px-4 py-3 text-left font-semibold text-slate-500">
+                          Sucursal / Producto
+                        </th>
+
+                        {businessPreview.columnLabels.map(
+                          (label) => (
+                            <th
+                              key={label}
+                              className="border border-slate-200 bg-white px-4 py-3 text-right font-semibold text-slate-500"
+                            >
+                              {label}
+                            </th>
+                          ),
+                        )}
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {businessPreview.values.map(
+                        (row, rowIndex) => (
+                          <tr key={businessPreview.rowLabels[rowIndex]}>
+                            <td className="border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700">
+                              {businessPreview.rowLabels[rowIndex]}
+                            </td>
+
+                            {row.map((value, columnIndex) => (
+                              <td
+                                key={`${rowIndex}-${columnIndex}`}
+                                className="border border-slate-200 bg-white px-4 py-3 text-right font-mono text-slate-900"
+                              >
+                                {value}
+                              </td>
+                            ))}
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Representación matemática pura. */}
+                <div className="mt-5 rounded-xl bg-slate-900 p-5">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Matriz resultante
+                  </p>
+
+                  {businessPreview.values.map(
+                    (row, index) => (
+                      <p
+                        key={index}
+                        className="font-mono text-sm text-white"
+                      >
+                        [{row.join(', ')}]
+                      </p>
+                    ),
+                  )}
+                </div>
+
+                <div className="mt-5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveBusinessMatrix}
+                    disabled={savingBusinessMatrix}
+                    className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:bg-slate-400"
+                  >
+                    {savingBusinessMatrix
+                      ? 'Guardando...'
+                      : 'Guardar matriz empresarial'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* =====================================================
             REGISTRAR MATRIZ
@@ -454,92 +846,142 @@ function Matrices() {
         </section>
 
         {/* =====================================================
-            MATRICES REGISTRADAS
-            ===================================================== */}
+    MATRICES REGISTRADAS
+    ===================================================== */}
 
-        <section className="mb-8">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-slate-900">
-              Matrices registradas
-            </h2>
+        <section className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-            <p className="mt-1 text-sm text-slate-500">
-              Consulta la estructura y los valores disponibles
-              para realizar operaciones.
-            </p>
+          {/* Encabezado de la tarjeta. */}
+          <div className="border-b border-slate-100 px-6 py-5">
+            <div className="flex items-center justify-between gap-4">
+
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Matrices registradas
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Consulta las matrices disponibles para tus análisis.
+                </p>
+              </div>
+
+              {/* Contador de matrices registradas. */}
+              <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                {matrices.length} registradas
+              </div>
+            </div>
           </div>
 
           {loading ? (
-            // Skeleton visual mientras se cargan las matrices.
-            <div className="grid gap-5 md:grid-cols-2">
-              {[1, 2].map((item) => (
+            /* Skeleton de carga igual al módulo de Vectores. */
+            <div className="space-y-3 p-6">
+              {[1, 2, 3].map((item) => (
                 <div
                   key={item}
-                  className="animate-pulse rounded-2xl border border-slate-200 bg-white p-6"
-                >
-                  <div className="h-5 w-40 rounded bg-slate-200" />
-                  <div className="mt-3 h-3 w-24 rounded bg-slate-100" />
-
-                  <div className="mt-6 space-y-3">
-                    <div className="h-4 w-48 rounded bg-slate-100" />
-                    <div className="h-4 w-56 rounded bg-slate-100" />
-                    <div className="h-4 w-44 rounded bg-slate-100" />
-                  </div>
-                </div>
+                  className="h-14 animate-pulse rounded-xl bg-slate-100"
+                />
               ))}
             </div>
           ) : matrices.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 font-mono text-lg font-bold text-slate-500">
-                M
+            /* Estado vacío. */
+            <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                <Table2 className="h-6 w-6 text-slate-400" />
               </div>
 
-              <h3 className="mt-4 text-sm font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900">
                 No hay matrices registradas
               </h3>
 
-              <p className="mt-1 text-sm text-slate-500">
-                Registra una matriz para comenzar a trabajar
-                con operaciones matemáticas.
+              <p className="mt-1 max-w-sm text-sm text-slate-500">
+                Genera una matriz empresarial o registra una manualmente.
               </p>
             </div>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              {matrices.map((matrix) => (
-                <div
-                  key={matrix.id}
-                  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-                >
-                  {/* Encabezado de la tarjeta */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-bold text-slate-900">
-                        {matrix.name}
-                      </h3>
+            /* Tabla de matrices, siguiendo el diseño de Vectores. */
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-left">
 
-                      <p className="mt-1 text-sm text-slate-500">
-                        Matriz {matrix.rows} × {matrix.columns}
-                      </p>
-                    </div>
+                <thead className="border-b border-slate-100 bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Matriz
+                    </th>
 
-                    <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      #{matrix.id}
-                    </span>
-                  </div>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Dimensión
+                    </th>
 
-                  {/* Descripción */}
-                  {matrix.description && (
-                    <p className="mt-4 border-l-2 border-slate-200 pl-3 text-sm leading-5 text-slate-500">
-                      {matrix.description}
-                    </p>
-                  )}
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Valores
+                    </th>
 
-                  {/* Representación visual de la matriz */}
-                  <div className="mt-5 overflow-x-auto rounded-xl border border-slate-100 bg-slate-50 p-4">
-                    {renderMatrix(matrix.values)}
-                  </div>
-                </div>
-              ))}
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Descripción
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {matrices.map((matrix) => (
+                    <tr
+                      key={matrix.id}
+                      className="transition hover:bg-slate-50"
+                    >
+
+                      {/* Identificación de la matriz. */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                            <Table2 className="h-4 w-4 text-slate-600" />
+                          </div>
+
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {matrix.name}
+                            </p>
+
+                            <p className="text-xs text-slate-400">
+                              ID #{matrix.id}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Dimensión matemática. */}
+                      <td className="px-6 py-4">
+                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">
+                          {matrix.rows} × {matrix.columns}
+                        </span>
+                      </td>
+
+                      {/* Valores de la matriz. */}
+                      <td className="px-6 py-4">
+                        <div className="w-fit min-w-[180px] rounded-lg bg-slate-900 px-4 py-3">
+
+                          {matrix.values.map(
+                            (row, rowIndex) => (
+                              <p
+                                key={rowIndex}
+                                className="whitespace-nowrap font-mono text-sm leading-6 text-white"
+                              >
+                                [{row.join(', ')}]
+                              </p>
+                            ),
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Descripción. */}
+                      <td className="max-w-sm px-6 py-4 text-sm text-slate-600">
+                        {matrix.description ?? 'Sin descripción'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

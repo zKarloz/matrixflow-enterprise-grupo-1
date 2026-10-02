@@ -578,23 +578,6 @@ function Vectores() {
     <div className="min-h-full bg-slate-50 p-6">
       <div className="mx-auto max-w-7xl">
 
-        {/* Resumen del módulo sin repetir el título del Header. */}
-        <div className="mb-6 flex justify-end">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <VectorSquare className="h-5 w-5 text-cyan-600" />
-
-            <div>
-              <p className="text-xs font-medium text-slate-500">
-                Vectores registrados
-              </p>
-
-              <p className="text-lg font-bold text-slate-900">
-                {vectors.length}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Mensaje de error. */}
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
