@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 
 // Modal compartido para centrar formularios y cubrir todo el viewport.
+import { useNavigate } from 'react-router-dom'
+
 import Modal from '../components/ui/Modal'
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   Filter,
   Package,
@@ -33,6 +36,9 @@ import {
 } from '../services/api'
 
 function Productos() {
+  // Permite volver al módulo principal de Empresa.
+  const navigate = useNavigate()
+
   // Datos obtenidos desde FastAPI.
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -630,35 +636,68 @@ function Productos() {
     <div className="mx-auto max-w-7xl space-y-6">
 
       {/* El título principal ya se muestra en el Header global. */}
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          {/* Navegación de regreso al módulo Empresa. */}
+          <button
+            type="button"
+            onClick={() =>
+              navigate('/empresa')
+            }
+            className="
+              inline-flex
+              w-fit
+              items-center
+              gap-2
+              rounded-lg
+              border
+              border-slate-300
+              bg-white
+              px-4
+              py-2.5
+              text-sm
+              font-semibold
+              text-slate-700
+              shadow-sm
+              transition-all
+              duration-200
+              hover:bg-slate-50
+              hover:text-slate-900
+            "
+          >
+            <ArrowLeft size={17} />
+            Volver a Empresa
+          </button>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {/* La gestión de categorías queda separada del
+              formulario de productos para simplificarlo. */}
+            <button
+              type="button"
+              onClick={() =>
+                void openCategoryManager()
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+            >
+              <Tags size={18} />
+              Administrar categorías
+            </button>
+
+            <button
+              type="button"
+              onClick={openCreateForm}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+            >
+              <Plus size={18} />
+              Nuevo producto
+            </button>
+          </div>
+        </div>
+
         <p className="max-w-2xl text-sm text-slate-500">
           Administra el catálogo de productos y consulta su
           información comercial e inventario disponible.
         </p>
-
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {/* La gestión de categorías queda separada del
-              formulario de productos para simplificarlo. */}
-          <button
-            type="button"
-            onClick={() =>
-              void openCategoryManager()
-            }
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
-          >
-            <Tags size={18} />
-            Administrar categorías
-          </button>
-
-          <button
-            type="button"
-            onClick={openCreateForm}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
-          >
-            <Plus size={18} />
-            Nuevo producto
-          </button>
-        </div>
       </div>
 
       {/* Indicadores principales. */}

@@ -261,9 +261,11 @@ export async function getAuditLogs(): Promise<AuditLog[]> {
 // El JWT generado por FastAPI contiene información básica
 // del usuario:
 //
-//     sub  → ID del usuario
-//     role → nombre del rol
-//     exp  → expiración del token
+//     sub       → ID del usuario
+//     role      → nombre del rol
+//     username  → nombre de usuario
+//     full_name → nombre completo
+//     exp       → expiración del token
 //
 // Esta función solamente DECODIFICA el contenido del JWT
 // para utilizarlo en la interfaz.
@@ -280,6 +282,12 @@ export interface UserSession {
 
   // Rol obtenido del campo "role" del JWT.
   role: string
+
+  // Nombre corto de la cuenta.
+  username: string
+
+  // Nombre completo del usuario.
+  fullName: string
 }
 
 /**
@@ -323,23 +331,31 @@ export function getCurrentUser(): UserSession | null {
     // Convertimos el ID del usuario a número.
     const userId = Number(decodedPayload.sub)
 
-    // Obtenemos el rol enviado por FastAPI.
+    // Obtenemos los datos de sesión enviados por FastAPI.
     const role = decodedPayload.role
+    const username = decodedPayload.username
+    const fullName = decodedPayload.full_name
 
     // Verificamos que los datos mínimos existan.
     if (
       !Number.isInteger(userId) ||
       typeof role !== 'string' ||
-      role.trim() === ''
+      role.trim() === '' ||
+      typeof username !== 'string' ||
+      username.trim() === '' ||
+      typeof fullName !== 'string' ||
+      fullName.trim() === ''
     ) {
       return null
     }
 
-    // Devolvemos solamente la información necesaria
-    // para controlar la interfaz.
+    // Devolvemos únicamente la información que necesita
+    // la interfaz. La autorización real continúa en FastAPI.
     return {
       userId,
       role,
+      username,
+      fullName,
     }
   } catch {
     // Si el token no puede decodificarse,
@@ -570,6 +586,22 @@ export interface Company {
 }
 
 /**
+ * Datos necesarios para registrar una empresa.
+ */
+export interface CreateCompanyData {
+  // Nombre comercial o razón social.
+  name: string
+
+  // RUC u otro identificador tributario.
+  tax_id: string
+
+  // Datos de contacto opcionales.
+  address?: string | null
+  phone?: string | null
+  email?: string | null
+}
+
+/**
  * Obtiene todas las empresas registradas.
  *
  * Endpoint:
@@ -590,6 +622,46 @@ export async function getCompanies(): Promise<Company[]> {
   }
 
   // Convertimos la respuesta JSON a un arreglo de Company.
+  return response.json()
+}
+
+/**
+ * Registra una nueva empresa.
+ *
+ * Endpoint:
+ * POST /api/v1/companies
+ */
+export async function createCompany(
+  data: CreateCompanyData,
+): Promise<Company> {
+  // authenticatedFetch agrega automáticamente el JWT
+  // del usuario Administrador.
+  const response = await authenticatedFetch(
+    '/api/v1/companies',
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message =
+      'No se pudo registrar la empresa.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si FastAPI no devuelve JSON,
+      // conservamos el mensaje general.
+    }
+
+    throw new Error(message)
+  }
+
   return response.json()
 }
 

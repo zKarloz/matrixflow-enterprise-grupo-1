@@ -17,7 +17,6 @@ import {
   History,
   LayoutDashboard,
   LogOut,
-  Package,
   Settings,
   ShieldCheck,
   ShoppingCart,
@@ -67,23 +66,12 @@ export const menuItems: MenuItem[] = [
   },
 
   {
+    // Empresa funciona como página principal del módulo.
+    // Desde allí se accede a Sucursales y Productos.
     name: 'Empresa',
+    path: '/empresa',
     icon: <Building2 size={19} />,
     roles: ['Administrador'],
-    children: [
-      {
-        name: 'Sucursales',
-        path: '/empresa/sucursales',
-        icon: <Building2 size={16} />,
-        roles: ['Administrador'],
-      },
-      {
-        name: 'Productos',
-        path: '/empresa/productos',
-        icon: <Package size={16} />,
-        roles: ['Administrador'],
-      },
-    ],
   },
 
   {
@@ -243,11 +231,6 @@ function Sidebar({
   ] = useState<
     Record<string, boolean>
   >({
-    Empresa:
-      location.pathname.startsWith(
-        '/empresa',
-      ),
-
     'Análisis Matemático':
       location.pathname.startsWith(
         '/analisis-matematico',
@@ -323,9 +306,13 @@ function Sidebar({
     overflow-hidden
 
     border-r
-    border-slate-800
-    bg-slate-950
-    text-white
+    border-[#cbd9e6]
+    bg-[#E8F2FA]
+    text-slate-900
+
+    dark:border-slate-700/80
+    dark:bg-slate-900
+    dark:text-white
 
     lg:flex
   "
@@ -354,7 +341,8 @@ function Sidebar({
             : `
                 h-20
                 border-b
-                border-white/5
+                border-slate-300/80
+                dark:border-white/10
                 px-5
               `
           }
@@ -389,7 +377,8 @@ function Sidebar({
               text-[15px]
               font-bold
               tracking-[0.08em]
-              text-white
+              text-slate-900
+              dark:text-white
             "
           >
             MATRIXFLOW
@@ -403,6 +392,8 @@ function Sidebar({
               uppercase
               tracking-[0.22em]
               text-slate-500
+            dark:text-slate-500
+              dark:text-slate-500
             "
           >
             Enterprise
@@ -451,7 +442,7 @@ function Sidebar({
             font-semibold
             uppercase
             tracking-[0.18em]
-            text-slate-600
+            text-slate-500
           "
         >
           Navegación
@@ -538,14 +529,21 @@ function Sidebar({
 
                         ${hasActive
                           ? `
-                              bg-white/[0.06]
+                              bg-blue-100/80
                               font-medium
-                              text-white
+                              text-blue-800
+
+                              dark:bg-white/[0.06]
+                              dark:text-white
                             `
                           : `
-                              text-slate-400
-                              hover:bg-white/[0.04]
-                              hover:text-slate-100
+                              text-slate-700
+                              hover:bg-white/70
+                              hover:text-slate-950
+
+                              dark:text-slate-400
+                              dark:hover:bg-white/[0.04]
+                              dark:hover:text-slate-100
                             `
                         }
                       `}
@@ -573,12 +571,19 @@ function Sidebar({
 
                             ${hasActive
                               ? `
-                                  bg-blue-500/15
-                                  text-blue-400
+                                  bg-blue-100
+                                  text-blue-700
+
+                                  dark:bg-blue-500/15
+                                  dark:text-blue-400
                                 `
                               : `
                                   text-slate-500
-                                  group-hover:text-slate-300
+                          dark:text-slate-600
+                                  group-hover:text-slate-900
+
+                                  dark:text-slate-500
+                                  dark:group-hover:text-slate-300
                                 `
                             }
                           `}
@@ -643,7 +648,8 @@ function Sidebar({
                             space-y-1
 
                             border-l
-                            border-slate-800
+                            border-slate-300
+                            dark:border-slate-700
 
                             pb-1
                             pl-3
@@ -690,14 +696,21 @@ function Sidebar({
 
                                     ${isActive
                                       ? `
-                                          bg-blue-500/10
+                                          bg-blue-100/80
                                           font-medium
-                                          text-blue-300
+                                          text-blue-700
+
+                                          dark:bg-blue-500/10
+                                          dark:text-blue-300
                                         `
                                       : `
-                                          text-slate-500
-                                          hover:bg-white/[0.04]
-                                          hover:text-slate-200
+                                          text-slate-600
+                                          hover:bg-white/70
+                                          hover:text-slate-950
+
+                                          dark:text-slate-500
+                                          dark:hover:bg-white/[0.04]
+                                          dark:hover:text-slate-200
                                         `
                                     }
                                   `}
@@ -724,8 +737,8 @@ function Sidebar({
                                       shrink-0
 
                                       ${isActive
-                                        ? 'text-blue-400'
-                                        : 'text-slate-600 group-hover:text-slate-400'
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : 'text-slate-500 group-hover:text-slate-800 dark:text-slate-600 dark:group-hover:text-slate-400'
                                       }
                                     `}
                                   >
@@ -793,14 +806,21 @@ function Sidebar({
 
                     ${isActive
                       ? `
-                          bg-blue-500/10
+                          bg-blue-100/80
                           font-medium
-                          text-blue-300
+                          text-blue-700
+
+                          dark:bg-blue-500/10
+                          dark:text-blue-300
                         `
                       : `
-                          text-slate-400
-                          hover:bg-white/[0.04]
-                          hover:text-slate-100
+                          text-slate-700
+                          hover:bg-white/70
+                          hover:text-slate-950
+
+                          dark:text-slate-400
+                          dark:hover:bg-white/[0.04]
+                          dark:hover:text-slate-100
                         `
                     }
                   `}
@@ -838,12 +858,18 @@ function Sidebar({
 
                       ${isActive
                         ? `
-                            bg-blue-500/15
-                            text-blue-400
+                            bg-blue-100
+                            text-blue-700
+
+                            dark:bg-blue-500/15
+                            dark:text-blue-400
                           `
                         : `
-                            text-slate-500
-                            group-hover:text-slate-300
+                            text-slate-600
+                            group-hover:text-slate-900
+
+                            dark:text-slate-500
+                            dark:group-hover:text-slate-300
                           `
                       }
                     `}
@@ -878,7 +904,8 @@ function Sidebar({
           shrink-0
 
           border-t
-          border-white/5
+          border-slate-300/80
+          dark:border-white/10
 
           p-3
 
@@ -918,7 +945,8 @@ function Sidebar({
 
             text-sm
             font-medium
-            text-slate-400
+            text-slate-600
+            dark:text-slate-400
 
             transition-all
             duration-150
@@ -947,6 +975,7 @@ function Sidebar({
               rounded-lg
 
               text-slate-500
+              dark:text-slate-500
 
               transition-colors
               duration-150

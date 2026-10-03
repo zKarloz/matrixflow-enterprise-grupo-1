@@ -148,8 +148,18 @@ def login(
 
         access_token = create_access_token(
             {
+                # Identificador utilizado por el backend
+                # para reconocer al usuario autenticado.
                 "sub": str(user.id),
+
+                # Rol utilizado por la interfaz para adaptar
+                # la navegación visible.
                 "role": role.name,
+
+                # Datos de identidad necesarios para personalizar
+                # el saludo del Dashboard sin realizar otra petición.
+                "username": user.username,
+                "full_name": user.full_name,
             }
         )
 

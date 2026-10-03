@@ -1,181 +1,710 @@
-import { useEffect, useState } from 'react'
-import { getCompanies, type Company } from '../services/api'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
+import {
+  Building2,
+  Mail,
+  MapPin,
+  Package,
+  Phone,
+  Plus,
+  Store,
+  X,
+} from 'lucide-react'
+
+import { useNavigate } from 'react-router-dom'
+
+import Modal from '../components/ui/Modal'
 import CompanyInfoCard from '../components/company/CompanyInfoCard'
 
+import {
+  createCompany,
+  getCompanies,
+  type Company,
+} from '../services/api'
+
+
 function Empresa() {
-  // Guardamos las empresas obtenidas desde FastAPI.
-  const [companies, setCompanies] = useState<Company[]>([])
+  // Permite abrir los módulos internos de Empresa.
+  const navigate = useNavigate()
 
-  // Controlamos el estado de carga.
-  const [loading, setLoading] = useState(true)
+  // Empresas reales obtenidas desde FastAPI.
+  const [companies, setCompanies] =
+    useState<Company[]>([])
 
-  // Guardamos cualquier error producido durante la consulta.
-  const [error, setError] = useState<string | null>(null)
+  // Empresa seleccionada actualmente.
+  const [
+    selectedCompanyId,
+    setSelectedCompanyId,
+  ] = useState('')
 
-  // ============================================================
-  // CONSULTAR EMPRESA REAL
-  // ============================================================
-  //
-  // React
-  //   ↓
-  // getCompanies()
-  //   ↓
-  // authenticatedFetch()
-  //   ↓
-  // JWT
-  //   ↓
-  // FastAPI
-  //   ↓
-  // PostgreSQL / Supabase
-  //
-  // ============================================================
+  // Estados generales.
+  const [loading, setLoading] =
+    useState(true)
+
+  const [error, setError] =
+    useState('')
+
+  // Modal de creación de empresa.
+  const [showForm, setShowForm] =
+    useState(false)
+
+  const [saving, setSaving] =
+    useState(false)
+
+  const [formError, setFormError] =
+    useState('')
+
+  // Campos del formulario.
+  const [name, setName] =
+    useState('')
+
+  const [taxId, setTaxId] =
+    useState('')
+
+  const [address, setAddress] =
+    useState('')
+
+  const [phone, setPhone] =
+    useState('')
+
+  const [email, setEmail] =
+    useState('')
+
+
+  // ----------------------------------------------------------
+  // CARGA DE EMPRESAS
+  // ----------------------------------------------------------
+
+  const loadCompanies = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const data =
+        await getCompanies()
+
+      setCompanies(data)
+
+      // Conservamos la selección actual cuando todavía existe.
+      setSelectedCompanyId(
+        (currentId) => {
+          const currentExists =
+            data.some(
+              (company) =>
+                String(company.id) ===
+                currentId,
+            )
+
+          if (currentExists) {
+            return currentId
+          }
+
+          return data.length > 0
+            ? String(data[0].id)
+            : ''
+        },
+      )
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo cargar la información de las empresas.',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   useEffect(() => {
-    const loadCompanies = async () => {
-      try {
-        // Activamos el estado de carga.
-        setLoading(true)
-
-        // Limpiamos errores anteriores.
-        setError(null)
-
-        // Consultamos las empresas reales del backend.
-        const data = await getCompanies()
-
-        // Guardamos la respuesta en el estado de React.
-        setCompanies(data)
-      } catch (err) {
-        // Convertimos el error en un mensaje legible.
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'No se pudo cargar la información de la empresa.'
-
-        setError(message)
-      } finally {
-        // Finalizamos el estado de carga.
-        setLoading(false)
-      }
-    }
-
-    // Ejecutamos la consulta cuando se monta la página.
-    loadCompanies()
+    void loadCompanies()
   }, [])
 
-  // ============================================================
-  // ESTADO DE CARGA
-  // ============================================================
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <p className="text-slate-500">
-          Cargando información de la empresa desde el backend...
-        </p>
-      </div>
+  // Empresa activa en la pantalla.
+  const selectedCompany =
+    useMemo(
+      () =>
+        companies.find(
+          (company) =>
+            company.id ===
+            Number(
+              selectedCompanyId,
+            ),
+        ) ?? null,
+      [
+        companies,
+        selectedCompanyId,
+      ],
     )
+
+
+  // ----------------------------------------------------------
+  // FORMULARIO DE EMPRESA
+  // ----------------------------------------------------------
+
+  const resetForm = () => {
+    setShowForm(false)
+    setSaving(false)
+    setFormError('')
+    setName('')
+    setTaxId('')
+    setAddress('')
+    setPhone('')
+    setEmail('')
   }
 
-  // ============================================================
-  // ESTADO DE ERROR
-  // ============================================================
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <p className="text-red-600">
-          Error: {error}
-        </p>
-      </div>
-    )
+  const openCreateForm = () => {
+    resetForm()
+    setShowForm(true)
   }
 
-  // ============================================================
-  // SIN EMPRESAS
-  // ============================================================
 
-  if (companies.length === 0) {
-    return (
-      <div className="p-6">
-        <h1 className="mb-2 text-3xl font-bold text-slate-900">
-          Empresa
-        </h1>
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setFormError(
+        'El nombre de la empresa es obligatorio.',
+      )
+      return
+    }
 
-        <p className="mb-6 text-slate-500">
-          Información general de MatrixFlow Enterprise.
-        </p>
+    if (!taxId.trim()) {
+      setFormError(
+        'El RUC o identificador tributario es obligatorio.',
+      )
+      return
+    }
 
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-slate-500">
-            No se encontró información de la empresa en el backend.
-          </p>
-        </div>
-      </div>
-    )
+    try {
+      setSaving(true)
+      setFormError('')
+
+      const createdCompany =
+        await createCompany({
+          name: name.trim(),
+          tax_id: taxId.trim(),
+          address:
+            address.trim() || null,
+          phone:
+            phone.trim() || null,
+          email:
+            email.trim() || null,
+        })
+
+      // Recargamos para reflejar exactamente lo almacenado
+      // por PostgreSQL y seleccionamos la nueva empresa.
+      const updatedCompanies =
+        await getCompanies()
+
+      setCompanies(
+        updatedCompanies,
+      )
+
+      setSelectedCompanyId(
+        String(createdCompany.id),
+      )
+
+      resetForm()
+    } catch (requestError) {
+      setFormError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo registrar la empresa.',
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
-  // ============================================================
-  // MOSTRAR EMPRESA REAL
-  // ============================================================
-
-  // Actualmente utilizamos la primera empresa devuelta
-  // por el backend como empresa principal.
-  const company = companies[0]
 
   return (
-    <div>
+    <div className="mx-auto max-w-7xl space-y-6">
+      {/* ======================================================
+          ENCABEZADO
+          ====================================================== */}
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div>
+          <p className="max-w-2xl text-sm text-slate-500">
+            Administra las empresas registradas y accede a sus
+            módulos de sucursales y productos.
+          </p>
+        </div>
 
-      {/* Encabezado */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Empresa
-        </h1>
-
-        <p className="mt-2 text-slate-500">
-          Información general de MatrixFlow Enterprise.
-        </p>
+        <button
+          type="button"
+          onClick={openCreateForm}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+        >
+          <Plus size={18} />
+          Nueva empresa
+        </button>
       </div>
 
-      {/* Información principal obtenida desde FastAPI */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
 
-        <h2 className="text-xl font-semibold text-slate-900">
-          {company.name}
-        </h2>
+      {/* Mensaje de error general. */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-        <p className="mt-2 max-w-3xl text-slate-500">
-          Información registrada en el sistema.
-        </p>
 
-      </div>
+      {/* ======================================================
+          SELECTOR DE EMPRESA
+          ====================================================== */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Building2
+                size={20}
+                className="text-blue-600"
+              />
 
-      {/* Datos reales de la empresa */}
-      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Empresa seleccionada
+              </h2>
+            </div>
 
-        <CompanyInfoCard
-          label="RUC"
-          value={company.tax_id}
-        />
+            <p className="mt-1 text-sm text-slate-500">
+              Selecciona la empresa cuya información deseas consultar.
+            </p>
+          </div>
 
-        <CompanyInfoCard
-          label="Teléfono"
-          value={company.phone ?? 'No registrado'}
-        />
+          <div className="w-full lg:max-w-sm">
+            <label
+              htmlFor="company-selector"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
+              Empresa
+            </label>
 
-        <CompanyInfoCard
-          label="Correo electrónico"
-          value={company.email ?? 'No registrado'}
-        />
+            <select
+              id="company-selector"
+              value={selectedCompanyId}
+              onChange={(event) =>
+                setSelectedCompanyId(
+                  event.target.value,
+                )
+              }
+              disabled={
+                loading ||
+                companies.length === 0
+              }
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+            >
+              {companies.length === 0 ? (
+                <option value="">
+                  No hay empresas registradas
+                </option>
+              ) : (
+                companies.map(
+                  (company) => (
+                    <option
+                      key={company.id}
+                      value={company.id}
+                    >
+                      {company.name}
+                    </option>
+                  ),
+                )
+              )}
+            </select>
+          </div>
+        </div>
+      </section>
 
-        <CompanyInfoCard
-          label="Dirección"
-          value={company.address ?? 'No registrada'}
-        />
 
-      </div>
+      {/* ======================================================
+          INFORMACIÓN DE LA EMPRESA
+          ====================================================== */}
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map(
+            (item) => (
+              <div
+                key={item}
+                className="h-28 animate-pulse rounded-xl bg-slate-100"
+              />
+            ),
+          )}
+        </div>
+      ) : selectedCompany ? (
+        <>
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Building2 size={22} />
+                </div>
 
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    {selectedCompany.name}
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Información corporativa registrada en MatrixFlow.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
+              <CompanyInfoCard
+                label="RUC"
+                value={
+                  selectedCompany.tax_id
+                }
+              />
+
+              <CompanyInfoCard
+                label="Teléfono"
+                value={
+                  selectedCompany.phone ??
+                  'No registrado'
+                }
+              />
+
+              <CompanyInfoCard
+                label="Correo electrónico"
+                value={
+                  selectedCompany.email ??
+                  'No registrado'
+                }
+              />
+
+              <CompanyInfoCard
+                label="Dirección"
+                value={
+                  selectedCompany.address ??
+                  'No registrada'
+                }
+              />
+            </div>
+          </section>
+
+
+          {/* ==================================================
+              ACCESOS A LOS SUBMÓDULOS
+              ================================================== */}
+          <div className="grid gap-5 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  '/empresa/sucursales',
+                )
+              }
+              className="
+                company-module-card
+                company-module-card-branches
+                group
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                p-6
+                text-left
+                shadow-sm
+              "
+            >
+              <div className="flex items-start justify-between gap-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Store size={22} />
+                </div>
+
+                <span className="company-module-arrow text-xl text-slate-300 group-hover:text-blue-500">
+                  →
+                </span>
+              </div>
+
+              <h3 className="mt-5 text-lg font-bold text-slate-900">
+                Sucursales
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Administra las sedes y puntos de operación asociados
+                a las empresas registradas.
+              </p>
+            </button>
+
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  '/empresa/productos',
+                )
+              }
+              className="
+                company-module-card
+                company-module-card-products
+                group
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                p-6
+                text-left
+                shadow-sm
+              "
+            >
+              <div className="flex items-start justify-between gap-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <Package size={22} />
+                </div>
+
+                <span className="company-module-arrow text-xl text-slate-300 group-hover:text-emerald-500">
+                  →
+                </span>
+              </div>
+
+              <h3 className="mt-5 text-lg font-bold text-slate-900">
+                Productos
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Consulta y administra el catálogo de productos y
+                sus categorías.
+              </p>
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <Building2
+            size={34}
+            className="mx-auto text-slate-300"
+          />
+
+          <h2 className="mt-4 text-lg font-semibold text-slate-900">
+            No hay empresas registradas
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Crea la primera empresa para comenzar a organizar
+            sucursales y productos.
+          </p>
+
+          <button
+            type="button"
+            onClick={openCreateForm}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            <Plus size={17} />
+            Crear empresa
+          </button>
+        </div>
+      )}
+
+
+      {/* ======================================================
+          MODAL NUEVA EMPRESA
+          ====================================================== */}
+      <Modal
+        open={showForm}
+        onClose={() => {
+          if (!saving) {
+            resetForm()
+          }
+        }}
+        panelClassName="max-w-xl"
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              Nueva empresa
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Registra la información corporativa principal.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            aria-label="Cerrar formulario"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+
+        <div className="space-y-5 p-6">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {formError}
+            </div>
+          )}
+
+
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
+              Nombre o razón social
+            </label>
+
+            <div className="relative mt-2">
+              <Building2
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <input
+                type="text"
+                value={name}
+                onChange={(event) =>
+                  setName(
+                    event.target.value,
+                  )
+                }
+                disabled={saving}
+                placeholder="Ej. Empresa Comercial SAC"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          </div>
+
+
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
+              RUC
+            </label>
+
+            <input
+              type="text"
+              value={taxId}
+              onChange={(event) =>
+                setTaxId(
+                  event.target.value,
+                )
+              }
+              disabled={saving}
+              placeholder="Ej. 20123456789"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
+              Dirección
+            </label>
+
+            <div className="relative mt-2">
+              <MapPin
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <input
+                type="text"
+                value={address}
+                onChange={(event) =>
+                  setAddress(
+                    event.target.value,
+                  )
+                }
+                disabled={saving}
+                placeholder="Dirección opcional"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          </div>
+
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Teléfono
+              </label>
+
+              <div className="relative mt-2">
+                <Phone
+                  size={17}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(event) =>
+                    setPhone(
+                      event.target.value,
+                    )
+                  }
+                  disabled={saving}
+                  placeholder="999 999 999"
+                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+
+
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Correo electrónico
+              </label>
+
+              <div className="relative mt-2">
+                <Mail
+                  size={17}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(
+                      event.target.value,
+                    )
+                  }
+                  disabled={saving}
+                  placeholder="empresa@correo.com"
+                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              void handleSave()
+            }
+            disabled={saving}
+            className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving
+              ? 'Guardando...'
+              : 'Crear empresa'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
+
 
 export default Empresa

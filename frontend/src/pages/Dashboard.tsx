@@ -16,6 +16,7 @@ import SalesByProductChart from '../components/dashboard/SalesByProductChart'
 import RecentActivity from '../components/dashboard/RecentActivity'
 
 import {
+  getCurrentUser,
   getDashboard,
 } from '../services/api'
 
@@ -25,6 +26,33 @@ import type {
 
 
 function Dashboard() {
+  // Información de la cuenta incluida dentro del JWT.
+  const currentUser =
+    getCurrentUser()
+
+  // La forma del saludo puede configurarse por usuario.
+  const greetingStorageKey =
+    currentUser
+      ? `matrixflow-greeting-name-${currentUser.userId}`
+      : 'matrixflow-greeting-name'
+
+  const greetingNameMode =
+    localStorage.getItem(
+      greetingStorageKey,
+    ) === 'username'
+      ? 'username'
+      : 'full_name'
+
+  // Nombre final utilizado en el saludo.
+  const greetingName =
+    currentUser
+      ? (
+        greetingNameMode === 'username'
+          ? currentUser.username
+          : currentUser.fullName
+      )
+      : null
+
   // Toda la información del Dashboard se almacena
   // en un único estado.
   const [
@@ -85,21 +113,19 @@ function Dashboard() {
     <div className="min-h-full bg-slate-50 p-6">
       <div className="mx-auto max-w-7xl">
         {/* El Header global ya muestra el título Dashboard.
-            Evitamos repetir un segundo H1 dentro de la página. */}
+            Añadimos una bienvenida personalizada para la sesión. */}
         <div className="mb-8">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          {greetingName && (
+            <div className="mb-5">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                ¡Hola, {greetingName}!
+              </h2>
 
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Panel empresarial
-            </span>
-          </div>
-
-          <p className="max-w-2xl text-sm text-slate-500">
-            Visión general de ventas,
-            inventario y comportamiento
-            comercial.
-          </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Bienvenido nuevamente a MatrixFlow Enterprise. Consulta los indicadores de tu negocio y toma decisiones informadas.
+              </p>
+            </div>
+          )}
         </div>
 
 

@@ -179,7 +179,7 @@ function Login() {
 
                 ${isDarkTheme
                     ? 'bg-slate-950'
-                    : 'bg-slate-950 lg:bg-slate-50'
+                    : 'bg-white'
                 }
             `}
         >
@@ -226,7 +226,7 @@ function Login() {
                                     ? 'bg-slate-950'
                                     : 'bg-slate-900'
                             )
-                            : 'bg-slate-950'
+                            : 'bg-[#EEF7FF]'
                         }
 
     transition-[width,background-color]
@@ -257,7 +257,7 @@ function Login() {
 
                             ${isDarkTheme
                                 ? 'bg-slate-700/40'
-                                : 'bg-slate-800/60'
+                                : 'bg-blue-200/55'
                             }
                         `}
                     />
@@ -274,7 +274,7 @@ function Login() {
 
                             ${isDarkTheme
                                 ? 'bg-cyan-900/25'
-                                : 'bg-cyan-950/40'
+                                : 'bg-cyan-200/45'
                             }
                         `}
                     />
@@ -322,11 +322,23 @@ function Login() {
                                 </div>
 
                                 <div>
-                                    <p className="text-[15px] font-bold tracking-[0.08em] text-white">
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'text-[15px] font-bold tracking-[0.08em] text-white'
+                                                : 'text-[15px] font-bold tracking-[0.08em] text-slate-900'
+                                        }
+                                    >
                                         MATRIXFLOW
                                     </p>
 
-                                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'text-xs font-medium uppercase tracking-[0.2em] text-slate-400'
+                                                : 'text-xs font-medium uppercase tracking-[0.2em] text-slate-500'
+                                        }
+                                    >
                                         Enterprise
                                     </p>
                                 </div>
@@ -354,18 +366,43 @@ function Login() {
                                 }
   `}
                         >
-                            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">
+                            <p
+                                className={
+                                    isDarkTheme
+                                        ? 'mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400'
+                                        : 'mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-blue-600'
+                                }
+                            >
                                 Gestión empresarial
                             </p>
 
-                            <h1 className="text-4xl font-bold leading-tight tracking-tight text-white xl:text-5xl">
+                            <h1
+                                className={
+                                    isDarkTheme
+                                        ? 'text-4xl font-bold leading-tight tracking-tight text-white xl:text-5xl'
+                                        : 'text-4xl font-bold leading-tight tracking-tight text-slate-900 xl:text-5xl'
+                                }
+                            >
                                 Información clara para
-                                <span className="block text-slate-300">
+
+                                <span
+                                    className={
+                                        isDarkTheme
+                                            ? 'block text-slate-300'
+                                            : 'block text-slate-600'
+                                    }
+                                >
                                     decisiones inteligentes.
                                 </span>
                             </h1>
 
-                            <p className="mt-6 max-w-lg text-base leading-7 text-slate-400">
+                            <p
+                                className={
+                                    isDarkTheme
+                                        ? 'mt-6 max-w-lg text-base leading-7 text-slate-400'
+                                        : 'mt-6 max-w-lg text-base leading-7 text-slate-600'
+                                }
+                            >
                                 Centraliza ventas, inventario, indicadores
                                 y análisis en una experiencia empresarial
                                 diseñada para trabajar con tus datos.
@@ -374,32 +411,86 @@ function Login() {
                             {/* Indicadores conceptuales de las áreas
                                 principales de la plataforma. */}
                             <div className="mt-10 grid max-w-lg grid-cols-3 gap-3">
-                                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                                    <p className="text-xs font-medium text-slate-400">
+                                <div
+                                    className={
+                                        isDarkTheme
+                                            ? 'rounded-xl border border-white/10 bg-white/5 p-4'
+                                            : 'rounded-xl border border-blue-200/80 bg-white/65 p-4 shadow-sm'
+                                    }
+                                >
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'text-xs font-medium text-slate-400'
+                                                : 'text-xs font-medium text-slate-500'
+                                        }
+                                    >
                                         Ventas
                                     </p>
 
-                                    <p className="mt-2 text-sm font-semibold text-white">
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'mt-2 text-sm font-semibold text-white'
+                                                : 'mt-2 text-sm font-semibold text-slate-800'
+                                        }
+                                    >
                                         Análisis
                                     </p>
                                 </div>
 
-                                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                                    <p className="text-xs font-medium text-slate-400">
+                                <div
+                                    className={
+                                        isDarkTheme
+                                            ? 'rounded-xl border border-white/10 bg-white/5 p-4'
+                                            : 'rounded-xl border border-blue-200/80 bg-white/65 p-4 shadow-sm'
+                                    }
+                                >
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'text-xs font-medium text-slate-400'
+                                                : 'text-xs font-medium text-slate-500'
+                                        }
+                                    >
                                         Inventario
                                     </p>
 
-                                    <p className="mt-2 text-sm font-semibold text-white">
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'mt-2 text-sm font-semibold text-white'
+                                                : 'mt-2 text-sm font-semibold text-slate-800'
+                                        }
+                                    >
                                         Control
                                     </p>
                                 </div>
 
-                                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                                    <p className="text-xs font-medium text-slate-400">
+                                <div
+                                    className={
+                                        isDarkTheme
+                                            ? 'rounded-xl border border-white/10 bg-white/5 p-4'
+                                            : 'rounded-xl border border-blue-200/80 bg-white/65 p-4 shadow-sm'
+                                    }
+                                >
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'text-xs font-medium text-slate-400'
+                                                : 'text-xs font-medium text-slate-500'
+                                        }
+                                    >
                                         Indicadores
                                     </p>
 
-                                    <p className="mt-2 text-sm font-semibold text-white">
+                                    <p
+                                        className={
+                                            isDarkTheme
+                                                ? 'mt-2 text-sm font-semibold text-white'
+                                                : 'mt-2 text-sm font-semibold text-slate-800'
+                                        }
+                                    >
                                         Insights
                                     </p>
                                 </div>
@@ -410,7 +501,11 @@ function Login() {
                         <p
                             className={`
     text-xs
-    text-slate-500
+
+    ${isDarkTheme
+                                    ? 'text-slate-500'
+                                    : 'text-slate-500'
+                                }
 
     transition-opacity
     duration-200
@@ -449,11 +544,11 @@ function Login() {
 
     ${isDarkTheme
                             ? 'bg-slate-950'
-                            : 'lg:bg-slate-50'
+                            : 'bg-white'
                         }
 
     ${isExiting && !isDarkTheme
-                            ? 'lg:bg-slate-50'
+                            ? 'bg-white'
                             : ''
                         }
   `}

@@ -7,7 +7,10 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  MessageCircleMore,
   UserRound,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 
 import {
@@ -28,6 +31,16 @@ type ThemeMode =
 const THEME_STORAGE_KEY =
   'matrixflow-theme'
 
+// Preferencia de accesibilidad para eliminar efectos
+// de desenfoque en toda la interfaz.
+const BLUR_STORAGE_KEY =
+  'matrixflow-disable-blur'
+
+// Formas disponibles para personalizar el saludo.
+type GreetingNameMode =
+  | 'full_name'
+  | 'username'
+
 function Configuracion() {
   // Información básica obtenida del JWT actual.
   const currentUser = getCurrentUser()
@@ -45,6 +58,35 @@ function Configuracion() {
     ) === 'dark'
       ? 'dark'
       : 'light',
+  )
+
+  // Controla si deben desactivarse todos los efectos
+  // de desenfoque de MatrixFlow.
+  const [
+    disableBlur,
+    setDisableBlur,
+  ] = useState(
+    () =>
+      localStorage.getItem(
+        BLUR_STORAGE_KEY,
+      ) === 'true',
+  )
+
+  // La preferencia del saludo se guarda por usuario.
+  const greetingStorageKey =
+    currentUser
+      ? `matrixflow-greeting-name-${currentUser.userId}`
+      : 'matrixflow-greeting-name'
+
+  const [
+    greetingNameMode,
+    setGreetingNameMode,
+  ] = useState<GreetingNameMode>(() =>
+    localStorage.getItem(
+      greetingStorageKey,
+    ) === 'username'
+      ? 'username'
+      : 'full_name',
   )
 
   // Estado real del backend.
@@ -91,6 +133,35 @@ function Configuracion() {
       theme,
     )
   }, [theme])
+
+  // Aplicamos la preferencia de accesibilidad al elemento HTML.
+  // Esto permite que Header, Login y cualquier otro componente
+  // respondan sin duplicar lógica.
+  useEffect(() => {
+    const root =
+      document.documentElement
+
+    root.classList.toggle(
+      'matrixflow-disable-blur',
+      disableBlur,
+    )
+
+    localStorage.setItem(
+      BLUR_STORAGE_KEY,
+      String(disableBlur),
+    )
+  }, [disableBlur])
+
+  // Guardamos la forma de saludo elegida para esta cuenta.
+  useEffect(() => {
+    localStorage.setItem(
+      greetingStorageKey,
+      greetingNameMode,
+    )
+  }, [
+    greetingStorageKey,
+    greetingNameMode,
+  ])
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -211,6 +282,26 @@ function Configuracion() {
           <dl className="mt-6 grid gap-5 border-t border-slate-100 pt-5 sm:grid-cols-2">
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Usuario
+              </dt>
+
+              <dd className="mt-1 text-sm font-medium text-slate-800">
+                {currentUser?.username ?? 'No disponible'}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Nombre completo
+              </dt>
+
+              <dd className="mt-1 text-sm font-medium text-slate-800">
+                {currentUser?.fullName ?? 'No disponible'}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 ID de usuario
               </dt>
 
@@ -237,6 +328,123 @@ function Configuracion() {
         </section>
 
       </div>
+
+      {/* ======================================================
+          SALUDO DEL DASHBOARD
+          ====================================================== */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <MessageCircleMore size={21} />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Saludo del Dashboard
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Elige qué nombre debe utilizar MatrixFlow al darte la bienvenida.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
+          {/* Utilizar el nombre completo registrado en PostgreSQL. */}
+          <button
+            type="button"
+            onClick={() =>
+              setGreetingNameMode(
+                'full_name',
+              )
+            }
+            aria-pressed={
+              greetingNameMode ===
+              'full_name'
+            }
+            className={`
+              rounded-xl
+              border
+              p-4
+              text-left
+              transition-all
+              duration-150
+
+              ${greetingNameMode === 'full_name'
+                ? `
+                    border-blue-500
+                    bg-blue-50
+                    ring-2
+                    ring-blue-100
+                  `
+                : `
+                    border-slate-200
+                    bg-white
+                    hover:border-slate-300
+                    hover:bg-slate-50
+                  `
+              }
+            `}
+          >
+            <p className="text-sm font-semibold text-slate-900">
+              Nombre completo
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Ejemplo: ¡Hola, {currentUser?.fullName ?? 'Carlos Gutiérrez'}!
+            </p>
+          </button>
+
+          {/* Utilizar el username corto de la cuenta. */}
+          <button
+            type="button"
+            onClick={() =>
+              setGreetingNameMode(
+                'username',
+              )
+            }
+            aria-pressed={
+              greetingNameMode ===
+              'username'
+            }
+            className={`
+              rounded-xl
+              border
+              p-4
+              text-left
+              transition-all
+              duration-150
+
+              ${greetingNameMode === 'username'
+                ? `
+                    border-blue-500
+                    bg-blue-50
+                    ring-2
+                    ring-blue-100
+                  `
+                : `
+                    border-slate-200
+                    bg-white
+                    hover:border-slate-300
+                    hover:bg-slate-50
+                  `
+              }
+            `}
+          >
+            <p className="text-sm font-semibold text-slate-900">
+              Nombre de usuario
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Ejemplo: ¡Hola, {currentUser?.username ?? 'carlos'}!
+            </p>
+          </button>
+        </div>
+
+        <p className="mt-4 text-xs leading-5 text-slate-400">
+          Esta preferencia se guarda para la cuenta actual en este navegador.
+        </p>
+      </section>
 
       {/* ======================================================
           APARIENCIA
@@ -305,7 +513,24 @@ function Configuracion() {
               }
             `}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-amber-500 shadow-sm">
+            <div
+              className={`
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-lg
+                text-amber-500
+                shadow-sm
+
+                ${theme === 'dark'
+                  ? 'bg-[#FFF7D6] ring-1 ring-amber-200/80'
+                  : 'bg-white'
+                }
+              `}
+            >
               <Sun size={19} />
             </div>
 
@@ -391,6 +616,149 @@ function Configuracion() {
           al volver a iniciar sesión.
         </p>
       </section>
+
+      {/* ======================================================
+          ACCESIBILIDAD VISUAL
+          ====================================================== */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            {disableBlur ? (
+              <EyeOff size={21} />
+            ) : (
+              <Eye size={21} />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Accesibilidad visual
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Reduce efectos visuales para mejorar la claridad de la interfaz.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <button
+            type="button"
+            onClick={() =>
+              setDisableBlur(
+                (current) => !current,
+              )
+            }
+            aria-pressed={disableBlur}
+            className={`
+              flex
+              w-full
+              items-center
+              justify-between
+              gap-4
+              rounded-xl
+              border
+              p-4
+              text-left
+              transition-all
+              duration-150
+
+              ${disableBlur
+                ? `
+                    border-blue-500
+                    bg-blue-50
+                    ring-2
+                    ring-blue-100
+                  `
+                : `
+                    border-slate-200
+                    bg-white
+                    hover:border-slate-300
+                    hover:bg-slate-50
+                  `
+              }
+            `}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div
+                className={`
+                  flex
+                  h-10
+                  w-10
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-lg
+
+                  ${disableBlur
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-slate-100 text-slate-600'
+                  }
+                `}
+              >
+                {disableBlur ? (
+                  <EyeOff size={19} />
+                ) : (
+                  <Eye size={19} />
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  Desactivar efectos de desenfoque
+                </p>
+
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                  Elimina transparencias borrosas y fondos decorativos desenfocados.
+                </p>
+              </div>
+            </div>
+
+            {/* Interruptor visual. */}
+            <span
+              className={`
+                relative
+                h-6
+                w-11
+                shrink-0
+                rounded-full
+                transition-colors
+                duration-200
+
+                ${disableBlur
+                  ? 'bg-blue-600'
+                  : 'bg-slate-300'
+                }
+              `}
+              aria-hidden="true"
+            >
+              <span
+                className={`
+                  absolute
+                  top-0.5
+                  h-5
+                  w-5
+                  rounded-full
+                  bg-white
+                  shadow-sm
+                  transition-transform
+                  duration-200
+
+                  ${disableBlur
+                    ? 'translate-x-[22px]'
+                    : 'translate-x-0.5'
+                  }
+                `}
+              />
+            </span>
+          </button>
+
+          <p className="mt-4 text-xs leading-5 text-slate-400">
+            Esta preferencia se guarda en este navegador.
+          </p>
+        </div>
+      </section>
+
     </div>
   )
 }

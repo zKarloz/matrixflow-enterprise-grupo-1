@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 
 // Modal compartido para centrar formularios y cubrir todo el viewport.
+import { useNavigate } from 'react-router-dom'
+
 import Modal from '../components/ui/Modal'
 import {
   AlertCircle,
+  ArrowLeft,
   Building2,
   CheckCircle2,
   Filter,
@@ -28,6 +31,9 @@ import {
 } from '../services/api'
 
 function Sucursales() {
+  // Permite volver al módulo principal de Empresa.
+  const navigate = useNavigate()
+
   // Datos obtenidos desde FastAPI.
   const [branches, setBranches] = useState<Branch[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
@@ -248,21 +254,54 @@ function Sucursales() {
     <div className="mx-auto max-w-7xl space-y-6">
 
       {/* El título principal ya se muestra en el Header global. */}
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          {/* Navegación de regreso al módulo Empresa. */}
+          <button
+            type="button"
+            onClick={() =>
+              navigate('/empresa')
+            }
+            className="
+              inline-flex
+              w-fit
+              items-center
+              gap-2
+              rounded-lg
+              border
+              border-slate-300
+              bg-white
+              px-4
+              py-2.5
+              text-sm
+              font-semibold
+              text-slate-700
+              shadow-sm
+              transition-all
+              duration-200
+              hover:bg-slate-50
+              hover:text-slate-900
+            "
+          >
+            <ArrowLeft size={17} />
+            Volver a Empresa
+          </button>
+
+          <button
+            type="button"
+            onClick={openCreateForm}
+            disabled={companies.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <Plus size={18} />
+            Nueva sucursal
+          </button>
+        </div>
+
         <p className="max-w-2xl text-sm text-slate-500">
           Administra las sedes y puntos de operación registrados
           en MatrixFlow.
         </p>
-
-        <button
-          type="button"
-          onClick={openCreateForm}
-          disabled={companies.length === 0}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          <Plus size={18} />
-          Nueva sucursal
-        </button>
       </div>
 
       {/* Indicadores de sucursales. */}

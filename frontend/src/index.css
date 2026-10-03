@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /* ============================================================
+   MODO OSCURO CONTROLADO POR MATRIXFLOW
+   ============================================================
+
+   Tailwind debe utilizar la clase .dark del elemento HTML
+   en lugar de depender únicamente del tema del sistema.
+   ============================================================ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
    SCROLL DEL SIDEBAR
    ============================================================ */
 
@@ -1128,4 +1138,279 @@
 
 .dark .matrixflow-modal-panel .hover\:bg-red-50:hover {
     background-color: rgb(127 29 29 / 0.40) !important;
+}
+
+/* ============================================================
+   EMPRESA - CARDS DE SUCURSALES Y PRODUCTOS
+   ============================================================
+
+   Estas clases controlan el hover de los accesos principales
+   del módulo Empresa en tema claro y oscuro.
+
+   La transición utiliza una curva suave y un desplazamiento
+   corto para evitar una sensación brusca al mover el puntero.
+   ============================================================ */
+
+.matrixflow-app .company-module-card {
+    /* Evita movimientos bruscos y limita la animación
+       únicamente a las propiedades que realmente cambian. */
+    transition:
+        transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+        background-color 320ms ease,
+        border-color 320ms ease,
+        box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    will-change: transform;
+}
+
+/* Movimiento muy corto: 2 px en lugar de 4 px. */
+.matrixflow-app .company-module-card:hover {
+    transform: translateY(-2px);
+}
+
+/* ------------------------------------------------------------
+   TEMA CLARO
+   ------------------------------------------------------------ */
+
+/* Sucursales: azul muy tenue. */
+.matrixflow-app .company-module-card-branches:hover {
+    background-color: rgb(239 246 255 / 0.78);
+    border-color: rgb(147 197 253 / 0.70);
+    box-shadow:
+        0 14px 32px rgb(15 23 42 / 0.08);
+}
+
+/* Productos: verde muy tenue. */
+.matrixflow-app .company-module-card-products:hover {
+    background-color: rgb(236 253 245 / 0.78);
+    border-color: rgb(110 231 183 / 0.62);
+    box-shadow:
+        0 14px 32px rgb(15 23 42 / 0.08);
+}
+
+/* ------------------------------------------------------------
+   TEMA OSCURO
+   ------------------------------------------------------------ */
+
+/* En oscuro usamos tonos más profundos para que el cambio
+   sea visible sin convertir el card en un bloque brillante. */
+.dark .matrixflow-app .company-module-card-branches:hover {
+    background-color: rgb(30 64 175 / 0.20) !important;
+    border-color: rgb(96 165 250 / 0.38) !important;
+    box-shadow:
+        0 16px 38px rgb(2 6 23 / 0.42) !important;
+}
+
+.dark .matrixflow-app .company-module-card-products:hover {
+    background-color: rgb(6 78 59 / 0.28) !important;
+    border-color: rgb(52 211 153 / 0.34) !important;
+    box-shadow:
+        0 16px 38px rgb(2 6 23 / 0.42) !important;
+}
+
+/* La flecha acompaña el movimiento del card, pero con una
+   animación independiente y más delicada. */
+.matrixflow-app .company-module-arrow {
+    transition:
+        transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+        color 260ms ease;
+}
+
+.matrixflow-app .company-module-card:hover .company-module-arrow {
+    transform: translateX(4px);
+}
+
+/* Respetamos usuarios que prefieren menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+
+    .matrixflow-app .company-module-card,
+    .matrixflow-app .company-module-arrow {
+        transition: none;
+    }
+
+    .matrixflow-app .company-module-card:hover,
+    .matrixflow-app .company-module-card:hover .company-module-arrow {
+        transform: none;
+    }
+}
+
+/* ============================================================
+   CURSOR PARA ELEMENTOS INTERACTIVOS
+   ============================================================
+
+   Los elementos que permiten ejecutar una acción muestran
+   el cursor de selección para indicar visualmente que pueden
+   ser presionados.
+   ============================================================ */
+
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]),
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+}
+
+
+/* Los controles deshabilitados mantienen un cursor distinto
+   para indicar que temporalmente no pueden utilizarse. */
+button:disabled,
+select:disabled,
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   MATRIXFLOW - ACCESIBILIDAD VISUAL
+   ============================================================
+
+   Configuracion.tsx agrega la clase matrixflow-disable-blur
+   al elemento <html> cuando el usuario activa la opción.
+   ============================================================ */
+
+/* Elimina desenfoques tipo glass, como el Header transparente. */
+html.matrixflow-disable-blur [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Elimina fondos decorativos con blur de Tailwind. */
+html.matrixflow-disable-blur [class~="blur-sm"],
+html.matrixflow-disable-blur [class~="blur"],
+html.matrixflow-disable-blur [class~="blur-md"],
+html.matrixflow-disable-blur [class~="blur-lg"],
+html.matrixflow-disable-blur [class~="blur-xl"],
+html.matrixflow-disable-blur [class~="blur-2xl"],
+html.matrixflow-disable-blur [class~="blur-3xl"] {
+    filter: none !important;
+}
+
+/* Mantiene el cambio estable y evita una transición borrosa. */
+html.matrixflow-disable-blur [class*="backdrop-"] {
+    transition-property:
+        background-color,
+        border-color,
+        color,
+        opacity,
+        transform,
+        box-shadow !important;
+}
+
+/* ============================================================
+   MATRIXFLOW - DESENFOQUE Y SOMBREADO REFORZADO
+   ============================================================
+
+   Estas reglas mejoran la legibilidad cuando los efectos
+   visuales están activos.
+
+   Requiere:
+   - .matrixflow-glass-header en Header.tsx
+   - .matrixflow-modal-backdrop en Modal.tsx
+   - .matrixflow-disable-blur en <html> cuando el usuario
+     desactiva los desenfoques desde Configuración.
+   ============================================================ */
+
+
+/* ============================================================
+   HEADER - DESENFOQUE ACTIVO
+   ============================================================ */
+
+/* Tema claro:
+   aumentamos la opacidad para que el contenido situado detrás
+   apenas sea visible. */
+html:not(.matrixflow-disable-blur) .matrixflow-glass-header {
+    background-color: rgb(232 242 250 / 0.94) !important;
+
+    -webkit-backdrop-filter:
+        blur(18px) saturate(125%) !important;
+
+    backdrop-filter:
+        blur(18px) saturate(125%) !important;
+}
+
+
+/* Tema oscuro:
+   mantenemos slate-900, pero mucho más opaco. */
+html.dark:not(.matrixflow-disable-blur) .matrixflow-glass-header {
+    background-color: rgb(15 23 42 / 0.94) !important;
+
+    -webkit-backdrop-filter:
+        blur(18px) saturate(115%) !important;
+
+    backdrop-filter:
+        blur(18px) saturate(115%) !important;
+}
+
+
+/* ============================================================
+   MODAL - DESENFOQUE ACTIVO
+   ============================================================ */
+
+/* Tema claro:
+   oscurecemos más la página situada detrás del modal.
+   El objetivo es que el texto quede solamente insinuado. */
+html:not(.matrixflow-disable-blur) .matrixflow-modal-backdrop {
+    background-color: rgb(15 23 42 / 0.58) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(90%) !important;
+
+    backdrop-filter:
+        blur(8px) saturate(90%) !important;
+}
+
+
+/* Tema oscuro:
+   utilizamos una capa todavía más opaca porque el contenido
+   de fondo ya parte de colores oscuros. */
+html.dark:not(.matrixflow-disable-blur) .matrixflow-modal-backdrop {
+    background-color: rgb(2 6 23 / 0.80) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(85%) !important;
+
+    backdrop-filter:
+        blur(8px) saturate(85%) !important;
+}
+
+
+/* ============================================================
+   ACCESIBILIDAD - DESENFOQUE DESACTIVADO
+   ============================================================ */
+
+/* Cuando el usuario elimina los desenfoques, dejamos una
+   capa simple y suficientemente opaca en el Header. */
+html.matrixflow-disable-blur .matrixflow-glass-header {
+    background-color: rgb(232 242 250 / 0.98) !important;
+
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+
+html.dark.matrixflow-disable-blur .matrixflow-glass-header {
+    background-color: rgb(15 23 42 / 0.98) !important;
+
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+
+/* El modal conserva un sombreado plano para que la ventana
+   siga destacándose aunque no exista blur. */
+html.matrixflow-disable-blur .matrixflow-modal-backdrop {
+    background-color: rgb(15 23 42 / 0.62) !important;
+
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+
+html.dark.matrixflow-disable-blur .matrixflow-modal-backdrop {
+    background-color: rgb(2 6 23 / 0.82) !important;
+
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }

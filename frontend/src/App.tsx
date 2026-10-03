@@ -217,7 +217,11 @@ function AppLayout() {
           el ancho del Sidebar.
 
           Durante el logout utilizamos clip-path para revelar
-          progresivamente el resto del panel oscuro.
+          progresivamente el panel visual correspondiente al tema.
+
+          En tema claro utiliza el mismo azul suave del Login.
+          En tema oscuro utiliza slate-900 para diferenciarse
+          del fondo general slate-950.
 
           De esta forma evitamos animar width y no forzamos
           un recálculo completo del layout en cada frame.
@@ -239,7 +243,8 @@ function AppLayout() {
 
           w-[52.5vw]
 
-          bg-slate-950
+          bg-[#EEF7FF]
+          dark:bg-slate-900
 
           transition-[clip-path]
           duration-[650ms]
