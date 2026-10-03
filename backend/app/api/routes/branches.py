@@ -45,11 +45,18 @@ router = APIRouter(
 def get_branches(
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador", "Analista")
+        require_roles(
+            "Administrador",
+            "Analista",
+            "Consulta",
+        )
     ),
 ):
     """
     Devuelve todas las sucursales registradas.
+
+    El rol Consulta tiene acceso de solo lectura porque
+    Reportes necesita resolver los nombres de las sucursales.
     """
 
     return list_branches(db)

@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from 'react'
 // Modal compartido para centrar formularios y cubrir todo el viewport.
 import Modal from '../components/ui/Modal'
 import {
+  formatDateTime,
+  parseApiTimestamp,
+} from '../utils/date'
+import {
   AlertCircle,
   Banknote,
   Building2,
@@ -43,12 +47,6 @@ function formatCurrency(value: number) {
 }
 
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString('es-PE', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-}
 
 
 function Ventas() {
@@ -163,8 +161,12 @@ function Ventas() {
     return [...sales]
       .sort(
         (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime(),
+          parseApiTimestamp(
+            b.created_at,
+          ).getTime() -
+          parseApiTimestamp(
+            a.created_at,
+          ).getTime(),
       )
       .filter((sale) => {
         const branch = branches.find(
@@ -179,7 +181,7 @@ function Ventas() {
           sale.user_id,
           sale.total,
           branch?.name ?? '',
-          formatDate(sale.created_at),
+          formatDateTime(sale.created_at),
         ]
           .join(' ')
           .toLowerCase()
@@ -662,7 +664,7 @@ function Ventas() {
 
 
                       <td className="px-5 py-4 text-sm text-slate-500">
-                        {formatDate(
+                        {formatDateTime(
                           sale.created_at,
                         )}
                       </td>

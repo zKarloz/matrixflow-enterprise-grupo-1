@@ -16,6 +16,10 @@ import {
   type OperationHistoryStructuredResult,
 } from '../services/api'
 
+import {
+  formatDateTime,
+} from '../utils/date'
+
 // ============================================================
 // TIPOS
 // ============================================================
@@ -215,30 +219,6 @@ function Historial() {
         operation.operation_type ===
         'linear_combination',
     ).length
-
-  // ==========================================================
-  // FORMATEAR FECHA
-  // ==========================================================
-
-  function formatDate(date: string) {
-    const parsedDate = new Date(date)
-
-    if (
-      Number.isNaN(parsedDate.getTime())
-    ) {
-      return date
-    }
-
-    // El navegador convierte automáticamente
-    // desde UTC a la zona horaria local.
-    return parsedDate.toLocaleString(
-      'es-PE',
-      {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      },
-    )
-  }
 
   // ==========================================================
   // FORMATEAR TIEMPO
@@ -661,7 +641,7 @@ function Historial() {
 
                         {/* Fecha. */}
                         <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-500">
-                          {formatDate(
+                          {formatDateTime(
                             operation.created_at,
                           )}
                         </td>

@@ -41,11 +41,18 @@ router = APIRouter(
 def get_products(
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_roles("Administrador", "Analista")
+        require_roles(
+            "Administrador",
+            "Analista",
+            "Consulta",
+        )
     ),
 ):
     # Devuelve todos los productos junto con
     # su categoría y stock disponible.
+    #
+    # El rol Consulta tiene acceso de solo lectura porque
+    # Reportes necesita resolver los nombres de los productos.
     return list_products(db)
 
 

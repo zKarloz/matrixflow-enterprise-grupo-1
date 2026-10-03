@@ -6,6 +6,10 @@ import type {
   DashboardRecentSale,
 } from '../../services/api'
 
+import {
+  parseApiTimestamp,
+} from '../../utils/date'
+
 
 interface RecentActivityProps {
   data: DashboardRecentSale[]
@@ -17,7 +21,9 @@ function getRelativeTime(
 ): string {
   // Convertimos la fecha almacenada por PostgreSQL.
   const date =
-    new Date(dateString)
+    parseApiTimestamp(
+      dateString,
+    )
 
   if (
     Number.isNaN(
@@ -54,8 +60,8 @@ function getRelativeTime(
 
   if (minutes < 60) {
     return `Hace ${minutes} minuto${minutes === 1
-        ? ''
-        : 's'
+      ? ''
+      : 's'
       }`
   }
 
@@ -67,8 +73,8 @@ function getRelativeTime(
 
   if (hours < 24) {
     return `Hace ${hours} hora${hours === 1
-        ? ''
-        : 's'
+      ? ''
+      : 's'
       }`
   }
 
@@ -79,8 +85,8 @@ function getRelativeTime(
     )
 
   return `Hace ${days} día${days === 1
-      ? ''
-      : 's'
+    ? ''
+    : 's'
     }`
 }
 

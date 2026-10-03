@@ -10,6 +10,8 @@
 # ============================================================
 
 from collections import defaultdict
+from datetime import timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -23,6 +25,35 @@ from app.repositories.sale_repository import (
     get_sales_summary_by_branch,
     get_sales_summary_by_product,
 )
+
+
+# ============================================================
+# ZONA HORARIA EMPRESARIAL
+# ============================================================
+
+# MatrixFlow presenta fechas y períodos utilizando la zona
+# horaria de Perú.
+LIMA_TIME_ZONE = ZoneInfo("America/Lima")
+
+
+def to_lima_datetime(value):
+    """
+    Convierte un datetime de PostgreSQL a America/Lima.
+
+    Algunos registros históricos provienen de columnas sin
+    información de zona horaria. En esos casos interpretamos
+    el valor como UTC, que es la referencia utilizada por la
+    infraestructura actual de PostgreSQL/Supabase.
+    """
+
+    if value.tzinfo is None:
+        value = value.replace(
+            tzinfo=timezone.utc,
+        )
+
+    return value.astimezone(
+        LIMA_TIME_ZONE,
+    )
 
 
 # ============================================================
@@ -103,7 +134,12 @@ def get_dashboard_report(
         if sale.created_at is None:
             continue
 
-        period = sale.created_at.strftime(
+        # Convertimos primero a hora de Lima para evitar que
+        # una venta realizada por la noche quede agrupada en el
+        # día o mes siguiente debido a UTC.
+        period = to_lima_datetime(
+            sale.created_at,
+        ).strftime(
             "%Y-%m"
         )
 

@@ -16,7 +16,6 @@ import SalesByProductChart from '../components/dashboard/SalesByProductChart'
 import RecentActivity from '../components/dashboard/RecentActivity'
 
 import {
-  getCurrentUser,
   getDashboard,
 } from '../services/api'
 
@@ -25,24 +24,7 @@ import type {
 } from '../services/api'
 
 
-// Roles disponibles en MatrixFlow.
-type UserRole =
-  | 'Administrador'
-  | 'Analista'
-  | 'Consulta'
-
-
 function Dashboard() {
-  // Obtenemos el rol almacenado en el JWT.
-  const currentUser =
-    getCurrentUser()
-
-  const currentRole =
-    currentUser?.role as
-    | UserRole
-    | undefined
-
-
   // Toda la información del Dashboard se almacena
   // en un único estado.
   const [
@@ -213,9 +195,7 @@ function Dashboard() {
             ==================================================== */}
 
         {!loading &&
-          dashboard &&
-          currentRole !==
-          'Consulta' && (
+          dashboard && (
             <>
               {/* Evolución temporal. */}
               <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -305,30 +285,6 @@ function Dashboard() {
                 />
               </section>
             </>
-          )}
-
-
-        {/* ====================================================
-            USUARIO CONSULTA
-            ==================================================== */}
-
-        {!loading &&
-          dashboard &&
-          currentRole ===
-          'Consulta' && (
-            <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Vista de consulta
-                </h2>
-
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-                  Las métricas principales están disponibles de
-                  acuerdo con el nivel de acceso asignado a tu
-                  usuario.
-                </p>
-              </div>
-            </section>
           )}
       </div>
     </div>

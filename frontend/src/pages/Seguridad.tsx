@@ -19,6 +19,11 @@ import {
     type AuditLog,
 } from '../services/api'
 
+import {
+    formatDateTime,
+    parseApiTimestamp,
+} from '../utils/date'
+
 
 // ============================================================
 // FUNCIONES AUXILIARES
@@ -140,10 +145,10 @@ function Seguridad() {
                 )
                 .sort(
                     (a, b) =>
-                        new Date(
+                        parseApiTimestamp(
                             b.created_at,
                         ).getTime() -
-                        new Date(
+                        parseApiTimestamp(
                             a.created_at,
                         ).getTime(),
                 ),
@@ -402,10 +407,8 @@ function Seguridad() {
                                     </p>
 
                                     <p className="mt-1 text-sm font-semibold text-slate-800">
-                                        {new Date(
+                                        {formatDateTime(
                                             latestAccess.created_at,
-                                        ).toLocaleString(
-                                            'es-PE',
                                         )}
                                     </p>
                                 </div>
@@ -596,10 +599,8 @@ function Seguridad() {
 
 
                                         <td className="px-5 py-4 text-sm text-slate-600">
-                                            {new Date(
+                                            {formatDateTime(
                                                 log.created_at,
-                                            ).toLocaleString(
-                                                'es-PE',
                                             )}
                                         </td>
 
