@@ -74,3 +74,1058 @@
 .sidebar-scroll::-webkit-scrollbar {
     display: none;
 }
+
+/* ============================================================
+   TEMA OSCURO GLOBAL DE MATRIXFLOW
+   ============================================================
+
+   El modo oscuro se limita a .matrixflow-app para no modificar
+   la pantalla pública de Login.
+
+   Esta primera implementación utiliza overrides globales sobre
+   las utilidades Tailwind más comunes del proyecto. De esta
+   manera no es necesario editar cada página individualmente.
+   ============================================================ */
+
+/* Fondo y texto general de la aplicación autenticada. */
+.dark .matrixflow-app {
+    background-color: #020617 !important;
+    color: #e2e8f0 !important;
+}
+
+
+/* ------------------------------------------------------------
+   FONDOS PRINCIPALES
+   ------------------------------------------------------------ */
+
+.dark .matrixflow-app .bg-white {
+    background-color: #0f172a !important;
+}
+
+.dark .matrixflow-app .bg-slate-50 {
+    background-color: #020617 !important;
+}
+
+.dark .matrixflow-app .bg-slate-100 {
+    background-color: #1e293b !important;
+}
+
+.dark .matrixflow-app .bg-slate-200 {
+    background-color: #334155 !important;
+}
+
+
+/* ------------------------------------------------------------
+   TEXTOS
+   ------------------------------------------------------------ */
+
+.dark .matrixflow-app .text-slate-900 {
+    color: #f8fafc !important;
+}
+
+.dark .matrixflow-app .text-slate-800 {
+    color: #e2e8f0 !important;
+}
+
+.dark .matrixflow-app .text-slate-700 {
+    color: #cbd5e1 !important;
+}
+
+.dark .matrixflow-app .text-slate-600 {
+    color: #94a3b8 !important;
+}
+
+.dark .matrixflow-app .text-slate-500 {
+    color: #94a3b8 !important;
+}
+
+.dark .matrixflow-app .text-slate-400 {
+    color: #64748b !important;
+}
+
+
+/* ------------------------------------------------------------
+   BORDES
+   ------------------------------------------------------------ */
+
+.dark .matrixflow-app .border-slate-100 {
+    border-color: #1e293b !important;
+}
+
+.dark .matrixflow-app .border-slate-200 {
+    border-color: #334155 !important;
+}
+
+.dark .matrixflow-app .border-slate-300 {
+    border-color: #475569 !important;
+}
+
+
+/* ------------------------------------------------------------
+   FORMULARIOS
+   ------------------------------------------------------------ */
+
+.dark .matrixflow-app input,
+.dark .matrixflow-app textarea,
+.dark .matrixflow-app select {
+    background-color: #0f172a;
+    color: #e2e8f0;
+    border-color: #475569;
+}
+
+.dark .matrixflow-app input::placeholder,
+.dark .matrixflow-app textarea::placeholder {
+    color: #64748b;
+}
+
+.dark .matrixflow-app option {
+    background-color: #0f172a;
+    color: #e2e8f0;
+}
+
+
+/* ------------------------------------------------------------
+   TABLAS
+   ------------------------------------------------------------ */
+
+.dark .matrixflow-app table {
+    background-color: #0f172a;
+}
+
+.dark .matrixflow-app thead,
+.dark .matrixflow-app thead .bg-slate-50 {
+    background-color: #020617 !important;
+}
+
+
+/* ------------------------------------------------------------
+   SCROLLBAR EN MODO OSCURO
+   ------------------------------------------------------------ */
+
+.dark *::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+    background-color: #475569;
+    border-color: #0f172a;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+    background-color: #64748b;
+}
+
+.dark * {
+    scrollbar-color: #475569 #0f172a;
+}
+
+
+/* ------------------------------------------------------------
+   TRANSICIÓN SUAVE DE TEMA
+   ------------------------------------------------------------ */
+
+.matrixflow-app,
+.matrixflow-app main,
+.matrixflow-app section,
+.matrixflow-app header,
+.matrixflow-app input,
+.matrixflow-app textarea,
+.matrixflow-app select,
+.matrixflow-app button {
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+/* ============================================================
+   GRÁFICOS RECHARTS - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Los textos de los ejes de Recharts son elementos SVG.
+ * Por eso necesitamos modificar "fill" y no solamente "color".
+ */
+.dark .matrixflow-app .recharts-cartesian-axis-tick-value {
+    fill: #cbd5e1 !important;
+}
+
+/* Texto adicional utilizado en algunos ejes. */
+.dark .matrixflow-app .recharts-text {
+    fill: #cbd5e1;
+}
+
+/*
+ * Las líneas de los ejes también se suavizan para que
+ * sean visibles sin destacar demasiado.
+ */
+.dark .matrixflow-app .recharts-cartesian-axis-line,
+.dark .matrixflow-app .recharts-cartesian-axis-tick-line {
+    stroke: #475569;
+}
+
+/* Cuadrícula interior de los gráficos. */
+.dark .matrixflow-app .recharts-cartesian-grid line {
+    stroke: #334155;
+}
+
+/*
+ * Tooltip mostrado al colocar el cursor sobre
+ * una barra o punto del gráfico.
+ */
+.dark .matrixflow-app .recharts-default-tooltip {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+.dark .matrixflow-app .recharts-tooltip-label {
+    color: #f8fafc !important;
+}
+
+
+/* ============================================================
+   FONDOS DE ICONOS - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Muchos iconos Lucide están dentro de contenedores con
+ * fondos claros como blue-50, emerald-50 o slate-100.
+ *
+ * En modo oscuro los reemplazamos por tonos transparentes
+ * más apropiados.
+ */
+
+.dark .matrixflow-app .bg-blue-50 {
+    background-color: rgb(59 130 246 / 0.14) !important;
+}
+
+.dark .matrixflow-app .bg-emerald-50 {
+    background-color: rgb(16 185 129 / 0.14) !important;
+}
+
+.dark .matrixflow-app .bg-red-50 {
+    background-color: rgb(239 68 68 / 0.14) !important;
+}
+
+.dark .matrixflow-app .bg-amber-50 {
+    background-color: rgb(245 158 11 / 0.14) !important;
+}
+
+.dark .matrixflow-app .bg-purple-50 {
+    background-color: rgb(168 85 247 / 0.14) !important;
+}
+
+/*
+ * slate-100 se utiliza en varios iconos neutros.
+ */
+.dark .matrixflow-app .bg-slate-100 {
+    background-color: #1e293b !important;
+}
+
+/* ============================================================
+   RECHARTS - FONDO AL PASAR EL CURSOR POR UNA BARRA
+   ============================================================ */
+
+/*
+ * Recharts dibuja un rectángulo sobre la categoría activa.
+ * En modo oscuro reducimos su brillo para que combine
+ * con el resto de la interfaz.
+ */
+.dark .matrixflow-app .recharts-tooltip-cursor {
+    fill: rgb(51 65 85 / 0.45) !important;
+}
+
+/* ============================================================
+   TABLAS - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Oscurece las líneas divisorias entre filas.
+ *
+ * Tailwind usa "divide-slate-100" para separar los registros,
+ * por lo que las reglas normales de border-slate-100 no siempre
+ * alcanzan estas líneas.
+ */
+.dark .matrixflow-app .divide-slate-100> :not(:last-child) {
+    border-color: #1e293b !important;
+}
+
+.dark .matrixflow-app .divide-slate-200> :not(:last-child) {
+    border-color: #334155 !important;
+}
+
+
+/* ============================================================
+   HOVER DE FILAS
+   ============================================================ */
+
+/*
+ * Muchas tablas utilizan:
+ *
+ * hover:bg-slate-50
+ *
+ * En tema oscuro ese hover debe convertirse en un gris oscuro
+ * en lugar de iluminar toda la fila.
+ */
+.dark .matrixflow-app .hover\:bg-slate-50:hover {
+    background-color: #1e293b !important;
+}
+
+
+/*
+ * Cubrimos también componentes que utilicen slate-100
+ * como color de resaltado.
+ */
+.dark .matrixflow-app .hover\:bg-slate-100:hover {
+    background-color: #334155 !important;
+}
+
+
+/* ============================================================
+   HOVER GENERAL DE TABLAS
+   ============================================================ */
+
+/*
+ * Refuerzo para las filas de tablas.
+ * Evita que algún componente con estilos antiguos vuelva
+ * a mostrar un fondo demasiado claro.
+ */
+.dark .matrixflow-app tbody tr:hover {
+    background-color: #1e293b;
+}
+
+/* ============================================================
+   BOTONES DE ACCIÓN - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Acciones destructivas:
+ * Desactivar, eliminar, bloquear, etc.
+ */
+.dark .matrixflow-app .border-red-200 {
+    border-color: rgb(239 68 68 / 0.35) !important;
+}
+
+.dark .matrixflow-app .hover\:bg-red-50:hover {
+    background-color: rgb(127 29 29 / 0.35) !important;
+}
+
+
+/*
+ * Acciones positivas:
+ * Activar, habilitar, confirmar, etc.
+ */
+.dark .matrixflow-app .border-emerald-200 {
+    border-color: rgb(16 185 129 / 0.35) !important;
+}
+
+.dark .matrixflow-app .hover\:bg-emerald-50:hover {
+    background-color: rgb(6 78 59 / 0.35) !important;
+}
+
+
+/*
+ * Acciones informativas o secundarias azules.
+ */
+.dark .matrixflow-app .border-blue-200 {
+    border-color: rgb(59 130 246 / 0.35) !important;
+}
+
+.dark .matrixflow-app .hover\:bg-blue-50:hover {
+    background-color: rgb(30 64 175 / 0.30) !important;
+}
+
+
+/*
+ * Advertencias amarillas/ámbar.
+ */
+.dark .matrixflow-app .border-amber-200 {
+    border-color: rgb(245 158 11 / 0.35) !important;
+}
+
+.dark .matrixflow-app .hover\:bg-amber-50:hover {
+    background-color: rgb(120 53 15 / 0.35) !important;
+}
+
+.dark .matrixflow-app .border-blue-200 {
+    border-color: rgb(59 130 246 / 0.35) !important;
+}
+
+.dark .matrixflow-app .hover\:bg-blue-50:hover {
+    background-color: rgb(30 64 175 / 0.30) !important;
+}
+
+/* ============================================================
+   VECTOR EMPRESARIAL - TONOS CYAN EN MODO OSCURO
+   ============================================================ */
+
+/* Borde exterior de la tarjeta. */
+.dark .matrixflow-app .border-cyan-200 {
+    border-color: #155e75 !important;
+}
+
+/* Línea divisoria del encabezado. */
+.dark .matrixflow-app .border-cyan-100 {
+    border-color: #164e63 !important;
+}
+
+/*
+ * Fondo del icono Sparkles.
+ * Evitamos el cyan casi blanco del tema claro.
+ */
+.dark .matrixflow-app .bg-cyan-50 {
+    background-color: rgb(8 145 178 / 0.15) !important;
+}
+
+/* El icono conserva cyan, pero con mejor contraste. */
+.dark .matrixflow-app .text-cyan-600 {
+    color: #22d3ee !important;
+}
+
+
+/* ============================================================
+   BOTÓN GENERAR VECTOR
+   ============================================================ */
+
+/*
+ * El cyan-600 original resulta bastante brillante
+ * sobre el fondo oscuro, por eso usamos un cyan más profundo.
+ */
+.dark .matrixflow-app .bg-cyan-600 {
+    background-color: #0e7490 !important;
+}
+
+/* Hover oscuro pero claramente visible. */
+.dark .matrixflow-app .hover\:bg-cyan-700:hover {
+    background-color: #155e75 !important;
+}
+
+/* ============================================================
+   INPUT NUMÉRICO - BOTONES AUMENTAR / DISMINUIR
+   ============================================================ */
+
+/*
+ * Dejamos visibles los controles nativos del navegador
+ * y hacemos que combinen mejor con MatrixFlow.
+ */
+.matrixflow-app input[type="number"] {
+    color-scheme: light;
+}
+
+/* Flechas de Chrome, Edge, Brave, etc. */
+.matrixflow-app input[type="number"]::-webkit-inner-spin-button {
+    cursor: pointer;
+    opacity: 0.65;
+    transition: opacity 0.15s ease;
+}
+
+/* Al pasar el cursor se hacen un poco más visibles. */
+.matrixflow-app input[type="number"]::-webkit-inner-spin-button:hover {
+    opacity: 1;
+}
+
+
+/* ============================================================
+   INPUT NUMÉRICO - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Esta propiedad hace que el navegador dibuje automáticamente
+ * las flechas utilizando controles apropiados para fondo oscuro.
+ */
+.dark .matrixflow-app input[type="number"] {
+    color-scheme: dark;
+}
+
+/* ============================================================
+   ICONOS DEL HISTORIAL - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Fondo del icono de operaciones matriciales.
+ */
+.dark .matrixflow-app .bg-indigo-50 {
+    background-color: rgb(79 70 229 / 0.16) !important;
+}
+
+/*
+ * Conservamos el color del icono, pero algo más visible
+ * sobre el fondo oscuro.
+ */
+.dark .matrixflow-app .text-indigo-600 {
+    color: #818cf8 !important;
+}
+
+
+/*
+ * Fondo del icono de combinaciones lineales.
+ */
+.dark .matrixflow-app .bg-violet-50 {
+    background-color: rgb(124 58 237 / 0.16) !important;
+}
+
+.dark .matrixflow-app .text-violet-600 {
+    color: #a78bfa !important;
+}
+
+/* ============================================================
+   SEGURIDAD - AUDITORÍA DE ACCESOS
+   ============================================================ */
+
+/*
+ * En modo oscuro mantenemos el significado verde,
+ * pero evitamos un fondo demasiado oscuro o demasiado brillante.
+ */
+.dark .matrixflow-app .audit-status-card {
+    background-color: rgb(6 78 59 / 0.48) !important;
+    border-color: rgb(52 211 153 / 0.38) !important;
+}
+
+/* Textos de la tarjeta con mejor contraste. */
+.dark .matrixflow-app .audit-status-card .text-emerald-700 {
+    color: #6ee7b7 !important;
+}
+
+.dark .matrixflow-app .audit-status-card .text-emerald-900 {
+    color: #d1fae5 !important;
+}
+
+/*
+ * Fondo oscuro verdoso para ShieldCheck.
+ * Sustituye el bg-white/70 del tema claro.
+ */
+.dark .matrixflow-app .audit-status-icon {
+    background-color: rgb(16 185 129 / 0.18) !important;
+    color: #6ee7b7 !important;
+}
+
+/* ============================================================
+   MAPA DE ACCESOS - MODO OSCURO
+   ============================================================ */
+
+.dark .matrixflow-app .peru-access-map-shell {
+    background-color: #020617;
+}
+
+/*
+ * Fondo general que pueda existir dentro del componente.
+ */
+.dark .matrixflow-app .peru-access-map-shell .bg-slate-50 {
+    background-color: #020617 !important;
+}
+
+.dark .matrixflow-app .peru-access-map-shell .bg-white {
+    background-color: #0f172a !important;
+}
+
+.dark .matrixflow-app .peru-access-map-shell .border-slate-200 {
+    border-color: #334155 !important;
+}
+
+/*
+ * Departamentos del mapa.
+ *
+ * Usamos tonos slate para obtener una representación
+ * sencilla y consistente con MatrixFlow.
+ */
+.dark .matrixflow-app .peru-access-map-shell svg path {
+    fill: #1e293b !important;
+    stroke: #475569 !important;
+    stroke-width: 0.8;
+}
+
+/* ============================================================
+   MAPA DEL PERÚ - MODO OSCURO
+   ============================================================ */
+
+/* Fondo general del área del mapa. */
+.dark .matrixflow-app .peru-access-map {
+    background-color: #020617 !important;
+}
+
+
+/* ============================================================
+   DEPARTAMENTOS
+   ============================================================ */
+
+/*
+ * En claro se mantienen los colores originales.
+ * En oscuro usamos slate para evitar el mapa blanco/gris claro.
+ */
+.dark .matrixflow-app .peru-department {
+    fill: #1e293b !important;
+    stroke: #475569 !important;
+}
+
+/* Departamento al pasar el cursor. */
+.dark .matrixflow-app .peru-department:hover {
+    fill: #334155 !important;
+}
+
+
+/* ============================================================
+   MARCADOR DEL ÚLTIMO ACCESO
+   ============================================================ */
+
+/*
+ * Evitamos el borde blanco fuerte alrededor
+ * del marcador azul.
+ */
+.dark .matrixflow-app .peru-access-marker {
+    border-color: #0f172a !important;
+}
+
+
+/* ============================================================
+   TARJETA FLOTANTE DEL MARCADOR
+   ============================================================ */
+
+.dark .matrixflow-app .peru-access-tooltip {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+/* Flecha inferior del tooltip. */
+.dark .matrixflow-app .peru-access-tooltip-arrow {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+
+/* ============================================================
+   SIN COORDENADAS
+   ============================================================ */
+
+/*
+ * Tarjeta mostrada cuando el acceso no dispone
+ * de latitud y longitud.
+ */
+.dark .matrixflow-app .peru-map-empty {
+    background-color: rgb(15 23 42 / 0.95) !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+/* ============================================================
+   BOTONES DESHABILITADOS - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Algunos botones quedan temporalmente bloqueados mientras
+ * se cargan o guardan datos. Evitamos que adopten un gris
+ * demasiado claro sobre el fondo oscuro.
+ */
+.dark .matrixflow-app .disabled\:bg-slate-300:disabled,
+.dark .matrixflow-app .disabled\:bg-slate-400:disabled {
+    background-color: #334155 !important;
+    color: #94a3b8 !important;
+    border-color: #475569 !important;
+}
+
+/*
+ * Para botones que únicamente utilizan opacity cuando están
+ * bloqueados, mantenemos un aspecto oscuro y legible.
+ */
+.dark .matrixflow-app button:disabled {
+    cursor: not-allowed;
+}
+
+
+/* ============================================================
+   CAMPOS DE FORMULARIO - FOCO
+   ============================================================ */
+
+/*
+ * Unificamos el borde al hacer clic o navegar con Tab.
+ *
+ * Esto afecta input, select y textarea de todas las páginas.
+ */
+.matrixflow-app input:focus,
+.matrixflow-app textarea:focus,
+.matrixflow-app select:focus {
+    border-color: #3b82f6 !important;
+
+    box-shadow:
+        0 0 0 3px rgb(59 130 246 / 0.14) !important;
+
+    outline: none !important;
+}
+
+
+/* ============================================================
+   FOCO EN MODO OSCURO
+   ============================================================ */
+
+/*
+ * En el tema oscuro utilizamos un aro azul translúcido
+ * en lugar de los rings slate casi blancos de Tailwind.
+ */
+.dark .matrixflow-app input:focus,
+.dark .matrixflow-app textarea:focus,
+.dark .matrixflow-app select:focus {
+    border-color: #3b82f6 !important;
+
+    box-shadow:
+        0 0 0 3px rgb(59 130 246 / 0.22) !important;
+
+    outline: none !important;
+}
+
+
+/* ============================================================
+   NAVEGACIÓN CON TAB
+   ============================================================ */
+
+/*
+ * Los botones y enlaces siguen mostrando claramente qué
+ * elemento tiene el foco cuando se navega con teclado,
+ * pero sin generar un borde blanco demasiado brillante.
+ */
+.dark .matrixflow-app button:focus-visible,
+.dark .matrixflow-app a:focus-visible {
+    outline: 2px solid rgb(59 130 246 / 0.65) !important;
+    outline-offset: 2px;
+
+    box-shadow:
+        0 0 0 3px rgb(59 130 246 / 0.14) !important;
+}
+
+/* ============================================================
+   SIDEBAR - CERRAR SESIÓN
+   ============================================================ */
+
+/*
+ * Las reglas globales del tema oscuro para text-slate
+ * utilizan !important.
+ *
+ * Estas reglas específicas permiten que el rojo del botón
+ * Cerrar sesión tenga prioridad durante el hover.
+ */
+.dark .matrixflow-app .sidebar-logout:hover {
+    background-color: rgb(239 68 68 / 0.15) !important;
+    color: #f87171 !important;
+}
+
+
+/* Icono de cerrar sesión. */
+.dark .matrixflow-app .sidebar-logout:hover .sidebar-logout-icon {
+    background-color: rgb(239 68 68 / 0.15) !important;
+    color: #f87171 !important;
+}
+
+
+/*
+ * Lucide utiliza currentColor, por lo que forzamos también
+ * el color del SVG para evitar que otra regla lo sobrescriba.
+ */
+.dark .matrixflow-app .sidebar-logout:hover .sidebar-logout-icon svg {
+    color: #f87171 !important;
+    stroke: #f87171 !important;
+}
+
+/* ============================================================
+   MODALES - MODO OSCURO
+   ============================================================ */
+
+/* Fondo situado detrás del modal. */
+.dark .matrixflow-modal-backdrop {
+    background-color: rgb(2 6 23 / 0.72) !important;
+}
+
+
+/* Panel principal compartido por todos los modales. */
+.dark .matrixflow-modal-panel {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+
+/* ============================================================
+   SECCIONES INTERNAS
+   ============================================================ */
+
+.dark .matrixflow-modal-panel .bg-white {
+    background-color: #0f172a !important;
+}
+
+.dark .matrixflow-modal-panel .bg-slate-50 {
+    background-color: #020617 !important;
+}
+
+.dark .matrixflow-modal-panel .bg-slate-100 {
+    background-color: #1e293b !important;
+}
+
+
+/* ============================================================
+   BORDES
+   ============================================================ */
+
+.dark .matrixflow-modal-panel .border-slate-100,
+.dark .matrixflow-modal-panel .border-slate-200 {
+    border-color: #334155 !important;
+}
+
+.dark .matrixflow-modal-panel .border-slate-300 {
+    border-color: #475569 !important;
+}
+
+
+/* ============================================================
+   TEXTOS
+   ============================================================ */
+
+.dark .matrixflow-modal-panel .text-slate-900 {
+    color: #f8fafc !important;
+}
+
+.dark .matrixflow-modal-panel .text-slate-800 {
+    color: #e2e8f0 !important;
+}
+
+.dark .matrixflow-modal-panel .text-slate-700 {
+    color: #cbd5e1 !important;
+}
+
+.dark .matrixflow-modal-panel .text-slate-600,
+.dark .matrixflow-modal-panel .text-slate-500 {
+    color: #94a3b8 !important;
+}
+
+
+/* ============================================================
+   INPUTS, SELECTS Y TEXTAREAS
+   ============================================================ */
+
+.dark .matrixflow-modal-panel input,
+.dark .matrixflow-modal-panel textarea,
+.dark .matrixflow-modal-panel select {
+    background-color: #020617 !important;
+    border-color: #475569 !important;
+    color: #e2e8f0 !important;
+}
+
+.dark .matrixflow-modal-panel input::placeholder,
+.dark .matrixflow-modal-panel textarea::placeholder {
+    color: #64748b !important;
+}
+
+
+/* Foco azul discreto. */
+.dark .matrixflow-modal-panel input:focus,
+.dark .matrixflow-modal-panel textarea:focus,
+.dark .matrixflow-modal-panel select:focus {
+    border-color: #3b82f6 !important;
+
+    box-shadow:
+        0 0 0 3px rgb(59 130 246 / 0.20) !important;
+
+    outline: none !important;
+}
+
+
+/* ============================================================
+   BOTÓN CERRAR
+   ============================================================ */
+
+.dark .matrixflow-modal-panel button[aria-label*="Cerrar"]:hover {
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+
+/* ============================================================
+   MODALES - BOTONES DE ESTADO
+   ============================================================ */
+
+/*
+ * Acción destructiva:
+ * Desactivar, bloquear, etc.
+ */
+.dark .matrixflow-modal-panel .border-red-200 {
+    border-color: rgb(239 68 68 / 0.35) !important;
+}
+
+.dark .matrixflow-modal-panel .text-red-600,
+.dark .matrixflow-modal-panel .text-red-700 {
+    color: #f87171 !important;
+}
+
+.dark .matrixflow-modal-panel .hover\:bg-red-50:hover {
+    background-color: rgb(127 29 29 / 0.35) !important;
+}
+
+
+/*
+ * Acción positiva:
+ * Activo, activar, habilitar, etc.
+ */
+.dark .matrixflow-modal-panel .border-emerald-200 {
+    border-color: rgb(16 185 129 / 0.35) !important;
+}
+
+.dark .matrixflow-modal-panel .text-emerald-600,
+.dark .matrixflow-modal-panel .text-emerald-700 {
+    color: #34d399 !important;
+}
+
+.dark .matrixflow-modal-panel .hover\:bg-emerald-50:hover {
+    background-color: rgb(6 78 59 / 0.35) !important;
+}
+
+/* ============================================================
+   SKELETON / CARGA - MODO OSCURO
+   ============================================================ */
+
+/*
+ * Bloques de carga utilizados mientras MatrixFlow
+ * espera datos del backend.
+ */
+.dark .matrixflow-app .animate-pulse.bg-slate-100,
+.dark .matrixflow-modal-panel .animate-pulse.bg-slate-100 {
+    background-color: #1e293b !important;
+}
+
+.dark .matrixflow-app .animate-pulse.bg-slate-200,
+.dark .matrixflow-modal-panel .animate-pulse.bg-slate-200 {
+    background-color: #334155 !important;
+}
+
+
+/*
+ * Algunos skeletons están dentro de contenedores
+ * claros mientras se realiza la consulta.
+ */
+.dark .matrixflow-modal-panel .animate-pulse {
+    border-color: #334155 !important;
+}
+
+/* ============================================================
+   ACCIONES AZULES - MODO OSCURO
+   ============================================================ */
+
+.dark .matrixflow-app .border-blue-200 {
+    border-color: rgb(59 130 246 / 0.40) !important;
+}
+
+.dark .matrixflow-app .text-blue-600 {
+    color: #60a5fa !important;
+}
+
+.dark .matrixflow-app .hover\:bg-blue-50:hover {
+    background-color: rgb(30 64 175 / 0.30) !important;
+}
+
+.dark .matrixflow-app .hover\:text-blue-700:hover {
+    color: #93c5fd !important;
+}
+
+
+/* ============================================================
+   ESTADO ACTIVO - MODO OSCURO
+   ============================================================ */
+
+.dark .matrixflow-app .border-emerald-200 {
+    border-color: rgb(16 185 129 / 0.38) !important;
+}
+
+.dark .matrixflow-app .bg-emerald-50 {
+    background-color: rgb(6 78 59 / 0.32) !important;
+}
+
+.dark .matrixflow-app .text-emerald-700 {
+    color: #6ee7b7 !important;
+}
+
+/* ============================================================
+   MODAL - ACCIONES Y ESTADOS EN MODO OSCURO
+   ============================================================
+
+   El Modal se renderiza mediante createPortal directamente
+   dentro de document.body. Por ese motivo no hereda selectores
+   que dependan de .matrixflow-app.
+
+   Estas reglas cubren específicamente los colores utilizados
+   por Editar, Activa, Activar y Desactivar dentro del modal.
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   EDITAR - AZUL
+   ------------------------------------------------------------ */
+
+/*
+ * Borde azul más profundo para evitar que parezca demasiado
+ * brillante sobre el fondo slate del modal.
+ */
+.dark .matrixflow-modal-panel .border-blue-200 {
+    border-color: rgb(37 99 235 / 0.55) !important;
+}
+
+/* Texto azul legible pero no excesivamente luminoso. */
+.dark .matrixflow-modal-panel .text-blue-600 {
+    color: #60a5fa !important;
+}
+
+/* Hover azul oscuro y discreto. */
+.dark .matrixflow-modal-panel .hover\:bg-blue-50:hover {
+    background-color: rgb(30 58 138 / 0.38) !important;
+}
+
+.dark .matrixflow-modal-panel .hover\:text-blue-700:hover {
+    color: #93c5fd !important;
+}
+
+
+/* ------------------------------------------------------------
+   ESTADO ACTIVO / ACTIVAR - VERDE
+   ------------------------------------------------------------ */
+
+/*
+ * Fondo verde oscuro para etiquetas como "Activa".
+ */
+.dark .matrixflow-modal-panel .bg-emerald-50 {
+    background-color: rgb(6 78 59 / 0.45) !important;
+}
+
+/*
+ * Borde verde suave para que el estado conserve identidad
+ * sin producir una línea demasiado clara.
+ */
+.dark .matrixflow-modal-panel .border-emerald-200 {
+    border-color: rgb(16 185 129 / 0.30) !important;
+}
+
+/* Texto verde con contraste suficiente. */
+.dark .matrixflow-modal-panel .text-emerald-600,
+.dark .matrixflow-modal-panel .text-emerald-700 {
+    color: #6ee7b7 !important;
+}
+
+/* Hover del botón Activar. */
+.dark .matrixflow-modal-panel .hover\:bg-emerald-50:hover {
+    background-color: rgb(6 78 59 / 0.52) !important;
+}
+
+
+/* ------------------------------------------------------------
+   DESACTIVAR - ROJO
+   ------------------------------------------------------------ */
+
+/*
+ * Aprovechamos el mismo criterio visual para mantener
+ * consistencia entre las tres acciones.
+ */
+.dark .matrixflow-modal-panel .border-red-200 {
+    border-color: rgb(220 38 38 / 0.45) !important;
+}
+
+.dark .matrixflow-modal-panel .text-red-600,
+.dark .matrixflow-modal-panel .text-red-700 {
+    color: #f87171 !important;
+}
+
+.dark .matrixflow-modal-panel .hover\:bg-red-50:hover {
+    background-color: rgb(127 29 29 / 0.40) !important;
+}

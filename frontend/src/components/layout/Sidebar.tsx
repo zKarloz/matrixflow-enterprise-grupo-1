@@ -193,7 +193,7 @@ export const menuItems: MenuItem[] = [
     name: 'Configuración',
     path: '/configuracion',
     icon: <Settings size={19} />,
-    roles: ['Administrador'],
+    roles: ['Administrador', 'Analista', 'Consulta'],
   },
 ]
 
@@ -903,6 +903,7 @@ function Sidebar({
           onClick={onLogout}
           disabled={isLoggingOut}
           className="
+            sidebar-logout
             group
 
             flex
@@ -922,18 +923,20 @@ function Sidebar({
             transition-all
             duration-150
 
-            hover:bg-red-500/10
-            hover:text-red-300
+            hover:bg-red-500/15
+            hover:text-red-400
 
             focus:outline-none
             focus:ring-2
-            focus:ring-red-500/20
+            focus:ring-red-500/30
 
             disabled:cursor-default
           "
         >
           <span
             className="
+              sidebar-logout-icon
+
               flex
               h-8
               w-8
@@ -948,7 +951,7 @@ function Sidebar({
               transition-colors
               duration-150
 
-              group-hover:bg-red-500/10
+              group-hover:bg-red-500/15
               group-hover:text-red-400
             "
           >

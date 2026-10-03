@@ -818,7 +818,22 @@ function Productos() {
                           onClick={() =>
                             openEditForm(product)
                           }
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                          className="
+                              inline-flex
+                              items-center
+                              gap-1.5
+                              rounded-lg
+                              border
+                              border-blue-200
+                              px-3
+                              py-2
+                              text-xs
+                              font-semibold
+                              text-blue-600
+                              transition-colors
+                              hover:bg-blue-50
+                              hover:text-blue-700
+                            "
                         >
                           <Pencil size={14} />
                           Editar
@@ -1157,15 +1172,6 @@ function Productos() {
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={closeCategoryManager}
-                    disabled={categoryUpdating}
-                    aria-label="Cerrar administración de categorías"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white hover:text-slate-700 disabled:opacity-50"
-                  >
-                    <X size={16} />
-                  </button>
                 </div>
 
                 {/* Los errores de categorías se muestran dentro del panel. */}
@@ -1289,10 +1295,27 @@ function Productos() {
                                 </p>
 
                                 <span
-                                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${category.is_active
-                                    ? 'bg-emerald-50 text-emerald-700'
-                                    : 'bg-slate-100 text-slate-500'
-                                    }`}
+                                  className={`
+                                    rounded-full
+                                    border
+                                    px-2
+                                    py-0.5
+                                    text-[11px]
+                                    font-semibold
+
+                                    ${category.is_active
+                                      ? `
+                                          border-emerald-200
+                                          bg-emerald-50
+                                          text-emerald-700
+                                        `
+                                      : `
+                                          border-slate-200
+                                          bg-slate-100
+                                          text-slate-500
+                                        `
+                                    }
+                                  `}
                                 >
                                   {category.is_active
                                     ? 'Activa'
@@ -1313,7 +1336,24 @@ function Productos() {
                                   openCategoryEdit(category)
                                 }
                                 disabled={categoryUpdating}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50"
+                                className="
+                                  inline-flex
+                                  items-center
+                                  gap-1.5
+                                  rounded-lg
+                                  border
+                                  border-blue-200
+                                  px-2.5
+                                  py-2
+                                  text-xs
+                                  font-semibold
+                                  text-blue-600
+                                  transition-colors
+                                  hover:bg-blue-50
+                                  hover:text-blue-700
+                                  disabled:cursor-not-allowed
+                                  disabled:opacity-50
+                                "
                               >
                                 <Pencil size={13} />
                                 Editar

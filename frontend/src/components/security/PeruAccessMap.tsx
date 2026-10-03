@@ -79,7 +79,7 @@ function PeruAccessMap({
         .join(', ')
 
     return (
-        <div className="flex min-h-[520px] items-center justify-center bg-slate-50 p-5">
+        <div className="peru-access-map flex min-h-[520px] items-center justify-center bg-slate-50 p-5">
             {/* Mismas proporciones que el viewBox del SVG */}
             <div
                 className="relative w-full max-w-[500px]"
@@ -100,7 +100,7 @@ function PeruAccessMap({
                                 <path
                                     key={department.properties.ubigeo ?? department.properties.name ?? index}
                                     d={path}
-                                    className="fill-slate-300 stroke-white stroke-[1.2] transition-colors duration-200 hover:fill-slate-400"
+                                    className="peru-department fill-slate-300 stroke-white stroke-[1.2] transition-colors duration-200 hover:fill-slate-400"
                                 />
                             )
                         })}
@@ -116,7 +116,7 @@ function PeruAccessMap({
                         <button
                             type="button"
                             aria-label={`Ver información del acceso en ${locationLabel || 'ubicación aproximada'}`}
-                            className="relative flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-white bg-blue-600 shadow-md outline-none transition-all duration-200 hover:scale-110 hover:bg-blue-700 hover:shadow-lg focus-visible:ring-4 focus-visible:ring-blue-200"
+                            className="peru-access-marker relative flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-white bg-blue-600 shadow-md outline-none transition-all duration-200 hover:scale-110 hover:bg-blue-700 hover:shadow-lg focus-visible:ring-4 focus-visible:ring-blue-200"
                         >
                             {/* Halo */}
                             <span className="absolute h-10 w-10 rounded-full bg-blue-500/15 transition-all duration-300 group-hover:scale-125 group-hover:bg-blue-500/20" />
@@ -125,7 +125,7 @@ function PeruAccessMap({
                         </button>
 
                         {/* Tarjeta flotante: invisible por defecto */}
-                        <div className="pointer-events-none absolute bottom-full left-1/2 mb-3 w-64 -translate-x-1/2 translate-y-2 rounded-xl border border-slate-200 bg-white p-4 opacity-0 shadow-xl transition-all duration-200 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                        <div className="peru-access-tooltip pointer-events-none absolute bottom-full left-1/2 mb-3 w-64 -translate-x-1/2 translate-y-2 rounded-xl border border-slate-200 bg-white p-4 opacity-0 shadow-xl transition-all duration-200 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
                             <div className="flex items-start gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                                     <MapPin size={18} />
@@ -145,11 +145,11 @@ function PeruAccessMap({
                             </div>
 
                             {/* Flecha inferior */}
-                            <div className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-slate-200 bg-white" />
+                            <div className="peru-access-tooltip-arrow absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-slate-200 bg-white" />
                         </div>
                     </div>
                 ) : (
-                    <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-slate-200 bg-white/95 p-4 text-center text-sm text-slate-500">
+                    <div className="peru-map-empty absolute bottom-4 left-4 right-4 rounded-xl border border-slate-200 bg-white/95 p-4 text-center text-sm text-slate-500">
                         No existen coordenadas disponibles para representar el acceso.
                     </div>
                 )}

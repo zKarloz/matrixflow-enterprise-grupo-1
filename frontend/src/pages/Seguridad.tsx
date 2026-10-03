@@ -267,7 +267,7 @@ function Seguridad() {
                 </div>
 
 
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+                <div className="audit-status-card rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="text-sm font-medium text-emerald-700">
@@ -283,7 +283,7 @@ function Seguridad() {
                             </p>
                         </div>
 
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/70 text-emerald-700">
+                        <div className="audit-status-icon flex h-10 w-10 items-center justify-center rounded-xl bg-white/70 text-emerald-700">
                             <ShieldCheck size={20} />
                         </div>
                     </div>
@@ -444,34 +444,36 @@ function Seguridad() {
                             <div className="h-72 w-52 animate-pulse rounded-2xl bg-slate-200" />
                         </div>
                     ) : (
-                        <PeruAccessMap
-                            latitude={
-                                latestAccess?.latitude != null
-                                    ? Number(
-                                        latestAccess.latitude,
-                                    )
-                                    : null
-                            }
-                            longitude={
-                                latestAccess?.longitude != null
-                                    ? Number(
-                                        latestAccess.longitude,
-                                    )
-                                    : null
-                            }
-                            city={
-                                latestAccess?.city ??
-                                null
-                            }
-                            region={
-                                latestAccess?.region ??
-                                null
-                            }
-                            country={
-                                latestAccess?.country ??
-                                null
-                            }
-                        />
+                        <div className="peru-access-map-shell">
+                            <PeruAccessMap
+                                latitude={
+                                    latestAccess?.latitude != null
+                                        ? Number(
+                                            latestAccess.latitude,
+                                        )
+                                        : null
+                                }
+                                longitude={
+                                    latestAccess?.longitude != null
+                                        ? Number(
+                                            latestAccess.longitude,
+                                        )
+                                        : null
+                                }
+                                city={
+                                    latestAccess?.city ??
+                                    null
+                                }
+                                region={
+                                    latestAccess?.region ??
+                                    null
+                                }
+                                country={
+                                    latestAccess?.country ??
+                                    null
+                                }
+                            />
+                        </div>
                     )}
                 </section>
             </div>

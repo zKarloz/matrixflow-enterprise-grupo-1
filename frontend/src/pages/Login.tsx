@@ -15,7 +15,7 @@
 // de usuario.
 // ============================================================
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -25,16 +25,41 @@ import {
 
 import { login } from '../services/api'
 
+// Clave compartida con Configuración.
+// Permite conservar la apariencia seleccionada incluso
+// después de cerrar sesión.
+const THEME_STORAGE_KEY =
+    'matrixflow-theme'
+
 function Login() {
     // ----------------------------------------------------------
     // Estados del formulario
     // ----------------------------------------------------------
+
+    // Conserva el tema seleccionado anteriormente
+    // desde la página de Configuración.
+    const [
+        isDarkTheme,
+        setIsDarkTheme,
+    ] = useState(
+        () =>
+            localStorage.getItem(
+                THEME_STORAGE_KEY,
+            ) === 'dark',
+    )
 
     // Guarda el correo introducido por el usuario.
     const [email, setEmail] = useState('')
 
     // Guarda la contraseña introducida por el usuario.
     const [password, setPassword] = useState('')
+
+    // Controla si el usuario confirmó el aviso de privacidad
+    // relacionado con la IP pública y la ubicación aproximada.
+    const [
+        privacyAccepted,
+        setPrivacyAccepted,
+    ] = useState(false)
 
     // Controla el estado visual mientras se procesa el acceso.
     const [loading, setLoading] = useState(false)
@@ -51,6 +76,32 @@ function Login() {
     const navigate = useNavigate()
 
     // ----------------------------------------------------------
+    // Mantener el tema seleccionado
+    // ----------------------------------------------------------
+
+    useEffect(() => {
+        // Leemos nuevamente la preferencia al montar Login.
+        // Esto cubre accesos directos y recargas en /login.
+        const darkThemeEnabled =
+            localStorage.getItem(
+                THEME_STORAGE_KEY,
+            ) === 'dark'
+
+        setIsDarkTheme(
+            darkThemeEnabled,
+        )
+
+        // Conservamos también la clase global utilizada
+        // por el resto de MatrixFlow.
+        document.documentElement
+            .classList
+            .toggle(
+                'dark',
+                darkThemeEnabled,
+            )
+    }, [])
+
+    // ----------------------------------------------------------
     // Procesar inicio de sesión
     // ----------------------------------------------------------
 
@@ -59,6 +110,15 @@ function Login() {
     ) {
         // Evitamos que el navegador recargue la página.
         event.preventDefault()
+
+        // El acceso requiere que el usuario confirme primero
+        // que leyó el aviso de privacidad y seguridad.
+        if (!privacyAccepted) {
+            setError(
+                'Debes aceptar el aviso de privacidad y seguridad para continuar.',
+            )
+            return
+        }
 
         setError('')
         setLoading(true)
@@ -111,7 +171,18 @@ function Login() {
     // ----------------------------------------------------------
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-slate-950 lg:bg-slate-50">
+        <div
+            className={`
+                relative
+                min-h-screen
+                overflow-hidden
+
+                ${isDarkTheme
+                    ? 'bg-slate-950'
+                    : 'bg-slate-950 lg:bg-slate-50'
+                }
+            `}
+        >
 
             {/* ==================================================
                 FONDO DECORATIVO PARA MÓVIL
@@ -148,9 +219,17 @@ function Login() {
     hidden
     shrink-0
     overflow-hidden
-    bg-slate-950
 
-    transition-[width]
+    ${isDarkTheme
+                            ? (
+                                isExiting
+                                    ? 'bg-slate-950'
+                                    : 'bg-slate-900'
+                            )
+                            : 'bg-slate-950'
+                        }
+
+    transition-[width,background-color]
     duration-[650ms]
     ease-in-out
 
@@ -166,8 +245,39 @@ function Login() {
                 >
                     {/* Elementos decorativos sutiles para reforzar
                         la identidad visual sin distraer del formulario. */}
-                    <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-slate-800/60 blur-3xl" />
-                    <div className="absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-cyan-950/40 blur-3xl" />
+                    <div
+                        className={`
+                            absolute
+                            -left-32
+                            -top-32
+                            h-96
+                            w-96
+                            rounded-full
+                            blur-3xl
+
+                            ${isDarkTheme
+                                ? 'bg-slate-700/40'
+                                : 'bg-slate-800/60'
+                            }
+                        `}
+                    />
+
+                    <div
+                        className={`
+                            absolute
+                            -bottom-40
+                            -right-20
+                            h-96
+                            w-96
+                            rounded-full
+                            blur-3xl
+
+                            ${isDarkTheme
+                                ? 'bg-cyan-900/25'
+                                : 'bg-cyan-950/40'
+                            }
+                        `}
+                    />
 
                     <div
                         className={`
@@ -335,10 +445,14 @@ function Login() {
     ease-in-out
 
     sm:px-6
-    lg:bg-slate-50
     lg:px-12
 
-    ${isExiting
+    ${isDarkTheme
+                            ? 'bg-slate-950'
+                            : 'lg:bg-slate-50'
+                        }
+
+    ${isExiting && !isDarkTheme
                             ? 'lg:bg-slate-50'
                             : ''
                         }
@@ -352,7 +466,12 @@ function Login() {
     rounded-3xl
     border
     border-white/10
-    bg-white
+
+    ${isDarkTheme
+                                ? 'bg-slate-900'
+                                : 'bg-white'
+                            }
+
     p-6
     shadow-2xl
     shadow-black/25
@@ -364,7 +483,12 @@ function Login() {
 
     lg:rounded-none
     lg:border-0
-    lg:bg-transparent
+
+    ${isDarkTheme
+                                ? 'lg:bg-transparent'
+                                : 'lg:bg-transparent'
+                            }
+
     lg:p-0
     lg:shadow-none
 
@@ -390,7 +514,13 @@ function Login() {
                             </div>
 
                             <div>
-                                <p className="text-lg font-bold tracking-tight text-slate-900">
+                                <p
+                                    className={
+                                        isDarkTheme
+                                            ? 'text-lg font-bold tracking-tight text-white'
+                                            : 'text-lg font-bold tracking-tight text-slate-900'
+                                    }
+                                >
                                     MatrixFlow
                                 </p>
 
@@ -408,7 +538,13 @@ function Login() {
                                 Bienvenido de nuevo
                             </p>
 
-                            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                            <h2
+                                className={
+                                    isDarkTheme
+                                        ? 'mt-2 text-3xl font-bold tracking-tight text-white'
+                                        : 'mt-2 text-3xl font-bold tracking-tight text-slate-900'
+                                }
+                            >
                                 Inicia sesión
                             </h2>
 
@@ -421,8 +557,11 @@ function Login() {
                             TARJETA DEL FORMULARIO
                             ================================================== */}
                         <div
-                            className="
-                                bg-white
+                            className={`
+                                ${isDarkTheme
+                                    ? 'bg-slate-900'
+                                    : 'bg-white'
+                                }
 
                                 lg:rounded-2xl
                                 lg:border
@@ -431,7 +570,12 @@ function Login() {
                                 lg:shadow-sm
 
                                 xl:p-8
-                            "
+
+                                ${isDarkTheme
+                                    ? 'lg:border-slate-700'
+                                    : ''
+                                }
+                            `}
                         >
 
                             {/* Mensaje de error */}
@@ -469,7 +613,11 @@ function Login() {
                                 <div>
                                     <label
                                         htmlFor="email"
-                                        className="mb-2 block text-sm font-semibold text-slate-700"
+                                        className={
+                                            isDarkTheme
+                                                ? 'mb-2 block text-sm font-semibold text-slate-200'
+                                                : 'mb-2 block text-sm font-semibold text-slate-700'
+                                        }
                                     >
                                         Correo electrónico
                                     </label>
@@ -485,7 +633,28 @@ function Login() {
                                         autoComplete="email"
                                         required
                                         disabled={loading}
-                                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                        className={`
+                                            w-full
+                                            rounded-xl
+                                            border
+                                            px-4
+                                            py-3
+                                            text-sm
+                                            outline-none
+                                            transition
+                                            placeholder:text-slate-500
+
+                                            focus:border-blue-500
+                                            focus:ring-4
+                                            focus:ring-blue-500/15
+
+                                            disabled:cursor-not-allowed
+
+                                            ${isDarkTheme
+                                                ? 'border-slate-700 bg-slate-950 text-slate-100 disabled:bg-slate-800'
+                                                : 'border-slate-300 bg-white text-slate-900 disabled:bg-slate-50'
+                                            }
+                                        `}
                                     />
                                 </div>
 
@@ -494,7 +663,11 @@ function Login() {
                                     <div className="mb-2 flex items-center justify-between">
                                         <label
                                             htmlFor="password"
-                                            className="block text-sm font-semibold text-slate-700"
+                                            className={
+                                                isDarkTheme
+                                                    ? 'block text-sm font-semibold text-slate-200'
+                                                    : 'block text-sm font-semibold text-slate-700'
+                                            }
                                         >
                                             Contraseña
                                         </label>
@@ -511,15 +684,150 @@ function Login() {
                                         autoComplete="current-password"
                                         required
                                         disabled={loading}
-                                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                        className={`
+                                            w-full
+                                            rounded-xl
+                                            border
+                                            px-4
+                                            py-3
+                                            text-sm
+                                            outline-none
+                                            transition
+                                            placeholder:text-slate-500
+
+                                            focus:border-blue-500
+                                            focus:ring-4
+                                            focus:ring-blue-500/15
+
+                                            disabled:cursor-not-allowed
+
+                                            ${isDarkTheme
+                                                ? 'border-slate-700 bg-slate-950 text-slate-100 disabled:bg-slate-800'
+                                                : 'border-slate-300 bg-white text-slate-900 disabled:bg-slate-50'
+                                            }
+                                        `}
                                     />
+                                </div>
+
+                                {/* ==================================================
+                                    AVISO DE PRIVACIDAD Y SEGURIDAD
+                                    ================================================== */}
+                                <div
+                                    className={
+                                        isDarkTheme
+                                            ? 'rounded-xl border border-slate-700 bg-slate-950/60 p-4'
+                                            : 'rounded-xl border border-slate-200 bg-slate-50 p-4'
+                                    }
+                                >
+                                    <div className="mb-3">
+                                        <p
+                                            className={
+                                                isDarkTheme
+                                                    ? 'text-sm font-semibold text-slate-100'
+                                                    : 'text-sm font-semibold text-slate-800'
+                                            }
+                                        >
+                                            Aviso de privacidad y seguridad
+                                        </p>
+
+                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                            Al iniciar sesión, MatrixFlow Enterprise puede
+                                            registrar tu dirección IP pública y obtener una
+                                            ubicación aproximada asociada a ella con fines
+                                            de seguridad, auditoría y control de accesos.
+                                            Esta información no corresponde a una ubicación
+                                            GPS ni determina con exactitud tu domicilio.
+                                        </p>
+                                    </div>
+
+                                    <label
+                                        htmlFor="privacy-accepted"
+                                        className={`
+                                            flex
+                                            cursor-pointer
+                                            items-start
+                                            gap-3
+                                            rounded-lg
+                                            border
+                                            p-3
+                                            transition-colors
+
+                                            ${isDarkTheme
+                                                ? 'border-slate-700 bg-slate-900 hover:border-slate-600 hover:bg-slate-800'
+                                                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                                            }
+                                        `}
+                                    >
+                                        <input
+                                            id="privacy-accepted"
+                                            type="checkbox"
+                                            checked={privacyAccepted}
+                                            onChange={(event) =>
+                                                setPrivacyAccepted(
+                                                    event.target.checked,
+                                                )
+                                            }
+                                            disabled={loading}
+                                            className="
+                                                mt-0.5
+                                                h-4
+                                                w-4
+                                                shrink-0
+                                                cursor-pointer
+                                                rounded
+                                                border-slate-300
+                                                accent-blue-600
+                                                disabled:cursor-not-allowed
+                                            "
+                                        />
+
+                                        <span
+                                            className={
+                                                isDarkTheme
+                                                    ? 'text-xs leading-5 text-slate-400'
+                                                    : 'text-xs leading-5 text-slate-600'
+                                            }
+                                        >
+                                            He leído y comprendo que MatrixFlow puede
+                                            registrar mi dirección IP pública, navegador,
+                                            fecha y hora de acceso, y una ubicación
+                                            aproximada asociada a la IP.
+                                        </span>
+                                    </label>
                                 </div>
 
                                 {/* Botón principal */}
                                 <button
                                     type="submit"
-                                    disabled={loading}
-                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={
+                                        loading ||
+                                        !privacyAccepted
+                                    }
+                                    className={`
+                                        flex
+                                        w-full
+                                        items-center
+                                        justify-center
+                                        gap-2
+                                        rounded-xl
+                                        px-4
+                                        py-3.5
+                                        text-sm
+                                        font-semibold
+                                        text-white
+                                        transition
+
+                                        focus:outline-none
+                                        focus:ring-4
+
+                                        disabled:cursor-not-allowed
+                                        disabled:opacity-60
+
+                                        ${isDarkTheme
+                                            ? 'bg-blue-600 hover:bg-blue-500 focus:ring-blue-500/20'
+                                            : 'bg-slate-900 hover:bg-slate-800 focus:ring-slate-200'
+                                        }
+                                    `}
                                 >
                                     {loading ? (
                                         <>

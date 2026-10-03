@@ -76,6 +76,11 @@ import Seguridad from './pages/Seguridad'
 // De esta manera ambas animaciones se sienten simétricas.
 const LOGOUT_ANIMATION_MS = 650
 
+// Clave utilizada para conservar el tema seleccionado
+// entre recargas y nuevas sesiones.
+const THEME_STORAGE_KEY =
+  'matrixflow-theme'
+
 
 // ============================================================
 // RUTA PROTEGIDA POR ROL
@@ -194,6 +199,7 @@ function AppLayout() {
   return (
     <div
       className="
+        matrixflow-app
         min-h-screen
         overflow-x-hidden
         bg-slate-50
@@ -624,7 +630,7 @@ function AppLayout() {
               element={
                 <RoleProtectedRoute
                   allowedRoles={[
-                    'Administrador',
+                    'Administrador', 'Analista', 'Consulta',
                   ]}
                 >
                   <Configuracion />
@@ -647,6 +653,27 @@ function AppLayout() {
 // ============================================================
 
 function App() {
+
+  // ==========================================================
+  // TEMA VISUAL
+  // ==========================================================
+
+  useEffect(() => {
+    // Recuperamos la preferencia local antes de navegar
+    // por los módulos autenticados.
+    const savedTheme =
+      localStorage.getItem(
+        THEME_STORAGE_KEY,
+      )
+
+    document.documentElement
+      .classList
+      .toggle(
+        'dark',
+        savedTheme === 'dark',
+      )
+  }, [])
+
 
   // ==========================================================
   // CONEXIÓN CON EL BACKEND

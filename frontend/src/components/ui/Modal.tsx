@@ -104,6 +104,8 @@ function Modal({
     return createPortal(
         <div
             className="
+        matrixflow-modal-backdrop
+
         fixed inset-0 z-[100]
         overflow-y-auto
         bg-slate-950/40
@@ -126,6 +128,8 @@ function Modal({
                 {/* Contenedor visual del modal. */}
                 <div
                     className={`
+            matrixflow-modal-panel
+
             w-full
             ${panelClassName}
             max-h-[calc(100dvh-2rem)]
