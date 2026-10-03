@@ -34,14 +34,14 @@ import { getCurrentUser } from '../../services/api'
 
 // Roles disponibles actualmente en MatrixFlow.
 // Deben coincidir con los valores enviados dentro del JWT.
-type UserRole =
+export type UserRole =
   | 'Administrador'
   | 'Analista'
   | 'Consulta'
 
 
 // Representa un elemento del menú lateral.
-interface MenuItem {
+export interface MenuItem {
   name: string
   path?: string
   icon: ReactNode
@@ -54,7 +54,7 @@ interface MenuItem {
 // MENÚ PRINCIPAL
 // ============================================================
 
-const menuItems: MenuItem[] = [
+export const menuItems: MenuItem[] = [
   {
     name: 'Dashboard',
     path: '/',
@@ -315,7 +315,7 @@ function Sidebar({
     top-0
     z-40
 
-    flex
+    hidden
     h-screen
     w-64
     flex-col
@@ -324,9 +324,10 @@ function Sidebar({
 
     border-r
     border-slate-800
-
     bg-slate-950
     text-white
+
+    lg:flex
   "
     >
 

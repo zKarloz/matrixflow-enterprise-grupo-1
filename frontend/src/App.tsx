@@ -35,6 +35,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 // Componentes principales del diseño.
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
+import MobileNavigation from './components/layout/MobileNavigation'
 
 // Página pública de inicio de sesión.
 import Login from './pages/Login'
@@ -144,6 +145,12 @@ function AppLayout() {
     setIsLoggingOut,
   ] = useState(false)
 
+  // Controla la navegación desplegable en celulares y tablets.
+  const [
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  ] = useState(false)
+
 
   // ==========================================================
   // CERRAR SESIÓN
@@ -155,6 +162,10 @@ function AppLayout() {
     if (isLoggingOut) {
       return
     }
+
+    // Cerramos la navegación móvil antes de iniciar
+    // la transición hacia Login.
+    setMobileMenuOpen(false)
 
     // Primero iniciamos únicamente la transición visual.
     setIsLoggingOut(true)
@@ -217,6 +228,9 @@ function AppLayout() {
 
           z-35
 
+          hidden
+          lg:block
+
           w-[52.5vw]
 
           bg-slate-950
@@ -252,6 +266,25 @@ function AppLayout() {
       <Sidebar
         isLoggingOut={isLoggingOut}
         onLogout={handleLogout}
+      />
+
+
+      {/* ====================================================
+          NAVEGACIÓN MÓVIL
+          ==================================================== */}
+
+      <MobileNavigation
+        open={mobileMenuOpen}
+        onToggle={() =>
+          setMobileMenuOpen(
+            (previous) => !previous,
+          )
+        }
+        onClose={() =>
+          setMobileMenuOpen(false)
+        }
+        onLogout={handleLogout}
+        isLoggingOut={isLoggingOut}
       />
 
 
@@ -300,8 +333,10 @@ function AppLayout() {
 
       <main
         className={`
-          ml-64
-          pt-20
+          pt-16
+
+          lg:ml-64
+          lg:pt-20
 
           transition-[opacity,transform]
           duration-300
@@ -322,7 +357,7 @@ function AppLayout() {
           motion-reduce:transition-none
         `}
       >
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
 
           <Routes>
 

@@ -59,7 +59,7 @@ function Header() {
 
 
   return (
-    <header className="fixed left-64 right-0 top-0 z-30 h-20 border-b border-slate-200 bg-white">
+    <header className="fixed left-64 right-0 top-0 z-30 hidden h-20 border-b border-slate-200 bg-white lg:block">
       <div className="flex h-full items-center justify-between px-8">
 
         {/* Título de la página actual. */}
