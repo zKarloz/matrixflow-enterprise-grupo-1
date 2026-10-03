@@ -591,7 +591,7 @@ function Historial() {
           (input, index) => (
             <div
               key={`${input.type}-${input.id}-${index}`}
-              className="flex items-center gap-2"
+              className="flex min-w-0 items-start gap-2"
             >
               <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 {input.type === 'vector'
@@ -599,7 +599,7 @@ function Historial() {
                   : `M${input.id}`}
               </span>
 
-              <span className="text-sm text-slate-700 dark:text-slate-300">
+              <span className="min-w-0 break-words text-sm leading-5 text-slate-700 dark:text-slate-300">
                 {input.source_name}
               </span>
             </div>
@@ -658,7 +658,21 @@ function Historial() {
       )
     ) {
       return (
-        <code className="block max-w-full break-words rounded-lg bg-slate-900 px-3 py-2 text-xs text-white dark:bg-slate-950">
+        <code
+          className="
+            inline-block
+            min-w-max
+            whitespace-nowrap
+            rounded-lg
+            bg-slate-900
+            px-3
+            py-2
+            font-mono
+            text-xs
+            text-white
+            dark:bg-slate-950
+          "
+        >
           [
           {(
             structuredResult.values as number[]
@@ -675,12 +689,22 @@ function Historial() {
         structuredResult.values as number[][]
 
       return (
-        <div className="max-w-full rounded-lg bg-slate-900 px-3 py-2 dark:bg-slate-950">
+        <div
+          className="
+            inline-block
+            min-w-max
+            rounded-lg
+            bg-slate-900
+            px-3
+            py-2
+            dark:bg-slate-950
+          "
+        >
           {matrix.map(
             (row, index) => (
               <p
                 key={index}
-                className="break-words font-mono text-xs leading-5 text-white"
+                className="whitespace-nowrap font-mono text-xs leading-5 text-white"
               >
                 [{row.join(', ')}]
               </p>
@@ -698,11 +722,139 @@ function Historial() {
   }
 
   // ==========================================================
+  // DETALLE EXPANDIDO DE UNA OPERACIÓN
+  // ==========================================================
+
+  function renderOperationDetail(
+    operation: OperationHistoryItem,
+  ) {
+    return (
+      <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5">
+        <div>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Datos utilizados en la operación
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            Se reutilizan las estructuras originales registradas
+            en Vectores y Matrices.
+          </p>
+        </div>
+
+        {operation.inputs.length > 0 ? (
+          <div className="space-y-3">
+            {operation.inputs.map(
+              (input, inputIndex) => {
+                if (input.type === 'vector') {
+                  const vector =
+                    vectors.find(
+                      (item) =>
+                        item.id === input.id,
+                    )
+
+                  return vector ? (
+                    <div
+                      key={`history-vector-${operation.id}-${input.id}-${inputIndex}`}
+                    >
+                      {renderVectorHistoryDetail(
+                        vector,
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      key={`missing-vector-${operation.id}-${inputIndex}`}
+                      className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-500/10 dark:text-amber-300"
+                    >
+                      <Info
+                        size={17}
+                        className="mt-0.5 shrink-0"
+                      />
+
+                      <span>
+                        Vector V{input.id} no disponible actualmente.
+                      </span>
+                    </div>
+                  )
+                }
+
+                const matrix =
+                  matrices.find(
+                    (item) =>
+                      item.id === input.id,
+                  )
+
+                return matrix ? (
+                  <div
+                    key={`history-matrix-${operation.id}-${input.id}-${inputIndex}`}
+                  >
+                    {renderMatrixHistoryDetail(
+                      matrix,
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    key={`missing-matrix-${operation.id}-${inputIndex}`}
+                    className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-500/10 dark:text-amber-300"
+                  >
+                    <Info
+                      size={17}
+                      className="mt-0.5 shrink-0"
+                    />
+
+                    <span>
+                      Matriz M{input.id} no disponible actualmente.
+                    </span>
+                  </div>
+                )
+              },
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            La operación no conserva referencias a estructuras registradas.
+          </p>
+        )}
+
+        {/* El resultado conserva un scroll horizontal propio
+            cuando su contenido supera el ancho del teléfono. */}
+        <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Resultado registrado
+          </p>
+
+          <div
+            className="
+              history-result-scroll
+              w-full
+              max-w-full
+              overflow-x-auto
+              overflow-y-hidden
+              rounded-xl
+              bg-slate-50
+              p-4
+              pb-3
+              dark:bg-slate-950/70
+            "
+            style={{
+              WebkitOverflowScrolling:
+                'touch',
+            }}
+          >
+            <div className="w-max min-w-max">
+              {renderResult(operation)}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-    <div className="min-h-full bg-slate-50 p-6">
+    <div className="min-h-full bg-slate-50 p-4 sm:p-6">
       <div className="mx-auto max-w-7xl">
 
         {/* ===================================================
@@ -883,7 +1035,7 @@ function Historial() {
 
           {/* Encabezado. */}
           <div className="border-b border-slate-100 px-6 py-5">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
@@ -930,50 +1082,54 @@ function Historial() {
               </p>
             </div>
           ) : (
-            // Tabla del historial.
-            <div className="overflow-hidden">
-              <table className="w-full table-fixed text-left">
+            <>
+              {/* =================================================
+                  TELÉFONOS Y TABLETS PEQUEÑAS
+                  =================================================
 
-                <thead className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
-                  <tr>
-                    <th className="w-[13%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Fecha
-                    </th>
+                  En móvil no usamos la tabla de seis columnas.
+                  Cada operación se muestra como una tarjeta vertical
+                  para evitar textos comprimidos y superpuestos.
+                  ================================================= */}
+              <div className="space-y-3 p-3 sm:p-4 lg:hidden">
+                {filteredOperations.map(
+                  (operation) => {
+                    const isExpanded =
+                      expandedOperationId ===
+                      operation.id
 
-                    <th className="w-[21%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Operación
-                    </th>
+                    return (
+                      <div
+                        key={operation.id}
+                        className="
+                          history-card-scroll
+                          w-full
+                          max-w-full
+                          overflow-x-auto
+                          overflow-y-hidden
+                          pb-2
+                        "
+                        style={{
+                          WebkitOverflowScrolling:
+                            'touch',
+                        }}
+                      >
+                        <article
+                          className={`
+                            min-w-[680px]
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            transition-colors
 
-                    <th className="w-[15%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Tipo
-                    </th>
-
-                    <th className="w-[20%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Entradas
-                    </th>
-
-                    <th className="w-[21%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Resultado
-                    </th>
-
-                    <th className="w-[10%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Tiempo
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredOperations.map(
-                    (operation) => {
-                      const isExpanded =
-                        expandedOperationId ===
-                        operation.id
-
-                      return (
-                        <Fragment key={operation.id}>
-                          <tr
-                            role="button"
-                            tabIndex={0}
+                            ${isExpanded
+                              ? 'border-blue-200 bg-blue-50/60 dark:border-blue-900/60 dark:bg-blue-950/20'
+                              : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'
+                            }
+                          `}
+                        >
+                          <button
+                            type="button"
                             aria-expanded={isExpanded}
                             onClick={() =>
                               setExpandedOperationId(
@@ -982,190 +1138,290 @@ function Historial() {
                                   : operation.id,
                               )
                             }
-                            onKeyDown={(event) => {
-                              if (
-                                event.key === 'Enter' ||
-                                event.key === ' '
-                              ) {
-                                event.preventDefault()
+                            className="
+                            w-full
+                            p-4
+                            text-left
+                            transition-colors
+                            hover:bg-slate-50
+                            dark:hover:bg-slate-800/60
+                          "
+                          >
+                            {/* Cabecera móvil de la operación. */}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="break-words text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
+                                  {operation.name}
+                                </p>
 
+                                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                                  Registro #{operation.id}
+                                </p>
+                              </div>
+
+                              <ChevronDown
+                                size={18}
+                                className={`
+                                mt-0.5
+                                shrink-0
+                                text-slate-400
+                                transition-transform
+                                duration-200
+
+                                ${isExpanded
+                                    ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                                    : ''
+                                  }
+                              `}
+                              />
+                            </div>
+
+                            {/* Información secundaria organizada
+                              en bloques y no en columnas estrechas. */}
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                              <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/70">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  Fecha
+                                </p>
+
+                                <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                                  {formatDateTime(
+                                    operation.created_at,
+                                  )}
+                                </p>
+                              </div>
+
+                              <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/70">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  Tipo
+                                </p>
+
+                                <p className="mt-1 text-xs font-semibold leading-5 text-slate-700 dark:text-slate-200">
+                                  {getOperationLabel(
+                                    operation.operation_type,
+                                  )}
+                                </p>
+                              </div>
+
+                              <div className="col-span-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/70">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  Entradas
+                                </p>
+
+                                <div className="mt-2">
+                                  {renderInputs(operation)}
+                                </div>
+                              </div>
+
+                              <div className="col-span-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/70">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  Resultado
+                                </p>
+
+                                <div className="mt-2">
+                                  {renderResult(operation)}
+                                </div>
+                              </div>
+
+                              <div className="col-span-2 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/70">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  Tiempo
+                                </p>
+
+                                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                  <Clock3 className="h-4 w-4 shrink-0 text-slate-400" />
+
+                                  {formatExecutionTime(
+                                    operation.execution_time,
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Detalle completo reutilizado de Vectores/Matrices. */}
+                          {isExpanded && (
+                            <div className="border-t border-slate-200 p-3 dark:border-slate-700">
+                              {renderOperationDetail(
+                                operation,
+                              )}
+                            </div>
+                          )}
+                        </article>
+                      </div>
+                    )
+                  },
+                )}
+              </div>
+
+              {/* =================================================
+                  ESCRITORIO
+                  =================================================
+
+                  Conservamos la tabla completa únicamente desde lg.
+                  ================================================= */}
+              <div className="hidden overflow-hidden lg:block">
+                <table className="w-full table-fixed text-left">
+
+                  <thead className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+                    <tr>
+                      <th className="w-[13%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Fecha
+                      </th>
+
+                      <th className="w-[21%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Operación
+                      </th>
+
+                      <th className="w-[15%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Tipo
+                      </th>
+
+                      <th className="w-[20%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Entradas
+                      </th>
+
+                      <th className="w-[21%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Resultado
+                      </th>
+
+                      <th className="w-[10%] px-5 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Tiempo
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {filteredOperations.map(
+                      (operation) => {
+                        const isExpanded =
+                          expandedOperationId ===
+                          operation.id
+
+                        return (
+                          <Fragment key={operation.id}>
+                            <tr
+                              role="button"
+                              tabIndex={0}
+                              aria-expanded={isExpanded}
+                              onClick={() =>
                                 setExpandedOperationId(
                                   isExpanded
                                     ? null
                                     : operation.id,
                                 )
                               }
-                            }}
-                            className={`
-                              cursor-pointer
-                              transition-colors
+                              onKeyDown={(event) => {
+                                if (
+                                  event.key === 'Enter' ||
+                                  event.key === ' '
+                                ) {
+                                  event.preventDefault()
 
-                              ${isExpanded
-                                ? 'bg-blue-50/70 dark:bg-blue-950/30'
-                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                              }
-                            `}
-                          >
-                            <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">
-                              <div className="flex items-start gap-2">
-                                <ChevronDown
-                                  size={16}
-                                  className={`
-                                    mt-0.5
-                                    shrink-0
-                                    text-slate-400
-                                    transition-transform
-                                    ${isExpanded
-                                      ? 'rotate-180 text-blue-600 dark:text-blue-400'
-                                      : ''
-                                    }
-                                  `}
-                                />
+                                  setExpandedOperationId(
+                                    isExpanded
+                                      ? null
+                                      : operation.id,
+                                  )
+                                }
+                              }}
+                              className={`
+                                cursor-pointer
+                                transition-colors
 
-                                <span>
-                                  {formatDateTime(
-                                    operation.created_at,
+                                ${isExpanded
+                                  ? 'bg-blue-50/70 dark:bg-blue-950/30'
+                                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                                }
+                              `}
+                            >
+                              <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">
+                                <div className="flex items-start gap-2">
+                                  <ChevronDown
+                                    size={16}
+                                    className={`
+                                      mt-0.5
+                                      shrink-0
+                                      text-slate-400
+                                      transition-transform
+
+                                      ${isExpanded
+                                        ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                                        : ''
+                                      }
+                                    `}
+                                  />
+
+                                  <span>
+                                    {formatDateTime(
+                                      operation.created_at,
+                                    )}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <p className="break-words font-semibold text-slate-900 dark:text-slate-100">
+                                  {operation.name}
+                                </p>
+
+                                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                                  Registro #{operation.id}
+                                </p>
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <span className="inline-flex rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                  {getOperationLabel(
+                                    operation.operation_type,
                                   )}
                                 </span>
-                              </div>
-                            </td>
+                              </td>
 
-                            <td className="px-5 py-4">
-                              <p className="break-words font-semibold text-slate-900 dark:text-slate-100">
-                                {operation.name}
-                              </p>
+                              <td className="px-5 py-4">
+                                {renderInputs(operation)}
+                              </td>
 
-                              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                                Registro #{operation.id}
-                              </p>
-                            </td>
-
-                            <td className="px-5 py-4">
-                              <span className="inline-flex rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                {getOperationLabel(
-                                  operation.operation_type,
-                                )}
-                              </span>
-                            </td>
-
-                            <td className="px-5 py-4">
-                              {renderInputs(operation)}
-                            </td>
-
-                            <td className="min-w-0 px-5 py-4">
-                              {renderResult(operation)}
-                            </td>
-
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                <Clock3 className="h-4 w-4 shrink-0 text-slate-400" />
-
-                                {formatExecutionTime(
-                                  operation.execution_time,
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-
-                          {isExpanded && (
-                            <tr className="bg-slate-50/80 dark:bg-slate-950/40">
-                              <td
-                                colSpan={6}
-                                className="px-5 pb-6 pt-2"
-                              >
-                                <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                      Datos utilizados en la operación
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                      Se reutilizan las estructuras originales registradas en Vectores y Matrices.
-                                    </p>
-                                  </div>
-
-                                  {operation.inputs.length > 0 ? (
-                                    <div className="space-y-3">
-                                      {operation.inputs.map(
-                                        (input, inputIndex) => {
-                                          if (input.type === 'vector') {
-                                            const vector =
-                                              vectors.find(
-                                                (item) =>
-                                                  item.id === input.id,
-                                              )
-
-                                            return vector ? (
-                                              <div
-                                                key={`history-vector-${operation.id}-${input.id}-${inputIndex}`}
-                                              >
-                                                {renderVectorHistoryDetail(
-                                                  vector,
-                                                )}
-                                              </div>
-                                            ) : (
-                                              <div
-                                                key={`missing-vector-${operation.id}-${inputIndex}`}
-                                                className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-500/10 dark:text-amber-300"
-                                              >
-                                                <Info size={17} />
-                                                Vector V{input.id} no disponible actualmente.
-                                              </div>
-                                            )
-                                          }
-
-                                          const matrix =
-                                            matrices.find(
-                                              (item) =>
-                                                item.id === input.id,
-                                            )
-
-                                          return matrix ? (
-                                            <div
-                                              key={`history-matrix-${operation.id}-${input.id}-${inputIndex}`}
-                                            >
-                                              {renderMatrixHistoryDetail(
-                                                matrix,
-                                              )}
-                                            </div>
-                                          ) : (
-                                            <div
-                                              key={`missing-matrix-${operation.id}-${inputIndex}`}
-                                              className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-500/10 dark:text-amber-300"
-                                            >
-                                              <Info size={17} />
-                                              Matriz M{input.id} no disponible actualmente.
-                                            </div>
-                                          )
-                                        },
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                                      La operación no conserva referencias a estructuras registradas.
-                                    </p>
-                                  )}
-
-                                  <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
-                                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                      Resultado registrado
-                                    </p>
-
-                                    <div className="overflow-x-auto rounded-xl bg-slate-50 p-4 dark:bg-slate-950/70">
-                                      {renderResult(operation)}
-                                    </div>
+                              <td className="min-w-0 px-5 py-4">
+                                <div className="w-full max-w-full overflow-x-auto pb-1">
+                                  <div className="w-max min-w-max">
+                                    {renderResult(operation)}
                                   </div>
                                 </div>
                               </td>
+
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                  <Clock3 className="h-4 w-4 shrink-0 text-slate-400" />
+
+                                  {formatExecutionTime(
+                                    operation.execution_time,
+                                  )}
+                                </div>
+                              </td>
                             </tr>
-                          )}
-                        </Fragment>
-                      )
-                    },
-                  )}
-                </tbody>
-              </table>
-            </div>
+
+                            {isExpanded && (
+                              <tr className="bg-slate-50/80 dark:bg-slate-950/40">
+                                <td
+                                  colSpan={6}
+                                  className="px-5 pb-6 pt-2"
+                                >
+                                  {renderOperationDetail(
+                                    operation,
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        )
+                      },
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+
           )}
         </section>
       </div>
