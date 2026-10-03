@@ -111,12 +111,33 @@ function Login() {
     // ----------------------------------------------------------
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="relative min-h-screen overflow-hidden bg-slate-950 lg:bg-slate-50">
+
+            {/* ==================================================
+                FONDO DECORATIVO PARA MÓVIL
+                ==================================================
+
+                Reutiliza la identidad visual del panel izquierdo
+                de escritorio sin modificar su diseño.
+                ================================================== */}
+            <div
+                aria-hidden="true"
+                className="
+                    pointer-events-none
+                    absolute
+                    inset-0
+
+                    lg:hidden
+                "
+            >
+                <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-slate-800/60 blur-3xl" />
+                <div className="absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-cyan-950/50 blur-3xl" />
+            </div>
 
             {/* ==================================================
                 CONTENEDOR PRINCIPAL
                 ================================================== */}
-            <div className="min-h-screen lg:flex">
+            <div className="relative z-10 min-h-screen lg:flex">
 
                 {/* ==================================================
                     PANEL DE IDENTIDAD
@@ -306,18 +327,19 @@ function Login() {
     items-center
     justify-center
 
-    px-5
-    py-10
+    px-4
+    py-8
 
     transition-all
     duration-[650ms]
     ease-in-out
 
-    sm:px-8
+    sm:px-6
+    lg:bg-slate-50
     lg:px-12
 
     ${isExiting
-                            ? 'bg-slate-50'
+                            ? 'lg:bg-slate-50'
                             : ''
                         }
   `}
@@ -327,8 +349,24 @@ function Login() {
     w-full
     max-w-md
 
+    rounded-3xl
+    border
+    border-white/10
+    bg-white
+    p-6
+    shadow-2xl
+    shadow-black/25
+
     transition-all
     duration-300
+
+    sm:p-8
+
+    lg:rounded-none
+    lg:border-0
+    lg:bg-transparent
+    lg:p-0
+    lg:shadow-none
 
     ${isExiting
                                 ? `
@@ -346,7 +384,7 @@ function Login() {
                     >
 
                         {/* Marca visible en dispositivos pequeños */}
-                        <div className="mb-10 flex items-center justify-center gap-3 lg:hidden">
+                        <div className="mb-7 flex items-center justify-center gap-3 lg:hidden">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
                                 <Workflow size={21} />
                             </div>
@@ -365,7 +403,7 @@ function Login() {
                         {/* ==================================================
                             ENCABEZADO DEL FORMULARIO
                             ================================================== */}
-                        <div className="mb-8">
+                        <div className="mb-7 text-center lg:mb-8 lg:text-left">
                             <p className="text-sm font-medium text-slate-500">
                                 Bienvenido de nuevo
                             </p>
@@ -382,7 +420,19 @@ function Login() {
                         {/* ==================================================
                             TARJETA DEL FORMULARIO
                             ================================================== */}
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                        <div
+                            className="
+                                bg-white
+
+                                lg:rounded-2xl
+                                lg:border
+                                lg:border-slate-200
+                                lg:p-6
+                                lg:shadow-sm
+
+                                xl:p-8
+                            "
+                        >
 
                             {/* Mensaje de error */}
                             {error && (
@@ -488,7 +538,7 @@ function Login() {
                         </div>
 
                         {/* Mensaje inferior */}
-                        <p className="mt-6 text-center text-xs leading-5 text-slate-400">
+                        <p className="mt-5 text-center text-xs leading-5 text-slate-400 lg:mt-6">
                             Acceso protegido para usuarios autorizados de MatrixFlow Enterprise.
                         </p>
                     </div>
