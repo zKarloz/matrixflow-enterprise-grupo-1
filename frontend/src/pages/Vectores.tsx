@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 
 import {
   CheckCircle2,
+  ChevronDown,
+  Info,
   Plus,
   Sparkles,
   VectorSquare,
@@ -72,6 +74,25 @@ function Vectores() {
   // Lista de vectores registrados.
   const [vectors, setVectors] = useState<Vector[]>([])
 
+  // ID de la fila de vector que está desplegada.
+  // Solo mantenemos una abierta a la vez.
+  const [
+    expandedVectorId,
+    setExpandedVectorId,
+  ] = useState<number | null>(null)
+
+  // Referencias utilizadas para interpretar los componentes
+  // de los vectores empresariales ya registrados.
+  const [
+    productReferenceLabels,
+    setProductReferenceLabels,
+  ] = useState<string[]>([])
+
+  const [
+    salesReferenceLabels,
+    setSalesReferenceLabels,
+  ] = useState<string[]>([])
+
   // Estados generales de la pantalla.
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -118,10 +139,60 @@ function Vectores() {
         setLoading(true)
         setError('')
 
-        // Obtenemos los vectores registrados.
+        // Obtenemos primero los vectores registrados.
         const data = await getVectors()
 
         setVectors(data)
+
+        // Las referencias empresariales son complementarias.
+        // Si alguna consulta falla, la tabla sigue funcionando.
+        const [
+          productsResult,
+          dashboardResult,
+        ] = await Promise.allSettled([
+          getProducts(),
+          getDashboard(),
+        ])
+
+        if (
+          productsResult.status ===
+          'fulfilled'
+        ) {
+          const orderedProducts =
+            [...productsResult.value].sort(
+              (first, second) =>
+                first.id - second.id,
+            )
+
+          setProductReferenceLabels(
+            orderedProducts.map(
+              (product) =>
+                product.name,
+            ),
+          )
+        }
+
+        if (
+          dashboardResult.status ===
+          'fulfilled'
+        ) {
+          const orderedSalesRows =
+            [
+              ...dashboardResult.value
+                .sales_by_product,
+            ].sort(
+              (first, second) =>
+                first.product_id -
+                second.product_id,
+            )
+
+          setSalesReferenceLabels(
+            orderedSalesRows.map(
+              (item) =>
+                item.product_name,
+            ),
+          )
+        }
       } catch (requestError) {
         console.error('Error al cargar vectores:', requestError)
 
@@ -443,6 +514,76 @@ function Vectores() {
   }
 
   // ==========================================================
+  // INTERPRETAR VECTORES REGISTRADOS
+  // ==========================================================
+
+  const getRegisteredVectorLabels = (
+    vector: Vector,
+  ): string[] | null => {
+    const normalizedName =
+      vector.name
+        .trim()
+        .toLowerCase()
+
+    // Stock y precio se construyen usando todos los productos
+    // ordenados por ID ascendente.
+    if (
+      normalizedName ===
+      'stock total por producto' ||
+      normalizedName ===
+      'precio actual por producto'
+    ) {
+      if (
+        productReferenceLabels.length <
+        vector.values.length
+      ) {
+        return null
+      }
+
+      return productReferenceLabels.slice(
+        0,
+        vector.values.length,
+      )
+    }
+
+    // Los vectores derivados de ventas usan sales_by_product,
+    // también ordenado por ID de producto ascendente.
+    if (
+      normalizedName ===
+      'unidades vendidas por producto' ||
+      normalizedName ===
+      'importe vendido por producto'
+    ) {
+      if (
+        salesReferenceLabels.length <
+        vector.values.length
+      ) {
+        return null
+      }
+
+      return salesReferenceLabels.slice(
+        0,
+        vector.values.length,
+      )
+    }
+
+    // Un vector manual no almacena actualmente el significado
+    // semántico de cada componente.
+    return null
+  }
+
+  const toggleRegisteredVector = (
+    vectorId: number,
+  ) => {
+    setExpandedVectorId(
+      (current) =>
+        current === vectorId
+          ? null
+          : vectorId,
+    )
+  }
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
@@ -728,7 +869,8 @@ function Vectores() {
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Consulta los vectores disponibles para tus análisis.
+                  Consulta los vectores disponibles y presiona una fila
+                  para interpretar sus componentes.
                 </p>
               </div>
 
@@ -764,73 +906,236 @@ function Vectores() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left">
-                <thead className="border-b border-slate-100 bg-slate-50">
+            <div className="overflow-hidden">
+              <table className="w-full table-fixed text-left">
+                <thead className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[24%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Vector
                     </th>
 
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[12%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Dimensión
                     </th>
 
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[34%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Componentes
                     </th>
 
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[30%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Descripción
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-100">
-                  {vectors.map((vector) => (
-                    <tr
-                      key={vector.id}
-                      className="transition hover:bg-slate-50"
-                    >
-                      {/* Identificación del vector. */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
-                            V{vector.id}
-                          </div>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {vectors.map((vector) => {
+                    const isExpanded =
+                      expandedVectorId ===
+                      vector.id
 
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {vector.name}
-                            </p>
+                    const referenceLabels =
+                      getRegisteredVectorLabels(
+                        vector,
+                      )
 
-                            <p className="text-xs text-slate-400">
-                              ID #{vector.id}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+                    return (
+                      <Fragment key={vector.id}>
+                        <tr
+                          role="button"
+                          tabIndex={0}
+                          aria-expanded={isExpanded}
+                          onClick={() =>
+                            toggleRegisteredVector(
+                              vector.id,
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === 'Enter' ||
+                              event.key === ' '
+                            ) {
+                              event.preventDefault()
 
-                      {/* Dimensión matemática. */}
-                      <td className="px-6 py-4">
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">
-                          {vector.dimension}
-                        </span>
-                      </td>
+                              toggleRegisteredVector(
+                                vector.id,
+                              )
+                            }
+                          }}
+                          className={`
+                            cursor-pointer
+                            transition-colors
+                            duration-150
 
-                      {/* Representación visual de los componentes. */}
-                      <td className="px-6 py-4">
-                        <code className="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white">
-                          [{vector.values.join(', ')}]
-                        </code>
-                      </td>
+                            ${isExpanded
+                              ? 'bg-blue-50/70 dark:bg-blue-950/30'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                            }
+                          `}
+                        >
+                          {/* Identificación del vector. */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
+                                V{vector.id}
+                              </div>
 
-                      {/* Descripción opcional. */}
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {vector.description ?? 'Sin descripción'}
-                      </td>
-                    </tr>
-                  ))}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                  {vector.name}
+                                </p>
+
+                                <p className="text-xs text-slate-400 dark:text-slate-500">
+                                  ID #{vector.id}
+                                </p>
+                              </div>
+
+                              <ChevronDown
+                                size={17}
+                                className={`
+                                  shrink-0
+                                  text-slate-400
+                                  transition-transform
+                                  duration-200
+
+                                  ${isExpanded
+                                    ? 'rotate-180 text-blue-600'
+                                    : ''
+                                  }
+                                `}
+                              />
+                            </div>
+                          </td>
+
+                          {/* Dimensión matemática. */}
+                          <td className="px-6 py-4">
+                            <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              {vector.dimension}
+                            </span>
+                          </td>
+
+                          {/* Componentes del vector. */}
+                          <td className="px-6 py-4">
+                            <code className="block max-w-full whitespace-normal break-words rounded-lg bg-slate-900 px-3 py-2 text-sm leading-6 text-white dark:bg-slate-950">
+                              [{vector.values.join(', ')}]
+                            </code>
+                          </td>
+
+                          {/* Descripción opcional. */}
+                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                            {vector.description ??
+                              'Sin descripción'}
+                          </td>
+                        </tr>
+
+                        {/* Detalle desplegable del vector. */}
+                        {isExpanded && (
+                          <tr className="bg-slate-50/80 dark:bg-slate-950/40">
+                            <td
+                              colSpan={4}
+                              className="px-6 pb-6 pt-2"
+                            >
+                              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                                <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+                                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                    Significado de los componentes
+                                  </p>
+
+                                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                    Cada valor conserva la misma posición
+                                    utilizada al generar el vector.
+                                  </p>
+                                </div>
+
+                                {referenceLabels ? (
+                                  <div className="vector-detail-scroll overflow-x-auto pb-2">
+                                    <table className="min-w-max text-left">
+                                      <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/70">
+                                          {referenceLabels.map(
+                                            (
+                                              label,
+                                              index,
+                                            ) => (
+                                              <th
+                                                key={`${vector.id}-${index}-${label}`}
+                                                className="min-w-[180px] max-w-[240px] px-4 py-3 align-bottom text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300"
+                                              >
+                                                {label}
+                                              </th>
+                                            ),
+                                          )}
+                                        </tr>
+                                      </thead>
+
+                                      <tbody>
+                                        <tr>
+                                          {vector.values.map(
+                                            (
+                                              value,
+                                              index,
+                                            ) => (
+                                              <td
+                                                key={`${vector.id}-${index}-${value}`}
+                                                className="px-4 py-4"
+                                              >
+                                                <span className="inline-flex min-w-10 items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white dark:bg-slate-950">
+                                                  {value}
+                                                </span>
+                                              </td>
+                                            ),
+                                          )}
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start gap-3 px-5 py-5">
+                                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+                                      <Info size={17} />
+                                    </div>
+
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                        Referencias no disponibles
+                                      </p>
+
+                                      <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
+                                        Este vector no conserva etiquetas
+                                        semánticas para sus componentes.
+                                        Puede tratarse de un vector manual
+                                        o de una referencia empresarial que
+                                        ya no coincide con los datos actuales.
+                                      </p>
+
+                                      <div className="mt-4 flex flex-wrap gap-2">
+                                        {vector.values.map(
+                                          (
+                                            value,
+                                            index,
+                                          ) => (
+                                            <span
+                                              key={`${vector.id}-position-${index}`}
+                                              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                            >
+                                              Componente {index + 1}:{' '}
+                                              <strong className="font-mono text-slate-900 dark:text-white">
+                                                {value}
+                                              </strong>
+                                            </span>
+                                          ),
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

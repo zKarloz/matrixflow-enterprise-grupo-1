@@ -499,12 +499,12 @@ function Reportes() {
         {/* ============================================================
     VISUALIZACIONES EMPRESARIALES
     ============================================================ */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-2">
 
           {/* ==========================================================
       VENTAS POR SUCURSAL
       ========================================================== */}
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
                 Ventas por sucursal
@@ -515,69 +515,103 @@ function Reportes() {
               </p>
             </div>
 
-            <div className="mt-6 h-80">
-              {salesChartData.length === 0 ? (
-                // Estado vacío cuando todavía no existen ventas.
-                <div className="flex h-full items-center justify-center">
-                  <p className="text-sm text-slate-500">
-                    No hay ventas disponibles para graficar.
-                  </p>
-                </div>
-              ) : (
-                <ResponsiveContainer
-                  width="100%"
-                  height="100%"
-                >
-                  <BarChart
-                    data={salesChartData}
-                    margin={{
-                      top: 10,
-                      right: 10,
-                      left: 10,
-                      bottom: 10,
-                    }}
+            {/* ==================================================
+                GRÁFICO CON SCROLL HORIZONTAL EN TELÉFONOS
+                ==================================================
+
+                La tarjeta permanece dentro del ancho de la pantalla.
+                Solamente este viewport puede desplazarse lateralmente.
+
+                El lienzo interno conserva 720 px en teléfonos para
+                evitar que Recharts comprima las barras y etiquetas.
+                Desde md vuelve a ocupar el ancho normal.
+                ================================================== */}
+            <div
+              className="
+                report-sales-chart-scroll
+                mt-6
+                w-full
+                min-w-0
+                max-w-full
+                overflow-x-auto
+                overflow-y-hidden
+                pb-2
+              "
+            >
+              <div
+                className="
+                  report-sales-chart-canvas
+                  h-80
+                  w-[720px]
+                  min-w-[720px]
+                  md:w-full
+                  md:min-w-0
+                "
+              >
+                {salesChartData.length === 0 ? (
+                  // Estado vacío cuando todavía no existen ventas.
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-sm text-slate-500">
+                      No hay ventas disponibles para graficar.
+                    </p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                    minWidth={0}
                   >
-                    {/* Líneas horizontales de referencia. */}
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                    />
-
-                    {/* Nombre de cada sucursal. */}
-                    <XAxis
-                      dataKey="sucursal"
-                      tick={{
-                        fontSize: 12,
+                    <BarChart
+                      data={salesChartData}
+                      margin={{
+                        top: 10,
+                        right: 10,
+                        left: 10,
+                        bottom: 10,
                       }}
-                    />
+                    >
+                      {/* Líneas horizontales de referencia. */}
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                      />
 
-                    {/* Escala monetaria. */}
-                    <YAxis
-                      tick={{
-                        fontSize: 12,
-                      }}
-                      tickFormatter={(value) =>
-                        `S/ ${value}`
-                      }
-                    />
+                      {/* Nombre de cada sucursal. */}
+                      <XAxis
+                        dataKey="sucursal"
+                        tick={{
+                          fontSize: 12,
+                        }}
+                      />
 
-                    {/* Información al pasar el cursor. */}
-                    <Tooltip
-                      formatter={(value) => [
-                        `S/ ${Number(value).toFixed(2)}`,
-                        'Ventas',
-                      ]}
-                    />
+                      {/* Escala monetaria. */}
+                      <YAxis
+                        tick={{
+                          fontSize: 12,
+                        }}
+                        tickFormatter={(value) =>
+                          `S/ ${value}`
+                        }
+                      />
 
-                    {/* Importe vendido por sucursal. */}
-                    <Bar
-                      dataKey="ventas"
-                      fill="#0f766e"
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+                      {/* Información al pasar el cursor. */}
+                      <Tooltip
+                        formatter={(value) => [
+                          `S/ ${Number(value).toFixed(2)}`,
+                          'Ventas',
+                        ]}
+                      />
+
+                      {/* Importe vendido por sucursal. */}
+                      <Bar
+                        dataKey="ventas"
+                        fill="#0f766e"
+                        radius={[6, 6, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
             </div>
           </section>
 

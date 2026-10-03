@@ -3,13 +3,18 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Calculator,
   CheckCircle2,
+  ChevronDown,
+  Info,
   Table2,
   VectorSquare,
 } from 'lucide-react'
 
 import {
   createOperation,
+  getBranches,
+  getDashboard,
   getMatrices,
+  getProducts,
   getVectors,
   type Matrix,
   type Vector,
@@ -104,6 +109,29 @@ function Operaciones() {
   const [vectors, setVectors] = useState<Vector[]>([])
   const [matrices, setMatrices] = useState<Matrix[]>([])
 
+  // Controla qué operando tiene abierto su detalle.
+  const [
+    expandedOperand,
+    setExpandedOperand,
+  ] = useState<'first' | 'second' | null>(null)
+
+  // Referencias empresariales utilizadas para interpretar
+  // vectores y matrices ya registradas.
+  const [
+    productReferenceLabels,
+    setProductReferenceLabels,
+  ] = useState<string[]>([])
+
+  const [
+    salesReferenceLabels,
+    setSalesReferenceLabels,
+  ] = useState<string[]>([])
+
+  const [
+    branchReferenceLabels,
+    setBranchReferenceLabels,
+  ] = useState<string[]>([])
+
   // ==========================================================
   // SELECCIÓN DEL USUARIO
   // ==========================================================
@@ -155,6 +183,56 @@ function Operaciones() {
 
         setVectors(vectorData)
         setMatrices(matrixData)
+
+        // Las referencias son complementarias:
+        // si alguna consulta falla, las operaciones siguen funcionando.
+        const [
+          productsResult,
+          branchesResult,
+          dashboardResult,
+        ] = await Promise.allSettled([
+          getProducts(),
+          getBranches(),
+          getDashboard(),
+        ])
+
+        if (productsResult.status === 'fulfilled') {
+          const orderedProducts =
+            productsResult.value
+              .filter((product) => product.is_active)
+              .sort((first, second) => first.id - second.id)
+
+          setProductReferenceLabels(
+            orderedProducts.map((product) => product.name),
+          )
+        }
+
+        if (branchesResult.status === 'fulfilled') {
+          const orderedBranches =
+            branchesResult.value
+              .filter(
+                (branch) =>
+                  branch.company_id === DEFAULT_COMPANY_ID &&
+                  branch.is_active,
+              )
+              .sort((first, second) => first.id - second.id)
+
+          setBranchReferenceLabels(
+            orderedBranches.map((branch) => branch.name),
+          )
+        }
+
+        if (dashboardResult.status === 'fulfilled') {
+          const orderedSales =
+            [...dashboardResult.value.sales_by_product].sort(
+              (first, second) =>
+                first.product_id - second.product_id,
+            )
+
+          setSalesReferenceLabels(
+            orderedSales.map((item) => item.product_name),
+          )
+        }
       } catch (requestError) {
         console.error(
           'Error al cargar datos matemáticos:',
@@ -230,6 +308,7 @@ function Operaciones() {
     setResult(null)
     setError('')
     setSuccess('')
+    setExpandedOperand(null)
 
     // Elegimos automáticamente una operación válida
     // para el nuevo tipo de estructura.
@@ -238,6 +317,260 @@ function Operaciones() {
     } else {
       setOperationType('add_matrix')
     }
+  }
+
+  // ==========================================================
+  // REFERENCIAS SEMÁNTICAS
+  // ==========================================================
+
+  function getVectorLabels(
+    vector: Vector,
+  ): string[] | null {
+    const normalizedName =
+      vector.name.trim().toLowerCase()
+
+    if (
+      normalizedName === 'stock total por producto' ||
+      normalizedName === 'precio actual por producto'
+    ) {
+      if (
+        productReferenceLabels.length <
+        vector.values.length
+      ) {
+        return null
+      }
+
+      return productReferenceLabels.slice(
+        0,
+        vector.values.length,
+      )
+    }
+
+    if (
+      normalizedName === 'unidades vendidas por producto' ||
+      normalizedName === 'importe vendido por producto'
+    ) {
+      if (
+        salesReferenceLabels.length <
+        vector.values.length
+      ) {
+        return null
+      }
+
+      return salesReferenceLabels.slice(
+        0,
+        vector.values.length,
+      )
+    }
+
+    return null
+  }
+
+  function getMatrixReferences(
+    matrix: Matrix,
+  ): {
+    rowLabels: string[]
+    columnLabels: string[]
+  } | null {
+    const normalizedName =
+      matrix.name.trim().toLowerCase()
+
+    const isBusinessMatrix =
+      normalizedName === 'stock por sucursal y producto' ||
+      normalizedName === 'stock mínimo por sucursal y producto' ||
+      normalizedName === 'valor de inventario por sucursal y producto'
+
+    if (
+      !isBusinessMatrix ||
+      branchReferenceLabels.length < matrix.rows ||
+      productReferenceLabels.length < matrix.columns
+    ) {
+      return null
+    }
+
+    return {
+      rowLabels: branchReferenceLabels.slice(
+        0,
+        matrix.rows,
+      ),
+      columnLabels: productReferenceLabels.slice(
+        0,
+        matrix.columns,
+      ),
+    }
+  }
+
+  function renderVectorMeaning(
+    vector: Vector,
+  ) {
+    const labels = getVectorLabels(vector)
+
+    return (
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Significado de los componentes
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Vector {vector.name} · dimensión {vector.dimension}
+          </p>
+        </div>
+
+        {labels ? (
+          <div className="overflow-x-auto pb-2">
+            <table className="min-w-max text-left">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/70">
+                  {labels.map((label, index) => (
+                    <th
+                      key={`${vector.id}-${index}-${label}`}
+                      className="min-w-[180px] max-w-[240px] px-4 py-3 text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300"
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  {vector.values.map((value, index) => (
+                    <td
+                      key={`${vector.id}-${index}`}
+                      className="px-4 py-4"
+                    >
+                      <span className="inline-flex min-w-10 items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white dark:bg-slate-950">
+                        {value}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3 px-5 py-5">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+              <Info size={17} />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                Referencias no disponibles
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {vector.values.map((value, index) => (
+                  <span
+                    key={`${vector.id}-position-${index}`}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    Componente {index + 1}:{' '}
+                    <strong className="font-mono text-slate-900 dark:text-white">
+                      {value}
+                    </strong>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  function renderMatrixMeaning(
+    matrix: Matrix,
+  ) {
+    const references =
+      getMatrixReferences(matrix)
+
+    return (
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Significado de filas y columnas
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Matriz {matrix.name} · {matrix.rows} × {matrix.columns}
+          </p>
+        </div>
+
+        {references ? (
+          <div className="overflow-x-auto pb-2">
+            <table className="min-w-max border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/70">
+                  <th className="sticky left-0 z-10 min-w-[190px] border-r border-slate-200 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    Sucursal / Producto
+                  </th>
+
+                  {references.columnLabels.map(
+                    (label, index) => (
+                      <th
+                        key={`${matrix.id}-column-${index}`}
+                        className="min-w-[180px] max-w-[240px] px-4 py-3 text-right text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300"
+                      >
+                        {label}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {matrix.values.map((row, rowIndex) => (
+                  <tr key={`${matrix.id}-row-${rowIndex}`}>
+                    <td className="sticky left-0 z-10 border-r border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      {references.rowLabels[rowIndex]}
+                    </td>
+
+                    {row.map((value, columnIndex) => (
+                      <td
+                        key={`${matrix.id}-${rowIndex}-${columnIndex}`}
+                        className="px-4 py-4 text-right"
+                      >
+                        <span className="inline-flex min-w-12 items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white dark:bg-slate-950">
+                          {value}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-x-auto p-5">
+            <table className="min-w-max border-collapse text-xs">
+              <tbody>
+                {matrix.values.map((row, rowIndex) => (
+                  <tr key={`${matrix.id}-fallback-${rowIndex}`}>
+                    <td className="border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      Fila {rowIndex + 1}
+                    </td>
+
+                    {row.map((value, columnIndex) => (
+                      <td
+                        key={`${matrix.id}-fallback-${rowIndex}-${columnIndex}`}
+                        className="border border-slate-200 bg-white px-3 py-2 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      >
+                        C{columnIndex + 1}:{' '}
+                        <strong className="font-mono text-slate-900 dark:text-white">
+                          {value}
+                        </strong>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )
   }
 
   // ==========================================================
@@ -515,7 +848,7 @@ function Operaciones() {
             (row, index) => (
               <p
                 key={index}
-                className="whitespace-nowrap font-mono text-lg font-bold text-slate-900"
+                className="whitespace-nowrap font-mono text-lg font-bold text-slate-900 dark:text-slate-100"
               >
                 [{row.join(', ')}]
               </p>
@@ -528,7 +861,7 @@ function Operaciones() {
     // Vector: [1, 2, 3]
     if (Array.isArray(result)) {
       return (
-        <p className="font-mono text-xl font-bold text-slate-900">
+        <p className="font-mono text-xl font-bold text-slate-900 dark:text-slate-100">
           [{result.join(', ')}]
         </p>
       )
@@ -536,7 +869,7 @@ function Operaciones() {
 
     // Resultado escalar.
     return (
-      <p className="font-mono text-3xl font-bold text-slate-900">
+      <p className="font-mono text-3xl font-bold text-slate-900 dark:text-slate-100">
         {String(result)}
       </p>
     )
@@ -820,6 +1153,152 @@ function Operaciones() {
               )}
             </div>
 
+            {/* ===============================================
+                DETALLE SEMÁNTICO DE LOS OPERANDOS
+                =============================================== */}
+
+            {(
+              (dataType === 'vector' && firstVector) ||
+              (dataType === 'matrix' && firstMatrix)
+            ) && (
+                <div className="mt-6 space-y-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedOperand(
+                        expandedOperand === 'first'
+                          ? null
+                          : 'first',
+                      )
+                    }
+                    className={`
+                    flex
+                    w-full
+                    items-center
+                    justify-between
+                    rounded-xl
+                    border
+                    px-4
+                    py-3
+                    text-left
+                    transition-colors
+
+                    ${expandedOperand === 'first'
+                        ? 'border-blue-200 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/30'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/60'
+                      }
+                  `}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {dataType === 'vector'
+                          ? 'Interpretar primer vector'
+                          : 'Interpretar Matriz A'}
+                      </p>
+
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        Muestra qué representa cada posición.
+                      </p>
+                    </div>
+
+                    <ChevronDown
+                      size={18}
+                      className={`
+                      text-slate-400
+                      transition-transform
+                      ${expandedOperand === 'first'
+                          ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                          : ''
+                        }
+                    `}
+                    />
+                  </button>
+
+                  {expandedOperand === 'first' && (
+                    <div>
+                      {dataType === 'vector' && firstVector
+                        ? renderVectorMeaning(firstVector)
+                        : dataType === 'matrix' && firstMatrix
+                          ? renderMatrixMeaning(firstMatrix)
+                          : null}
+                    </div>
+                  )}
+
+                  {requiresSecondOperand && (
+                    (
+                      dataType === 'vector' && secondVector
+                    ) ||
+                    (
+                      dataType === 'matrix' && secondMatrix
+                    )
+                  ) && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedOperand(
+                              expandedOperand === 'second'
+                                ? null
+                                : 'second',
+                            )
+                          }
+                          className={`
+                        flex
+                        w-full
+                        items-center
+                        justify-between
+                        rounded-xl
+                        border
+                        px-4
+                        py-3
+                        text-left
+                        transition-colors
+
+                        ${expandedOperand === 'second'
+                              ? 'border-blue-200 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/30'
+                              : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/60'
+                            }
+                      `}
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                              {dataType === 'vector'
+                                ? 'Interpretar segundo vector'
+                                : 'Interpretar Matriz B'}
+                            </p>
+
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                              Muestra qué representa cada posición.
+                            </p>
+                          </div>
+
+                          <ChevronDown
+                            size={18}
+                            className={`
+                          text-slate-400
+                          transition-transform
+                          ${expandedOperand === 'second'
+                                ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                                : ''
+                              }
+                        `}
+                          />
+                        </button>
+
+                        {expandedOperand === 'second' && (
+                          <div>
+                            {dataType === 'vector' && secondVector
+                              ? renderVectorMeaning(secondVector)
+                              : dataType === 'matrix' && secondMatrix
+                                ? renderMatrixMeaning(secondMatrix)
+                                : null}
+                          </div>
+                        )}
+                      </>
+                    )}
+                </div>
+              )}
+
             {/* Escalar. */}
             {requiresScalar && (
               <div className="mt-5 max-w-sm">
@@ -882,7 +1361,7 @@ function Operaciones() {
             </div>
 
             <div className="p-6">
-              <div className="overflow-x-auto rounded-xl bg-slate-50 p-6">
+              <div className="overflow-x-auto rounded-xl bg-slate-50 p-6 dark:bg-slate-900">
                 {renderResult()}
               </div>
             </div>

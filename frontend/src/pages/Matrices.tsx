@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 
 import {
+  ChevronDown,
+  Info,
   Sparkles,
   Table2,
 } from 'lucide-react'
@@ -66,6 +68,27 @@ function Matrices() {
   // Lista de matrices registradas.
   const [matrices, setMatrices] = useState<Matrix[]>([])
 
+  // ID de la matriz actualmente desplegada.
+  // Solo mantenemos una fila abierta a la vez.
+  const [
+    expandedMatrixId,
+    setExpandedMatrixId,
+  ] = useState<number | null>(null)
+
+  // Referencias empresariales utilizadas para interpretar
+  // las filas y columnas de matrices ya registradas.
+  //
+  // Las filas representan sucursales y las columnas productos.
+  const [
+    branchReferenceLabels,
+    setBranchReferenceLabels,
+  ] = useState<string[]>([])
+
+  const [
+    productReferenceLabels,
+    setProductReferenceLabels,
+  ] = useState<string[]>([])
+
   // ============================================================
   // FORMULARIO DE CREACIÓN
   // ============================================================
@@ -117,6 +140,74 @@ function Matrices() {
 
       // Actualizamos la lista mostrada en pantalla.
       setMatrices(data)
+
+      // --------------------------------------------------------
+      // REFERENCIAS PARA INTERPRETAR MATRICES EMPRESARIALES
+      // --------------------------------------------------------
+      //
+      // Estas consultas son complementarias. Si alguna falla,
+      // las matrices siguen mostrándose y únicamente se pierde
+      // la interpretación semántica del detalle desplegable.
+      const [
+        branchesResult,
+        productsResult,
+      ] = await Promise.allSettled([
+        getBranches(),
+        getProducts(),
+      ])
+
+      if (
+        branchesResult.status ===
+        'fulfilled'
+      ) {
+        // Repetimos exactamente la misma regla utilizada
+        // al generar una matriz empresarial:
+        // empresa actual + sucursales activas + orden por ID.
+        const orderedBranches =
+          branchesResult.value
+            .filter(
+              (branch) =>
+                branch.company_id ===
+                DEFAULT_COMPANY_ID &&
+                branch.is_active,
+            )
+            .sort(
+              (first, second) =>
+                first.id - second.id,
+            )
+
+        setBranchReferenceLabels(
+          orderedBranches.map(
+            (branch) =>
+              branch.name,
+          ),
+        )
+      }
+
+      if (
+        productsResult.status ===
+        'fulfilled'
+      ) {
+        // Repetimos también el orden original de las columnas:
+        // productos activos ordenados por ID.
+        const orderedProducts =
+          productsResult.value
+            .filter(
+              (product) =>
+                product.is_active,
+            )
+            .sort(
+              (first, second) =>
+                first.id - second.id,
+            )
+
+        setProductReferenceLabels(
+          orderedProducts.map(
+            (product) =>
+              product.name,
+          ),
+        )
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -416,6 +507,74 @@ function Matrices() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // ============================================================
+  // INTERPRETAR MATRICES REGISTRADAS
+  // ============================================================
+
+  const getRegisteredMatrixReferences = (
+    matrix: Matrix,
+  ): {
+    rowLabels: string[]
+    columnLabels: string[]
+  } | null => {
+    const normalizedName =
+      matrix.name
+        .trim()
+        .toLowerCase()
+
+    // Las tres matrices empresariales actuales utilizan
+    // exactamente la misma estructura:
+    // filas = sucursales
+    // columnas = productos.
+    const isBusinessMatrix =
+      normalizedName ===
+      'stock por sucursal y producto' ||
+      normalizedName ===
+      'stock mínimo por sucursal y producto' ||
+      normalizedName ===
+      'valor de inventario por sucursal y producto'
+
+    if (!isBusinessMatrix) {
+      return null
+    }
+
+    // Si los datos actuales ya no tienen suficientes etiquetas,
+    // no asumimos una correspondencia incorrecta.
+    if (
+      branchReferenceLabels.length <
+      matrix.rows ||
+      productReferenceLabels.length <
+      matrix.columns
+    ) {
+      return null
+    }
+
+    return {
+      rowLabels:
+        branchReferenceLabels.slice(
+          0,
+          matrix.rows,
+        ),
+
+      columnLabels:
+        productReferenceLabels.slice(
+          0,
+          matrix.columns,
+        ),
+    }
+  }
+
+  const toggleRegisteredMatrix = (
+    matrixId: number,
+  ) => {
+    setExpandedMatrixId(
+      (current) =>
+        current === matrixId
+          ? null
+          : matrixId,
+    )
   }
 
   // ============================================================
@@ -727,7 +886,8 @@ function Matrices() {
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Consulta las matrices disponibles para tus análisis.
+                  Consulta las matrices disponibles y presiona una fila
+                  para interpretar sus filas y columnas.
                 </p>
               </div>
 
@@ -766,86 +926,306 @@ function Matrices() {
             </div>
           ) : (
             /* Tabla de matrices, siguiendo el diseño de Vectores. */
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left">
+            <div className="overflow-hidden">
+              <table className="w-full table-fixed text-left">
 
-                <thead className="border-b border-slate-100 bg-slate-50">
+                <thead className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[24%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Matriz
                     </th>
 
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[12%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Dimensión
                     </th>
 
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[34%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Valores
                     </th>
 
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-[30%] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Descripción
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-100">
-                  {matrices.map((matrix) => (
-                    <tr
-                      key={matrix.id}
-                      className="transition hover:bg-slate-50"
-                    >
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {matrices.map((matrix) => {
+                    const isExpanded =
+                      expandedMatrixId ===
+                      matrix.id
 
-                      {/* Identificación de la matriz. */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                    const references =
+                      getRegisteredMatrixReferences(
+                        matrix,
+                      )
 
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                            <Table2 className="h-4 w-4 text-slate-600" />
-                          </div>
+                    return (
+                      <Fragment key={matrix.id}>
+                        <tr
+                          role="button"
+                          tabIndex={0}
+                          aria-expanded={isExpanded}
+                          onClick={() =>
+                            toggleRegisteredMatrix(
+                              matrix.id,
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === 'Enter' ||
+                              event.key === ' '
+                            ) {
+                              event.preventDefault()
 
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {matrix.name}
-                            </p>
+                              toggleRegisteredMatrix(
+                                matrix.id,
+                              )
+                            }
+                          }}
+                          className={`
+                            cursor-pointer
+                            transition-colors
+                            duration-150
 
-                            <p className="text-xs text-slate-400">
-                              ID #{matrix.id}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+                            ${isExpanded
+                              ? 'bg-blue-50/70 dark:bg-blue-950/30'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                            }
+                          `}
+                        >
+                          {/* Identificación de la matriz. */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                                <Table2 className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                              </div>
 
-                      {/* Dimensión matemática. */}
-                      <td className="px-6 py-4">
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">
-                          {matrix.rows} × {matrix.columns}
-                        </span>
-                      </td>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                  {matrix.name}
+                                </p>
 
-                      {/* Valores de la matriz. */}
-                      <td className="px-6 py-4">
-                        <div className="w-fit min-w-[180px] rounded-lg bg-slate-900 px-4 py-3">
+                                <p className="text-xs text-slate-400 dark:text-slate-500">
+                                  ID #{matrix.id}
+                                </p>
+                              </div>
 
-                          {matrix.values.map(
-                            (row, rowIndex) => (
-                              <p
-                                key={rowIndex}
-                                className="whitespace-nowrap font-mono text-sm leading-6 text-white"
-                              >
-                                [{row.join(', ')}]
-                              </p>
-                            ),
-                          )}
-                        </div>
-                      </td>
+                              {/* Indicador de fila desplegable. */}
+                              <ChevronDown
+                                size={17}
+                                className={`
+                                  shrink-0
+                                  text-slate-400
+                                  transition-transform
+                                  duration-200
 
-                      {/* Descripción. */}
-                      <td className="max-w-sm px-6 py-4 text-sm text-slate-600">
-                        {matrix.description ?? 'Sin descripción'}
-                      </td>
-                    </tr>
-                  ))}
+                                  ${isExpanded
+                                    ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                                    : ''
+                                  }
+                                `}
+                              />
+                            </div>
+                          </td>
+
+                          {/* Dimensión matemática. */}
+                          <td className="px-6 py-4">
+                            <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              {matrix.rows} × {matrix.columns}
+                            </span>
+                          </td>
+
+                          {/* Valores resumidos.
+                              El contenido se ajusta dentro de la celda
+                              para mantener estática la tabla principal. */}
+                          <td className="px-6 py-4">
+                            <div className="max-w-full rounded-lg bg-slate-900 px-4 py-3 dark:bg-slate-950">
+                              {matrix.values.map(
+                                (
+                                  row,
+                                  rowIndex,
+                                ) => (
+                                  <p
+                                    key={rowIndex}
+                                    className="break-words font-mono text-sm leading-6 text-white"
+                                  >
+                                    [{row.join(', ')}]
+                                  </p>
+                                ),
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Descripción. */}
+                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                            {matrix.description ??
+                              'Sin descripción'}
+                          </td>
+                        </tr>
+
+                        {/* ======================================
+                            DETALLE DESPLEGABLE
+                            ====================================== */}
+                        {isExpanded && (
+                          <tr className="bg-slate-50/80 dark:bg-slate-950/40">
+                            <td
+                              colSpan={4}
+                              className="px-6 pb-6 pt-2"
+                            >
+                              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+
+                                <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+                                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                    Significado de filas y columnas
+                                  </p>
+
+                                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                    Las filas representan sucursales y las
+                                    columnas productos, respetando el orden
+                                    utilizado al generar la matriz.
+                                  </p>
+                                </div>
+
+                                {references ? (
+                                  /* El scroll horizontal pertenece
+                                     solamente a este detalle. */
+                                  <div className="matrix-detail-scroll overflow-x-auto pb-2">
+                                    <table className="min-w-max border-collapse text-sm">
+                                      <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/70">
+                                          <th className="sticky left-0 z-10 min-w-[190px] border-r border-slate-200 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                            Sucursal / Producto
+                                          </th>
+
+                                          {references.columnLabels.map(
+                                            (
+                                              label,
+                                              columnIndex,
+                                            ) => (
+                                              <th
+                                                key={`${matrix.id}-column-${columnIndex}-${label}`}
+                                                className="min-w-[180px] max-w-[240px] px-4 py-3 text-right text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300"
+                                              >
+                                                {label}
+                                              </th>
+                                            ),
+                                          )}
+                                        </tr>
+                                      </thead>
+
+                                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {matrix.values.map(
+                                          (
+                                            row,
+                                            rowIndex,
+                                          ) => (
+                                            <tr
+                                              key={`${matrix.id}-row-${rowIndex}`}
+                                            >
+                                              {/* La sucursal queda fija mientras
+                                                  se desplazan los productos. */}
+                                              <td className="sticky left-0 z-10 min-w-[190px] border-r border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                                {
+                                                  references
+                                                    .rowLabels[
+                                                  rowIndex
+                                                  ]
+                                                }
+                                              </td>
+
+                                              {row.map(
+                                                (
+                                                  value,
+                                                  columnIndex,
+                                                ) => (
+                                                  <td
+                                                    key={`${matrix.id}-${rowIndex}-${columnIndex}`}
+                                                    className="px-4 py-4 text-right"
+                                                  >
+                                                    <span className="inline-flex min-w-12 items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white dark:bg-slate-950">
+                                                      {value}
+                                                    </span>
+                                                  </td>
+                                                ),
+                                              )}
+                                            </tr>
+                                          ),
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                ) : (
+                                  /* Matrices manuales o referencias
+                                     que ya no coinciden con los datos. */
+                                  <div className="flex items-start gap-3 px-5 py-5">
+                                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+                                      <Info size={17} />
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                        Referencias no disponibles
+                                      </p>
+
+                                      <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                        Esta matriz no conserva etiquetas
+                                        semánticas para sus filas y columnas.
+                                        Puede tratarse de una matriz manual o
+                                        de una matriz empresarial cuya
+                                        estructura ya no coincide con las
+                                        sucursales y productos actuales.
+                                      </p>
+
+                                      {/* Mostramos la matriz por posiciones
+                                          sin inventar significados. */}
+                                      <div className="mt-4 overflow-x-auto pb-2">
+                                        <table className="min-w-max border-collapse text-xs">
+                                          <tbody>
+                                            {matrix.values.map(
+                                              (
+                                                row,
+                                                rowIndex,
+                                              ) => (
+                                                <tr
+                                                  key={`${matrix.id}-fallback-${rowIndex}`}
+                                                >
+                                                  <td className="whitespace-nowrap border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                    Fila {rowIndex + 1}
+                                                  </td>
+
+                                                  {row.map(
+                                                    (
+                                                      value,
+                                                      columnIndex,
+                                                    ) => (
+                                                      <td
+                                                        key={`${matrix.id}-fallback-${rowIndex}-${columnIndex}`}
+                                                        className="border border-slate-200 bg-white px-3 py-2 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                                                      >
+                                                        C{columnIndex + 1}:{' '}
+                                                        <strong className="font-mono text-slate-900 dark:text-white">
+                                                          {value}
+                                                        </strong>
+                                                      </td>
+                                                    ),
+                                                  )}
+                                                </tr>
+                                              ),
+                                            )}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

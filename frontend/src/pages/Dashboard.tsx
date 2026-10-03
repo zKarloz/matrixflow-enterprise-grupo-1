@@ -244,12 +244,19 @@ function Dashboard() {
                 </div>
 
                 <div className="p-6">
-                  <SalesChart
-                    data={
-                      dashboard
-                        .sales_by_period
-                    }
-                  />
+                  {/* En teléfonos el gráfico mantiene un ancho
+                      suficiente para evitar que sus datos se compriman.
+                      La barra horizontal pertenece solo al gráfico. */}
+                  <div className="overflow-x-auto pb-2">
+                    <div className="min-w-[680px] md:min-w-0">
+                      <SalesChart
+                        data={
+                          dashboard
+                            .sales_by_period
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -268,12 +275,18 @@ function Dashboard() {
                   </div>
 
                   <div className="p-6">
-                    <SalesByBranchChart
-                      data={
-                        dashboard
-                          .sales_by_branch
-                      }
-                    />
+                    {/* Scroll independiente para conservar la
+                        legibilidad del gráfico en teléfonos. */}
+                    <div className="overflow-x-auto pb-2">
+                      <div className="min-w-[680px] md:min-w-0">
+                        <SalesByBranchChart
+                          data={
+                            dashboard
+                              .sales_by_branch
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                 </section>
 
@@ -290,12 +303,18 @@ function Dashboard() {
                   </div>
 
                   <div className="p-6">
-                    <SalesByProductChart
-                      data={
-                        dashboard
-                          .sales_by_product
-                      }
-                    />
+                    {/* Los nombres de productos suelen ser largos,
+                        por eso evitamos comprimirlos en pantallas pequeñas. */}
+                    <div className="overflow-x-auto pb-2">
+                      <div className="min-w-[680px] md:min-w-0">
+                        <SalesByProductChart
+                          data={
+                            dashboard
+                              .sales_by_product
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                 </section>
               </div>

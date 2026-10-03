@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 
 import {
     CheckCircle2,
+    ChevronDown,
+    Info,
     Sigma,
     VectorSquare,
 } from 'lucide-react'
 
 import {
     createOperation,
+    getDashboard,
+    getProducts,
     getVectors,
     type Operation,
     type Vector,
@@ -31,6 +35,24 @@ function CombinacionesLineales() {
 
     // Vectores recuperados desde PostgreSQL.
     const [vectors, setVectors] = useState<Vector[]>([])
+
+    // Controla qué bloque de interpretación está desplegado.
+    const [
+        expandedDetail,
+        setExpandedDetail,
+    ] = useState<'u' | 'v' | 'result' | null>(null)
+
+    // Referencias de productos utilizadas para interpretar
+    // los componentes de vectores empresariales.
+    const [
+        productReferenceLabels,
+        setProductReferenceLabels,
+    ] = useState<string[]>([])
+
+    const [
+        salesReferenceLabels,
+        setSalesReferenceLabels,
+    ] = useState<string[]>([])
 
     // Identificadores de los vectores seleccionados.
     const [firstVectorId, setFirstVectorId] = useState('')
@@ -85,6 +107,59 @@ function CombinacionesLineales() {
                 const data = await getVectors()
 
                 setVectors(data)
+
+                // Las referencias empresariales son opcionales.
+                const [
+                    productsResult,
+                    dashboardResult,
+                ] = await Promise.allSettled([
+                    getProducts(),
+                    getDashboard(),
+                ])
+
+                if (
+                    productsResult.status ===
+                    'fulfilled'
+                ) {
+                    const orderedProducts =
+                        productsResult.value
+                            .filter(
+                                (product) =>
+                                    product.is_active,
+                            )
+                            .sort(
+                                (first, second) =>
+                                    first.id - second.id,
+                            )
+
+                    setProductReferenceLabels(
+                        orderedProducts.map(
+                            (product) => product.name,
+                        ),
+                    )
+                }
+
+                if (
+                    dashboardResult.status ===
+                    'fulfilled'
+                ) {
+                    const orderedSales =
+                        [
+                            ...dashboardResult.value
+                                .sales_by_product,
+                        ].sort(
+                            (first, second) =>
+                                first.product_id -
+                                second.product_id,
+                        )
+
+                    setSalesReferenceLabels(
+                        orderedSales.map(
+                            (item) =>
+                                item.product_name,
+                        ),
+                    )
+                }
             } catch (requestError) {
                 console.error(
                     'Error al cargar vectores:',
@@ -125,6 +200,159 @@ function CombinacionesLineales() {
             ),
         [vectors, secondVectorId],
     )
+
+    // ==========================================================
+    // INTERPRETAR COMPONENTES
+    // ==========================================================
+
+    function getVectorLabels(
+        vector: Vector,
+    ): string[] | null {
+        const normalizedName =
+            vector.name.trim().toLowerCase()
+
+        if (
+            normalizedName ===
+            'stock total por producto' ||
+            normalizedName ===
+            'precio actual por producto'
+        ) {
+            if (
+                productReferenceLabels.length <
+                vector.values.length
+            ) {
+                return null
+            }
+
+            return productReferenceLabels.slice(
+                0,
+                vector.values.length,
+            )
+        }
+
+        if (
+            normalizedName ===
+            'unidades vendidas por producto' ||
+            normalizedName ===
+            'importe vendido por producto'
+        ) {
+            if (
+                salesReferenceLabels.length <
+                vector.values.length
+            ) {
+                return null
+            }
+
+            return salesReferenceLabels.slice(
+                0,
+                vector.values.length,
+            )
+        }
+
+        return null
+    }
+
+    function renderVectorDetail(
+        vector: Vector,
+    ) {
+        const labels = getVectorLabels(vector)
+
+        return (
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                {labels ? (
+                    <div className="overflow-x-auto pb-2">
+                        <table className="min-w-max text-left">
+                            <thead>
+                                <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/70">
+                                    {labels.map(
+                                        (label, index) => (
+                                            <th
+                                                key={`${vector.id}-${index}-${label}`}
+                                                className="min-w-[180px] max-w-[240px] px-4 py-3 text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300"
+                                            >
+                                                {label}
+                                            </th>
+                                        ),
+                                    )}
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr>
+                                    {vector.values.map(
+                                        (value, index) => (
+                                            <td
+                                                key={`${vector.id}-${index}`}
+                                                className="px-4 py-4"
+                                            >
+                                                <span className="inline-flex min-w-10 items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white dark:bg-slate-950">
+                                                    {value}
+                                                </span>
+                                            </td>
+                                        ),
+                                    )}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="flex items-start gap-3 p-5">
+                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+                            <Info size={17} />
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            {vector.values.map(
+                                (value, index) => (
+                                    <span
+                                        key={`${vector.id}-position-${index}`}
+                                        className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                    >
+                                        Componente {index + 1}:{' '}
+                                        <strong className="font-mono text-slate-900 dark:text-white">
+                                            {value}
+                                        </strong>
+                                    </span>
+                                ),
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Las etiquetas del resultado solo son seguras cuando
+    // ambos vectores representan exactamente las mismas posiciones.
+    function getResultLabels(): string[] | null {
+        if (!firstVector || !secondVector) {
+            return null
+        }
+
+        const firstLabels =
+            getVectorLabels(firstVector)
+
+        const secondLabels =
+            getVectorLabels(secondVector)
+
+        if (
+            !firstLabels ||
+            !secondLabels ||
+            firstLabels.length !== secondLabels.length
+        ) {
+            return null
+        }
+
+        const sameMeaning =
+            firstLabels.every(
+                (label, index) =>
+                    label === secondLabels[index],
+            )
+
+        return sameMeaning
+            ? firstLabels
+            : null
+    }
 
     // ==========================================================
     // CALCULAR COMBINACIÓN LINEAL
@@ -396,58 +624,136 @@ function CombinacionesLineales() {
                         {(firstVector || secondVector) && (
                             <div className="mt-6 grid gap-4 md:grid-cols-2">
 
-                                {/* Vector U. */}
-                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="flex items-center gap-2">
-                                        <VectorSquare className="h-4 w-4 text-slate-500" />
+                                {/* Vector U desplegable. */}
+                                <div>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setExpandedDetail(
+                                                expandedDetail === 'u'
+                                                    ? null
+                                                    : 'u',
+                                            )
+                                        }
+                                        className={`
+                                            flex
+                                            w-full
+                                            items-center
+                                            justify-between
+                                            rounded-xl
+                                            border
+                                            p-4
+                                            text-left
+                                            transition-colors
 
-                                        <p className="text-sm font-semibold text-slate-700">
-                                            U
-                                        </p>
-                                    </div>
+                                            ${expandedDetail === 'u'
+                                                ? 'border-blue-200 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/30'
+                                                : 'border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/60'
+                                            }
+                                        `}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <VectorSquare className="h-4 w-4 text-slate-500 dark:text-slate-400" />
 
-                                    {firstVector ? (
-                                        <>
-                                            <p className="mt-2 text-sm font-medium text-slate-900">
-                                                {firstVector.name}
-                                            </p>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                                    Vector U
+                                                </p>
 
-                                            <code className="mt-3 block overflow-x-auto rounded-lg bg-slate-900 px-4 py-3 text-sm text-white">
-                                                [{firstVector.values.join(', ')}]
-                                            </code>
-                                        </>
-                                    ) : (
-                                        <p className="mt-2 text-sm text-slate-400">
-                                            No seleccionado
-                                        </p>
-                                    )}
+                                                <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                    {firstVector?.name ??
+                                                        'No seleccionado'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <ChevronDown
+                                            size={18}
+                                            className={`
+                                                text-slate-400
+                                                transition-transform
+                                                ${expandedDetail === 'u'
+                                                    ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                                                    : ''
+                                                }
+                                            `}
+                                        />
+                                    </button>
+
+                                    {expandedDetail === 'u' &&
+                                        firstVector && (
+                                            <div className="mt-2">
+                                                {renderVectorDetail(
+                                                    firstVector,
+                                                )}
+                                            </div>
+                                        )}
                                 </div>
 
-                                {/* Vector V. */}
-                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="flex items-center gap-2">
-                                        <VectorSquare className="h-4 w-4 text-slate-500" />
+                                {/* Vector V desplegable. */}
+                                <div>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setExpandedDetail(
+                                                expandedDetail === 'v'
+                                                    ? null
+                                                    : 'v',
+                                            )
+                                        }
+                                        className={`
+                                            flex
+                                            w-full
+                                            items-center
+                                            justify-between
+                                            rounded-xl
+                                            border
+                                            p-4
+                                            text-left
+                                            transition-colors
 
-                                        <p className="text-sm font-semibold text-slate-700">
-                                            V
-                                        </p>
-                                    </div>
+                                            ${expandedDetail === 'v'
+                                                ? 'border-blue-200 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/30'
+                                                : 'border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/60'
+                                            }
+                                        `}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <VectorSquare className="h-4 w-4 text-slate-500 dark:text-slate-400" />
 
-                                    {secondVector ? (
-                                        <>
-                                            <p className="mt-2 text-sm font-medium text-slate-900">
-                                                {secondVector.name}
-                                            </p>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                                    Vector V
+                                                </p>
 
-                                            <code className="mt-3 block overflow-x-auto rounded-lg bg-slate-900 px-4 py-3 text-sm text-white">
-                                                [{secondVector.values.join(', ')}]
-                                            </code>
-                                        </>
-                                    ) : (
-                                        <p className="mt-2 text-sm text-slate-400">
-                                            No seleccionado
-                                        </p>
-                                    )}
+                                                <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                    {secondVector?.name ??
+                                                        'No seleccionado'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <ChevronDown
+                                            size={18}
+                                            className={`
+                                                text-slate-400
+                                                transition-transform
+                                                ${expandedDetail === 'v'
+                                                    ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                                                    : ''
+                                                }
+                                            `}
+                                        />
+                                    </button>
+
+                                    {expandedDetail === 'v' &&
+                                        secondVector && (
+                                            <div className="mt-2">
+                                                {renderVectorDetail(
+                                                    secondVector,
+                                                )}
+                                            </div>
+                                        )}
                                 </div>
                             </div>
                         )}
@@ -573,19 +879,130 @@ function CombinacionesLineales() {
                                 </p>
                             </div>
 
+                            {/* Interpretación semántica del resultado. */}
+                            <div className="mt-5">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setExpandedDetail(
+                                            expandedDetail === 'result'
+                                                ? null
+                                                : 'result',
+                                        )
+                                    }
+                                    className={`
+                                        flex
+                                        w-full
+                                        items-center
+                                        justify-between
+                                        rounded-xl
+                                        border
+                                        px-4
+                                        py-3
+                                        text-left
+                                        transition-colors
+
+                                        ${expandedDetail === 'result'
+                                            ? 'border-blue-200 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/30'
+                                            : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/60'
+                                        }
+                                    `}
+                                >
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                            Interpretar vector resultante
+                                        </p>
+
+                                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                            Relaciona cada componente con su referencia cuando es posible.
+                                        </p>
+                                    </div>
+
+                                    <ChevronDown
+                                        size={18}
+                                        className={`
+                                            text-slate-400
+                                            transition-transform
+                                            ${expandedDetail === 'result'
+                                                ? 'rotate-180 text-blue-600 dark:text-blue-400'
+                                                : ''
+                                            }
+                                        `}
+                                    />
+                                </button>
+
+                                {expandedDetail === 'result' && (
+                                    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                                        {getResultLabels() ? (
+                                            <div className="overflow-x-auto pb-2">
+                                                <table className="min-w-max text-left">
+                                                    <thead>
+                                                        <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/70">
+                                                            {getResultLabels()!.map(
+                                                                (label, index) => (
+                                                                    <th
+                                                                        key={`result-${index}-${label}`}
+                                                                        className="min-w-[180px] max-w-[240px] px-4 py-3 text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300"
+                                                                    >
+                                                                        {label}
+                                                                    </th>
+                                                                ),
+                                                            )}
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tbody>
+                                                        <tr>
+                                                            {result.map(
+                                                                (value, index) => (
+                                                                    <td
+                                                                        key={`result-value-${index}`}
+                                                                        className="px-4 py-4"
+                                                                    >
+                                                                        <span className="inline-flex min-w-10 items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white dark:bg-slate-950">
+                                                                            {value}
+                                                                        </span>
+                                                                    </td>
+                                                                ),
+                                                            )}
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-2 p-5">
+                                                {result.map(
+                                                    (value, index) => (
+                                                        <span
+                                                            key={`result-position-${index}`}
+                                                            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                                        >
+                                                            Componente {index + 1}:{' '}
+                                                            <strong className="font-mono text-slate-900 dark:text-white">
+                                                                {value}
+                                                            </strong>
+                                                        </span>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Componentes individuales. */}
                             <div className="mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 
                                 {result.map((value, index) => (
                                     <div
                                         key={index}
-                                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800"
                                     >
                                         <p className="text-xs font-medium text-slate-400">
                                             Componente {index + 1}
                                         </p>
 
-                                        <p className="mt-1 font-mono text-lg font-bold text-slate-900">
+                                        <p className="mt-1 font-mono text-lg font-bold text-slate-900 dark:text-white">
                                             {value}
                                         </p>
                                     </div>

@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useState,
 } from 'react'
 
@@ -23,6 +24,21 @@ import {
 import {
     getCurrentUser,
 } from '../../services/api'
+
+
+// ============================================================
+// COLORES DE NAVEGACIÓN MÓVIL
+// ============================================================
+//
+// Tema claro:
+//   mismo azul pastel utilizado por Sidebar y Header.
+//
+// Tema oscuro:
+//   mismo slate-900 utilizado por la navegación de escritorio.
+// ============================================================
+
+const MOBILE_LIGHT_COLOR = '#E8F2FA'
+const MOBILE_DARK_COLOR = '#0f172a'
 
 
 interface MobileNavigationProps {
@@ -51,6 +67,84 @@ function MobileNavigation({
     isLoggingOut,
 }: MobileNavigationProps) {
     const location = useLocation()
+
+    // ========================================================
+    // SINCRONIZAR COLOR DEL NAVEGADOR EN ANDROID
+    // ========================================================
+    //
+    // theme-color permite que navegadores móviles compatibles
+    // adapten sus barras al tema visual de MatrixFlow.
+    //
+    // colorScheme ayuda también a que controles y superficies
+    // propias del navegador respeten claro / oscuro.
+    useEffect(() => {
+        const root =
+            document.documentElement
+
+        const applyBrowserTheme = () => {
+            const darkThemeEnabled =
+                root.classList.contains('dark')
+
+            const browserColor =
+                darkThemeEnabled
+                    ? MOBILE_DARK_COLOR
+                    : MOBILE_LIGHT_COLOR
+
+            // Actualizamos cualquier theme-color existente.
+            // Si index.html todavía no lo tiene, lo creamos.
+            const existingThemeColors =
+                document.querySelectorAll<HTMLMetaElement>(
+                    'meta[name="theme-color"]',
+                )
+
+            if (existingThemeColors.length > 0) {
+                existingThemeColors.forEach(
+                    (meta) => {
+                        meta.setAttribute(
+                            'content',
+                            browserColor,
+                        )
+                    },
+                )
+            } else {
+                const meta =
+                    document.createElement('meta')
+
+                meta.name = 'theme-color'
+                meta.content = browserColor
+
+                document.head.appendChild(meta)
+            }
+
+            // Indicamos al navegador qué esquema de color
+            // debe utilizar para sus propias superficies.
+            root.style.colorScheme =
+                darkThemeEnabled
+                    ? 'dark'
+                    : 'light'
+        }
+
+        applyBrowserTheme()
+
+        // Configuración cambia la clase .dark del <html>.
+        // El observador permite reaccionar inmediatamente.
+        const observer =
+            new MutationObserver(
+                applyBrowserTheme,
+            )
+
+        observer.observe(
+            root,
+            {
+                attributes: true,
+                attributeFilter: ['class'],
+            },
+        )
+
+        return () => {
+            observer.disconnect()
+        }
+    }, [])
 
     // Obtenemos el rol almacenado dentro del JWT para mostrar
     // únicamente las opciones permitidas visualmente.
@@ -127,26 +221,33 @@ function MobileNavigation({
           justify-between
 
           border-b
-          border-slate-800
+          border-[#cbd9e6]
 
-          bg-slate-950
+          bg-[#E8F2FA]
           px-4
-          text-white
+          text-slate-900
+
+          dark:border-slate-700/80
+          dark:bg-slate-900
+          dark:text-white
 
           lg:hidden
         "
             >
+                {/* Identidad visual fija de MatrixFlow.
+                    El logo mantiene exactamente los mismos colores
+                    tanto en tema claro como en tema oscuro. */}
                 <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
                         <Workflow size={19} />
                     </div>
 
                     <div className="min-w-0">
-                        <p className="truncate text-sm font-bold tracking-wider">
+                        <p className="truncate text-sm font-bold tracking-wider text-blue-600">
                             MATRIXFLOW
                         </p>
 
-                        <p className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-slate-400">
                             Enterprise
                         </p>
                     </div>
@@ -164,11 +265,15 @@ function MobileNavigation({
             justify-center
 
             rounded-lg
-            text-slate-300
+            text-slate-600
 
             transition-colors
-            hover:bg-white/10
-            hover:text-white
+            hover:bg-white/70
+            hover:text-slate-950
+
+            dark:text-slate-300
+            dark:hover:bg-white/10
+            dark:hover:text-white
           "
                     aria-expanded={open}
                     aria-label={
@@ -205,8 +310,10 @@ function MobileNavigation({
           top-16
           z-30
 
-          bg-slate-950/20
+          bg-slate-900/15
           backdrop-blur-[1px]
+
+          dark:bg-slate-950/45
 
           transition-opacity
           duration-300
@@ -238,8 +345,11 @@ function MobileNavigation({
           flex
           flex-col
 
-          bg-slate-950
-          text-white
+          bg-[#E8F2FA]
+          text-slate-900
+
+          dark:bg-slate-900
+          dark:text-white
 
           transition-all
           duration-300
@@ -264,7 +374,7 @@ function MobileNavigation({
                 {/* La navegación puede desplazarse si todas las
               secciones están expandidas. */}
                 <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4">
-                    <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                    <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
                         Navegación
                     </p>
 
@@ -331,13 +441,13 @@ function MobileNavigation({
                           active:scale-[0.99]
 
                           ${hasActiveChild
-                                                    ? 'bg-white/[0.06] text-white'
-                                                    : 'text-slate-300 hover:bg-white/[0.05]'
+                                                    ? 'bg-blue-100/80 text-blue-800 dark:bg-white/[0.06] dark:text-white'
+                                                    : 'text-slate-700 hover:bg-white/70 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.05] dark:hover:text-white'
                                                 }
                         `}
                                         >
                                             <span className="flex min-w-0 items-center gap-3">
-                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-400">
+                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-500 dark:text-slate-400">
                                                     {item.icon}
                                                 </span>
 
@@ -351,6 +461,7 @@ function MobileNavigation({
                                                 className={`
                             shrink-0
                             text-slate-500
+                            dark:text-slate-500
 
                             transition-transform
                             duration-200
@@ -392,7 +503,7 @@ function MobileNavigation({
                         `}
                                         >
                                             <div className="overflow-hidden">
-                                                <div className="ml-7 mt-1 space-y-1 border-l border-slate-800 pb-1 pl-3">
+                                                <div className="ml-7 mt-1 space-y-1 border-l border-slate-300 pb-1 pl-3 dark:border-slate-700">
                                                     {visibleChildren.map(
                                                         (child) => {
                                                             const isActive =
@@ -427,16 +538,23 @@ function MobileNavigation({
                                       ${isActive
                                                                             ? `
                                             translate-x-1
-                                            bg-blue-500/10
+                                            bg-blue-100/80
                                             font-medium
-                                            text-blue-300
+                                            text-blue-700
+
+                                            dark:bg-blue-500/10
+                                            dark:text-blue-300
                                           `
                                                                             : `
                                             translate-x-0
-                                            text-slate-400
+                                            text-slate-600
                                             hover:translate-x-1
-                                            hover:bg-white/[0.04]
-                                            hover:text-slate-200
+                                            hover:bg-white/70
+                                            hover:text-slate-950
+
+                                            dark:text-slate-400
+                                            dark:hover:bg-white/[0.04]
+                                            dark:hover:text-slate-200
                                           `
                                                                         }
                                     `}
@@ -490,8 +608,8 @@ function MobileNavigation({
                       active:scale-[0.98]
 
                       ${isActive
-                                            ? 'bg-blue-500/10 font-medium text-blue-300'
-                                            : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                                            ? 'bg-blue-100/80 font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300'
+                                            : 'text-slate-700 hover:bg-white/70 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.05] dark:hover:text-white'
                                         }
                     `}
                                 >
@@ -510,7 +628,7 @@ function MobileNavigation({
 
 
                 {/* Cerrar sesión permanece accesible en la parte inferior. */}
-                <div className="shrink-0 border-t border-white/5 p-3">
+                <div className="shrink-0 border-t border-slate-300/80 p-3 dark:border-white/10">
                     <button
                         type="button"
                         onClick={() => {
@@ -530,7 +648,9 @@ function MobileNavigation({
 
                 text-sm
                 font-medium
-                text-slate-400
+                text-slate-600
+
+                dark:text-slate-400
 
                 transition-all
                 duration-150

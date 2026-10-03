@@ -1414,3 +1414,44 @@ html.dark.matrixflow-disable-blur .matrixflow-modal-backdrop {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
 }
+
+/* ============================================================
+   REPORTES - GRÁFICO DE VENTAS POR SUCURSAL
+   ============================================================
+
+   El scroll pertenece exclusivamente al gráfico de barras.
+   Evita que CSS Grid expanda la tarjeta en teléfonos.
+   ============================================================ */
+
+.report-sales-chart-scroll {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+
+    /* El navegador puede interpretar el gesto horizontal
+       directamente como desplazamiento del gráfico. */
+    touch-action: pan-x;
+}
+
+
+/* En teléfonos mantenemos un lienzo ancho para que Recharts
+   no comprima las barras ni las etiquetas. */
+.report-sales-chart-canvas {
+    width: 720px;
+    min-width: 720px;
+}
+
+
+/* Desde tablet/escritorio recuperamos el diseño responsive. */
+@media (min-width: 768px) {
+    .report-sales-chart-canvas {
+        width: 100%;
+        min-width: 0;
+    }
+}
