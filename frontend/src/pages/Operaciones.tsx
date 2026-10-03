@@ -1,500 +1,893 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+import {
+  Calculator,
+  CheckCircle2,
+  Table2,
+  VectorSquare,
+} from 'lucide-react'
 
 import {
   createOperation,
-  getOperations,
-  type Operation,
+  getMatrices,
+  getVectors,
+  type Matrix,
+  type Vector,
 } from '../services/api'
 
-// Empresa utilizada actualmente por MatrixFlow.
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+
+// Empresa utilizada actualmente por los módulos matemáticos.
+// Más adelante podremos obtener este valor dinámicamente
+// desde la sesión del usuario.
 const DEFAULT_COMPANY_ID = 2
 
-// Operaciones matemáticas disponibles en el módulo.
+// ============================================================
+// TIPOS DE DATOS
+// ============================================================
+
+// El usuario puede trabajar con vectores o con matrices.
+type DataType = 'vector' | 'matrix'
+
+// Todas las operaciones soportadas actualmente por FastAPI.
 type OperationType =
   | 'sum_vector'
   | 'subtract_vector'
   | 'dot_product'
   | 'scalar_multiply'
+  | 'add_matrix'
+  | 'subtract_matrix'
+  | 'multiply_matrix'
+  | 'transpose_matrix'
+  | 'scalar_multiply_matrix'
 
-// Página principal del módulo de operaciones matemáticas.
+// ============================================================
+// OPERACIONES DISPONIBLES
+// ============================================================
+
+// Operaciones para vectores.
+// La combinación lineal se trabajará en su módulo específico.
+const VECTOR_OPERATIONS = [
+  {
+    value: 'sum_vector',
+    label: 'Suma de vectores',
+  },
+  {
+    value: 'subtract_vector',
+    label: 'Resta de vectores',
+  },
+  {
+    value: 'dot_product',
+    label: 'Producto punto',
+  },
+  {
+    value: 'scalar_multiply',
+    label: 'Multiplicación por escalar',
+  },
+] as const
+
+// Operaciones disponibles para matrices.
+const MATRIX_OPERATIONS = [
+  {
+    value: 'add_matrix',
+    label: 'Suma de matrices',
+  },
+  {
+    value: 'subtract_matrix',
+    label: 'Resta de matrices',
+  },
+  {
+    value: 'multiply_matrix',
+    label: 'Multiplicación matricial',
+  },
+  {
+    value: 'transpose_matrix',
+    label: 'Matriz transpuesta',
+  },
+  {
+    value: 'scalar_multiply_matrix',
+    label: 'Multiplicación por escalar',
+  },
+] as const
+
+// ============================================================
+// COMPONENTE
+// ============================================================
+
 function Operaciones() {
-  // Valores utilizados como entrada para las operaciones.
-  const [a, setA] = useState<number>(10)
-  const [b, setB] = useState<number>(5)
-  const [scalar, setScalar] = useState<number>(2)
+  // ==========================================================
+  // DATOS REGISTRADOS
+  // ==========================================================
 
-  // Historial real de operaciones registradas.
-  const [history, setHistory] = useState<Operation[]>([])
+  const [vectors, setVectors] = useState<Vector[]>([])
+  const [matrices, setMatrices] = useState<Matrix[]>([])
 
-  // Resultado de la última operación ejecutada.
+  // ==========================================================
+  // SELECCIÓN DEL USUARIO
+  // ==========================================================
+
+  // Determina si trabajamos con vectores o matrices.
+  const [dataType, setDataType] =
+    useState<DataType>('vector')
+
+  // Operación matemática seleccionada.
+  const [operationType, setOperationType] =
+    useState<OperationType>('sum_vector')
+
+  // IDs de las estructuras matemáticas seleccionadas.
+  const [firstId, setFirstId] = useState('')
+  const [secondId, setSecondId] = useState('')
+
+  // Valor utilizado por las operaciones escalares.
+  const [scalar, setScalar] = useState('2')
+
+  // ==========================================================
+  // RESULTADO E INTERFAZ
+  // ==========================================================
+
   const [result, setResult] = useState<unknown>(null)
 
-  // Estados de carga y error.
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [executing, setExecuting] = useState(false)
 
-  // Carga el historial de operaciones registradas.
-  const loadHistory = async () => {
-    try {
-      setError(null)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-      // Consultamos las operaciones existentes.
-      const operations = await getOperations()
+  // ==========================================================
+  // CARGAR VECTORES Y MATRICES
+  // ==========================================================
 
-      // Guardamos los resultados recibidos.
-      setHistory(operations)
-    } catch (err) {
-      // Mostramos un mensaje comprensible al usuario.
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'No se pudo cargar el historial.',
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true)
+        setError('')
+
+        // Recuperamos las estructuras matemáticas persistidas
+        // previamente desde PostgreSQL.
+        const [vectorData, matrixData] =
+          await Promise.all([
+            getVectors(),
+            getMatrices(),
+          ])
+
+        setVectors(vectorData)
+        setMatrices(matrixData)
+      } catch (requestError) {
+        console.error(
+          'Error al cargar datos matemáticos:',
+          requestError,
+        )
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'No se pudieron cargar los datos matemáticos.',
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // ==========================================================
+  // ELEMENTOS SELECCIONADOS
+  // ==========================================================
+
+  const firstVector = useMemo(
+    () =>
+      vectors.find(
+        (vector) =>
+          vector.id === Number(firstId),
+      ),
+    [vectors, firstId],
+  )
+
+  const secondVector = useMemo(
+    () =>
+      vectors.find(
+        (vector) =>
+          vector.id === Number(secondId),
+      ),
+    [vectors, secondId],
+  )
+
+  const firstMatrix = useMemo(
+    () =>
+      matrices.find(
+        (matrix) =>
+          matrix.id === Number(firstId),
+      ),
+    [matrices, firstId],
+  )
+
+  const secondMatrix = useMemo(
+    () =>
+      matrices.find(
+        (matrix) =>
+          matrix.id === Number(secondId),
+      ),
+    [matrices, secondId],
+  )
+
+  // ==========================================================
+  // CAMBIAR TIPO DE DATO
+  // ==========================================================
+
+  function handleDataTypeChange(
+    newType: DataType,
+  ) {
+    setDataType(newType)
+
+    // Limpiamos las selecciones anteriores porque un ID
+    // de vector no debe reutilizarse como ID de matriz.
+    setFirstId('')
+    setSecondId('')
+    setResult(null)
+    setError('')
+    setSuccess('')
+
+    // Elegimos automáticamente una operación válida
+    // para el nuevo tipo de estructura.
+    if (newType === 'vector') {
+      setOperationType('sum_vector')
+    } else {
+      setOperationType('add_matrix')
+    }
+  }
+
+  // ==========================================================
+  // DETERMINAR PARÁMETROS NECESARIOS
+  // ==========================================================
+
+  const requiresSecondOperand =
+    operationType === 'sum_vector' ||
+    operationType === 'subtract_vector' ||
+    operationType === 'dot_product' ||
+    operationType === 'add_matrix' ||
+    operationType === 'subtract_matrix' ||
+    operationType === 'multiply_matrix'
+
+  const requiresScalar =
+    operationType === 'scalar_multiply' ||
+    operationType === 'scalar_multiply_matrix'
+
+  // ==========================================================
+  // VALIDACIONES
+  // ==========================================================
+
+  function validateVectorOperation() {
+    if (!firstVector) {
+      throw new Error(
+        'Selecciona el primer vector.',
+      )
+    }
+
+    if (
+      requiresSecondOperand &&
+      !secondVector
+    ) {
+      throw new Error(
+        'Selecciona el segundo vector.',
+      )
+    }
+
+    // Suma, resta y producto punto requieren vectores
+    // con la misma dimensión.
+    if (
+      requiresSecondOperand &&
+      secondVector &&
+      firstVector.dimension !==
+      secondVector.dimension
+    ) {
+      throw new Error(
+        `Los vectores deben tener la misma dimensión. ` +
+        `El primero tiene dimensión ${firstVector.dimension} ` +
+        `y el segundo ${secondVector.dimension}.`,
       )
     }
   }
 
-  // Cargamos el historial al entrar al módulo.
-  useEffect(() => {
-    loadHistory()
-  }, [])
+  function validateMatrixOperation() {
+    if (!firstMatrix) {
+      throw new Error(
+        'Selecciona la primera matriz.',
+      )
+    }
 
-  // Ejecuta una operación matemática y actualiza el historial.
-  const executeOperation = async (
-    operationType: OperationType,
-    operationName: string,
-    firstValues: number[][],
-    secondValues?: number[][] | null,
-    operationScalar?: number | null,
-  ) => {
+    if (
+      requiresSecondOperand &&
+      !secondMatrix
+    ) {
+      throw new Error(
+        'Selecciona la segunda matriz.',
+      )
+    }
+
+    // Suma y resta requieren las mismas dimensiones.
+    if (
+      (
+        operationType === 'add_matrix' ||
+        operationType === 'subtract_matrix'
+      ) &&
+      secondMatrix &&
+      (
+        firstMatrix.rows !== secondMatrix.rows ||
+        firstMatrix.columns !== secondMatrix.columns
+      )
+    ) {
+      throw new Error(
+        'Para sumar o restar, ambas matrices deben tener las mismas dimensiones.',
+      )
+    }
+
+    // Para A × B, las columnas de A deben ser iguales
+    // al número de filas de B.
+    if (
+      operationType === 'multiply_matrix' &&
+      secondMatrix &&
+      firstMatrix.columns !== secondMatrix.rows
+    ) {
+      throw new Error(
+        `No se pueden multiplicar estas matrices. ` +
+        `Las ${firstMatrix.columns} columnas de A deben ` +
+        `coincidir con las ${secondMatrix.rows} filas de B.`,
+      )
+    }
+  }
+
+  // ==========================================================
+  // EJECUTAR OPERACIÓN
+  // ==========================================================
+
+  async function handleExecuteOperation() {
     try {
-      setLoading(true)
-      setError(null)
+      setExecuting(true)
+      setError('')
+      setSuccess('')
+      setResult(null)
 
-      // Registramos la operación con sus valores correspondientes.
+      // Validamos el escalar cuando la operación lo necesita.
+      if (requiresScalar) {
+        const numericScalar = Number(scalar)
+
+        if (!Number.isFinite(numericScalar)) {
+          throw new Error(
+            'Ingresa un escalar válido.',
+          )
+        }
+      }
+
+      // ------------------------------------------------------
+      // OPERACIONES CON VECTORES
+      // ------------------------------------------------------
+
+      if (dataType === 'vector') {
+        validateVectorOperation()
+
+        // Después de la validación sabemos que existe.
+        if (!firstVector) {
+          return
+        }
+
+        const selectedOperation =
+          VECTOR_OPERATIONS.find(
+            (item) =>
+              item.value === operationType,
+          )
+
+        const operationName =
+          secondVector && requiresSecondOperand
+            ? `${selectedOperation?.label}: ${firstVector.name} y ${secondVector.name}`
+            : `${selectedOperation?.label}: ${firstVector.name}`
+
+        const response = await createOperation({
+          company_id: DEFAULT_COMPANY_ID,
+          name: operationName,
+          operation_type: operationType,
+
+          // El backend recibe los vectores como una
+          // matriz de una sola fila.
+          first_values: [
+            firstVector.values,
+          ],
+
+          second_values:
+            secondVector && requiresSecondOperand
+              ? [secondVector.values]
+              : null,
+
+          scalar:
+            requiresScalar
+              ? Number(scalar)
+              : null,
+
+          // Guardamos también la relación con los vectores
+          // persistidos en PostgreSQL.
+          first_vector_id: firstVector.id,
+
+          second_vector_id:
+            secondVector && requiresSecondOperand
+              ? secondVector.id
+              : null,
+        })
+
+        setResult(response.result)
+
+        setSuccess(
+          'Operación vectorial ejecutada correctamente.',
+        )
+
+        return
+      }
+
+      // ------------------------------------------------------
+      // OPERACIONES CON MATRICES
+      // ------------------------------------------------------
+
+      validateMatrixOperation()
+
+      if (!firstMatrix) {
+        return
+      }
+
+      const selectedOperation =
+        MATRIX_OPERATIONS.find(
+          (item) =>
+            item.value === operationType,
+        )
+
+      const operationName =
+        secondMatrix && requiresSecondOperand
+          ? `${selectedOperation?.label}: ${firstMatrix.name} y ${secondMatrix.name}`
+          : `${selectedOperation?.label}: ${firstMatrix.name}`
+
       const response = await createOperation({
         company_id: DEFAULT_COMPANY_ID,
         name: operationName,
         operation_type: operationType,
-        first_values: firstValues,
-        second_values: secondValues ?? null,
-        scalar: operationScalar ?? null,
+
+        // Las matrices ya están almacenadas como number[][].
+        first_values: firstMatrix.values,
+
+        second_values:
+          secondMatrix && requiresSecondOperand
+            ? secondMatrix.values
+            : null,
+
+        scalar:
+          requiresScalar
+            ? Number(scalar)
+            : null,
+
+        // Relacionamos la operación con las matrices
+        // seleccionadas.
+        first_matrix_id: firstMatrix.id,
+
+        second_matrix_id:
+          secondMatrix && requiresSecondOperand
+            ? secondMatrix.id
+            : null,
       })
 
-      // Mostramos el resultado calculado.
       setResult(response.result)
 
-      // Actualizamos el historial después de ejecutar la operación.
-      await loadHistory()
-    } catch (err) {
-      // Mostramos el error sin modificar la lógica existente.
+      setSuccess(
+        'Operación matricial ejecutada correctamente.',
+      )
+    } catch (requestError) {
+      console.error(
+        'Error al ejecutar operación:',
+        requestError,
+      )
+
       setError(
-        err instanceof Error
-          ? err.message
+        requestError instanceof Error
+          ? requestError.message
           : 'No se pudo ejecutar la operación.',
       )
     } finally {
-      // Finalizamos el estado de carga.
-      setLoading(false)
+      setExecuting(false)
     }
   }
 
-  // Limpia únicamente el resultado mostrado actualmente.
-  const clearResult = () => {
-    setResult(null)
-  }
+  // ==========================================================
+  // MOSTRAR RESULTADO
+  // ==========================================================
 
-  // Convierte el resultado en un texto seguro para mostrarlo.
-  const formatResult = (value: unknown) => {
-    if (value === undefined || value === null) {
-      return 'Resultado no disponible'
+  function renderResult() {
+    if (result === null) {
+      return null
     }
 
-    return Array.isArray(value) ? JSON.stringify(value) : String(value)
+    // Matriz: [[1, 2], [3, 4]]
+    if (
+      Array.isArray(result) &&
+      Array.isArray(result[0])
+    ) {
+      return (
+        <div className="space-y-2">
+          {(result as number[][]).map(
+            (row, index) => (
+              <p
+                key={index}
+                className="whitespace-nowrap font-mono text-lg font-bold text-slate-900"
+              >
+                [{row.join(', ')}]
+              </p>
+            ),
+          )}
+        </div>
+      )
+    }
+
+    // Vector: [1, 2, 3]
+    if (Array.isArray(result)) {
+      return (
+        <p className="font-mono text-xl font-bold text-slate-900">
+          [{result.join(', ')}]
+        </p>
+      )
+    }
+
+    // Resultado escalar.
+    return (
+      <p className="font-mono text-3xl font-bold text-slate-900">
+        {String(result)}
+      </p>
+    )
   }
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
     <div className="min-h-full bg-slate-50 p-6">
       <div className="mx-auto max-w-7xl">
-        {/* Encabezado principal del módulo. */}
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Análisis matemático
-          </p>
 
-          <div className="mt-2 flex flex-col justify-between gap-3 md:flex-row md:items-end">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Operaciones
-              </h1>
+        {/* ===================================================
+            MENSAJES
+            =================================================== */}
 
-              <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                Ejecuta operaciones vectoriales y analiza sus resultados.
-              </p>
-            </div>
-
-            {/* Indicador compacto del historial disponible. */}
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Operaciones registradas
-              </p>
-
-              <p className="mt-1 text-xl font-bold text-slate-900">
-                {history.length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Mensaje de error general. */}
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <span className="font-semibold">Error</span>
-            <span>{error}</span>
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p className="font-semibold">
+              No se pudo completar la operación
+            </p>
+
+            <p className="mt-1">
+              {error}
+            </p>
           </div>
         )}
 
-        {/* Panel de valores de entrada. */}
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Parámetros
-            </p>
+        {success && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
 
-            <h2 className="mt-1 text-xl font-bold text-slate-900">
-              Valores de entrada
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Define los valores que utilizarás en las operaciones.
-            </p>
+            <span className="font-medium">
+              {success}
+            </span>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-3">
-            {/* Valor A. */}
-            <div>
-              <label className="text-sm font-semibold text-slate-700">
-                Valor A
-              </label>
+        {/* ===================================================
+            CENTRO DE OPERACIONES
+            =================================================== */}
 
-              <input
-                type="number"
-                value={a}
-                onChange={(event) => setA(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-              />
-            </div>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-            {/* Valor B. */}
-            <div>
-              <label className="text-sm font-semibold text-slate-700">
-                Valor B
-              </label>
+          {/* Encabezado de la tarjeta. */}
+          <div className="border-b border-slate-100 px-6 py-5">
+            <div className="flex items-center gap-3">
 
-              <input
-                type="number"
-                value={b}
-                onChange={(event) => setB(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-              />
-            </div>
-
-            {/* Escalar utilizado únicamente en la multiplicación escalar. */}
-            <div>
-              <label className="text-sm font-semibold text-slate-700">
-                Escalar
-              </label>
-
-              <input
-                type="number"
-                value={scalar}
-                onChange={(event) => setScalar(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Operaciones disponibles. */}
-        <section className="mt-8">
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Herramientas
-            </p>
-
-            <h2 className="mt-1 text-xl font-bold text-slate-900">
-              Operaciones disponibles
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            {/* Operación de suma. */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500">
-                    Suma
-                  </p>
-
-                  <p className="mt-2 text-2xl font-bold text-slate-900">
-                    A + B
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-400">
-                    {a} + {b}
-                  </p>
-                </div>
-
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
-                  +
-                </span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
+                <Calculator className="h-5 w-5 text-cyan-600" />
               </div>
 
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() =>
-                  executeOperation(
-                    'sum_vector',
-                    `Suma ${a} + ${b}`,
-                    [[a]],
-                    [[b]],
-                  )
-                }
-                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Ejecutar suma
-              </button>
-            </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Ejecutar operación matemática
+                </h2>
 
-            {/* Operación de resta. */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500">
-                    Resta
-                  </p>
-
-                  <p className="mt-2 text-2xl font-bold text-slate-900">
-                    A − B
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-400">
-                    {a} − {b}
-                  </p>
-                </div>
-
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
-                  −
-                </span>
-              </div>
-
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() =>
-                  executeOperation(
-                    'subtract_vector',
-                    `Resta ${a} - ${b}`,
-                    [[a]],
-                    [[b]],
-                  )
-                }
-                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Ejecutar resta
-              </button>
-            </div>
-
-            {/* Producto punto. */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500">
-                    Producto punto
-                  </p>
-
-                  <p className="mt-2 text-2xl font-bold text-slate-900">
-                    A · B
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-400">
-                    {a} · {b}
-                  </p>
-                </div>
-
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
-                  ·
-                </span>
-              </div>
-
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() =>
-                  executeOperation(
-                    'dot_product',
-                    `Producto punto ${a} · ${b}`,
-                    [[a]],
-                    [[b]],
-                  )
-                }
-                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Ejecutar producto punto
-              </button>
-            </div>
-
-            {/* Multiplicación por escalar. */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500">
-                    Multiplicación por escalar
-                  </p>
-
-                  <p className="mt-2 text-2xl font-bold text-slate-900">
-                    A × escalar
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-400">
-                    {a} × {scalar}
-                  </p>
-                </div>
-
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-700">
-                  ×
-                </span>
-              </div>
-
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() =>
-                  executeOperation(
-                    'scalar_multiply',
-                    `Multiplicación ${a} × ${scalar}`,
-                    [[a]],
-                    null,
-                    scalar,
-                  )
-                }
-                className="mt-6 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Ejecutar multiplicación
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Resultado de la última operación. */}
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Resultado
-              </p>
-
-              <h2 className="mt-1 text-xl font-bold text-slate-900">
-                Última operación
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              onClick={clearResult}
-              disabled={result === null}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Limpiar
-            </button>
-          </div>
-
-          <div className="mt-6 flex min-h-32 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6">
-            {result === null ? (
-              <p className="text-sm text-slate-400">
-                Ejecuta una operación para visualizar el resultado.
-              </p>
-            ) : (
-              <div className="text-center">
-                <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  Calculado
-                </span>
-
-                <p className="mt-3 break-all text-3xl font-bold text-slate-900">
-                  {formatResult(result)}
+                <p className="mt-1 text-sm text-slate-500">
+                  Utiliza vectores y matrices registrados con
+                  información empresarial.
                 </p>
               </div>
-            )}
-          </div>
-        </section>
-
-        {/* Historial de operaciones realizadas. */}
-        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Registro
-            </p>
-
-            <h2 className="mt-1 text-xl font-bold text-slate-900">
-              Historial de operaciones
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Consulta las operaciones realizadas anteriormente.
-            </p>
+            </div>
           </div>
 
           <div className="p-6">
-            {history.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
-                <p className="font-semibold text-slate-600">
-                  No hay operaciones registradas.
-                </p>
 
-                <p className="mt-1 text-sm text-slate-400">
-                  Las operaciones realizadas aparecerán aquí.
-                </p>
+            {/* ===============================================
+                TIPO DE ESTRUCTURA
+                =============================================== */}
+
+            <div>
+              <label className="mb-3 block text-sm font-semibold text-slate-700">
+                Tipo de estructura
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDataTypeChange('vector')
+                  }
+                  className={
+                    dataType === 'vector'
+                      ? 'flex items-center gap-3 rounded-xl border border-cyan-300 bg-cyan-50 p-4 text-left'
+                      : 'flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:bg-slate-50'
+                  }
+                >
+                  <VectorSquare
+                    className={
+                      dataType === 'vector'
+                        ? 'h-5 w-5 text-cyan-600'
+                        : 'h-5 w-5 text-slate-500'
+                    }
+                  />
+
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      Vectores
+                    </p>
+
+                    <p className="text-xs text-slate-500">
+                      {vectors.length} disponibles
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDataTypeChange('matrix')
+                  }
+                  className={
+                    dataType === 'matrix'
+                      ? 'flex items-center gap-3 rounded-xl border border-cyan-300 bg-cyan-50 p-4 text-left'
+                      : 'flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:bg-slate-50'
+                  }
+                >
+                  <Table2
+                    className={
+                      dataType === 'matrix'
+                        ? 'h-5 w-5 text-cyan-600'
+                        : 'h-5 w-5 text-slate-500'
+                    }
+                  />
+
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      Matrices
+                    </p>
+
+                    <p className="text-xs text-slate-500">
+                      {matrices.length} disponibles
+                    </p>
+                  </div>
+                </button>
               </div>
-            ) : (
-              <div className="overflow-hidden rounded-xl border border-slate-200">
-                <div className="hidden grid-cols-[1.5fr_1fr_1fr] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 md:grid">
-                  <span>Operación</span>
-                  <span>Tipo</span>
-                  <span className="text-right">Resultado</span>
+            </div>
+
+            {/* ===============================================
+                OPERACIÓN
+                =============================================== */}
+
+            <div className="mt-6">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Operación
+              </label>
+
+              <select
+                value={operationType}
+                disabled={loading}
+                onChange={(event) => {
+                  setOperationType(
+                    event.target.value as OperationType,
+                  )
+
+                  // Limpiamos resultados anteriores para no
+                  // confundirlos con la nueva operación.
+                  setResult(null)
+                  setError('')
+                  setSuccess('')
+                }}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+              >
+                {dataType === 'vector'
+                  ? VECTOR_OPERATIONS.map(
+                    (operation) => (
+                      <option
+                        key={operation.value}
+                        value={operation.value}
+                      >
+                        {operation.label}
+                      </option>
+                    ),
+                  )
+                  : MATRIX_OPERATIONS.map(
+                    (operation) => (
+                      <option
+                        key={operation.value}
+                        value={operation.value}
+                      >
+                        {operation.label}
+                      </option>
+                    ),
+                  )}
+              </select>
+            </div>
+
+            {/* ===============================================
+                ENTRADAS
+                =============================================== */}
+
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+
+              {/* Primer operando. */}
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  {dataType === 'vector'
+                    ? 'Primer vector'
+                    : 'Matriz A'}
+                </label>
+
+                <select
+                  value={firstId}
+                  disabled={loading}
+                  onChange={(event) =>
+                    setFirstId(event.target.value)
+                  }
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"
+                >
+                  <option value="">
+                    Seleccionar
+                  </option>
+
+                  {dataType === 'vector'
+                    ? vectors.map((vector) => (
+                      <option
+                        key={vector.id}
+                        value={vector.id}
+                      >
+                        {vector.name} — dimensión{' '}
+                        {vector.dimension}
+                      </option>
+                    ))
+                    : matrices.map((matrix) => (
+                      <option
+                        key={matrix.id}
+                        value={matrix.id}
+                      >
+                        {matrix.name} — {matrix.rows}×
+                        {matrix.columns}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Segundo operando. */}
+              {requiresSecondOperand && (
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    {dataType === 'vector'
+                      ? 'Segundo vector'
+                      : 'Matriz B'}
+                  </label>
+
+                  <select
+                    value={secondId}
+                    disabled={loading}
+                    onChange={(event) =>
+                      setSecondId(event.target.value)
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"
+                  >
+                    <option value="">
+                      Seleccionar
+                    </option>
+
+                    {dataType === 'vector'
+                      ? vectors.map((vector) => (
+                        <option
+                          key={vector.id}
+                          value={vector.id}
+                        >
+                          {vector.name} — dimensión{' '}
+                          {vector.dimension}
+                        </option>
+                      ))
+                      : matrices.map((matrix) => (
+                        <option
+                          key={matrix.id}
+                          value={matrix.id}
+                        >
+                          {matrix.name} — {matrix.rows}×
+                          {matrix.columns}
+                        </option>
+                      ))}
+                  </select>
                 </div>
+              )}
+            </div>
 
-                <div className="divide-y divide-slate-100">
-                  {history.map((operation) => (
-                    <div
-                      key={operation.id}
-                      className="grid gap-3 px-5 py-4 md:grid-cols-[1.5fr_1fr_1fr] md:items-center"
-                    >
-                      <div>
-                        <p className="font-semibold text-slate-800">
-                          {operation.name || 'Operación matemática'}
-                        </p>
+            {/* Escalar. */}
+            {requiresScalar && (
+              <div className="mt-5 max-w-sm">
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Escalar
+                </label>
 
-                        <p className="mt-1 text-xs text-slate-400">
-                          Registro #{operation.id}
-                        </p>
-                      </div>
-
-                      <div>
-                        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                          {operation.operation_type}
-                        </span>
-                      </div>
-
-                      <p className="break-all text-left text-lg font-bold text-slate-900 md:text-right">
-                        {formatResult(operation.result)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <input
+                  type="number"
+                  value={scalar}
+                  onChange={(event) =>
+                    setScalar(event.target.value)
+                  }
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"
+                />
               </div>
             )}
+
+            {/* Botón principal. */}
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={handleExecuteOperation}
+                disabled={executing || loading}
+                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {executing
+                  ? 'Calculando...'
+                  : 'Ejecutar operación'}
+              </button>
+            </div>
           </div>
         </section>
+
+        {/* ===================================================
+            RESULTADO
+            =================================================== */}
+
+        {result !== null && (
+          <section className="mt-8 overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm">
+
+            <div className="border-b border-cyan-100 px-6 py-5">
+              <div className="flex items-center gap-3">
+
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
+                  <CheckCircle2 className="h-5 w-5 text-cyan-600" />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Resultado
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Resultado calculado por el motor matemático
+                    del backend.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="overflow-x-auto rounded-xl bg-slate-50 p-6">
+                {renderResult()}
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )

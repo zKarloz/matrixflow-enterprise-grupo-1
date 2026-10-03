@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
-  ArrowRight,
-  Calculator,
   CheckCircle2,
   Plus,
   Sparkles,
@@ -10,7 +8,6 @@ import {
 } from 'lucide-react'
 
 import {
-  createOperation,
   createVector,
   getDashboard,
   getInventory,
@@ -26,22 +23,6 @@ import {
 // Empresa utilizada actualmente para los registros matemáticos.
 // Este valor se conserva para no modificar la lógica existente.
 const DEFAULT_COMPANY_ID = 2
-
-// Operaciones vectoriales disponibles en el módulo.
-const VECTOR_OPERATIONS = [
-  {
-    value: 'sum_vector',
-    label: 'Suma de vectores',
-  },
-  {
-    value: 'subtract_vector',
-    label: 'Resta de vectores',
-  },
-  {
-    value: 'dot_product',
-    label: 'Producto punto',
-  },
-]
 
 // ============================================================
 // FUENTES DE DATOS EMPRESARIALES
@@ -94,7 +75,6 @@ function Vectores() {
   // Estados generales de la pantalla.
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -108,22 +88,6 @@ function Vectores() {
   // Los componentes se introducen como texto separado por comas.
   // Ejemplo: "1, 2, 3" se convierte internamente en [1, 2, 3].
   const [vectorValues, setVectorValues] = useState('')
-
-  // ==========================================================
-  // OPERACIONES
-  // ==========================================================
-
-  // Vector seleccionado como primera entrada.
-  const [firstVectorId, setFirstVectorId] = useState('')
-
-  // Vector seleccionado como segunda entrada.
-  const [secondVectorId, setSecondVectorId] = useState('')
-
-  // Operación matemática seleccionada.
-  const [operationType, setOperationType] = useState('sum_vector')
-
-  // Resultado de la operación seleccionada.
-  const [operationResult, setOperationResult] = useState<unknown>(null)
 
   // ==========================================================
   // VECTOR GENERADO DESDE DATOS EMPRESARIALES
@@ -173,28 +137,6 @@ function Vectores() {
 
     loadVectors()
   }, [])
-
-  // ==========================================================
-  // VECTORES SELECCIONADOS
-  // ==========================================================
-
-  // Buscamos el primer vector seleccionado.
-  const selectedFirstVector = useMemo(
-    () =>
-      vectors.find(
-        (vector) => vector.id === Number(firstVectorId),
-      ),
-    [vectors, firstVectorId],
-  )
-
-  // Buscamos el segundo vector seleccionado.
-  const selectedSecondVector = useMemo(
-    () =>
-      vectors.find(
-        (vector) => vector.id === Number(secondVectorId),
-      ),
-    [vectors, secondVectorId],
-  )
 
   // ==========================================================
   // CONVERTIR TEXTO A VECTOR
@@ -497,76 +439,6 @@ function Vectores() {
       )
     } finally {
       setSaving(false)
-    }
-  }
-
-  // ==========================================================
-  // EJECUTAR OPERACIÓN
-  // ==========================================================
-
-  const handleOperation = async () => {
-    // Las operaciones actuales requieren dos vectores.
-    if (!selectedFirstVector) {
-      setError('Selecciona el primer vector.')
-      return
-    }
-
-    if (!selectedSecondVector) {
-      setError('Selecciona el segundo vector.')
-      return
-    }
-
-    try {
-      setCalculating(true)
-      setError('')
-      setSuccess('')
-      setOperationResult(null)
-
-      // Obtenemos el nombre legible de la operación.
-      const operationLabel =
-        VECTOR_OPERATIONS.find(
-          (item) => item.value === operationType,
-        )?.label ?? 'Operación vectorial'
-
-      // Las operaciones conservan el formato esperado actualmente.
-      // Los valores se envían como matrices de una fila.
-      const operation = await createOperation({
-        company_id: DEFAULT_COMPANY_ID,
-        name: operationLabel,
-        operation_type: operationType,
-
-        // Primer vector.
-        first_values: [
-          selectedFirstVector.values,
-        ],
-
-        // Segundo vector.
-        second_values: [
-          selectedSecondVector.values,
-        ],
-
-        // Referencias de los vectores seleccionados.
-        first_vector_id: selectedFirstVector.id,
-        second_vector_id: selectedSecondVector.id,
-      })
-
-      // Mostramos el resultado recibido.
-      setOperationResult(operation.result)
-
-      setSuccess('Operación ejecutada correctamente.')
-    } catch (requestError) {
-      console.error(
-        'Error al ejecutar operación:',
-        requestError,
-      )
-
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'No se pudo ejecutar la operación.',
-      )
-    } finally {
-      setCalculating(false)
     }
   }
 
@@ -965,176 +837,7 @@ function Vectores() {
           )}
         </section>
 
-        {/* =====================================================
-            OPERACIONES MATEMÁTICAS
-            ===================================================== */}
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-6 py-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
-                <Calculator className="h-5 w-5 text-cyan-600" />
-              </div>
 
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Operaciones con vectores
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Selecciona dos vectores y define la operación que deseas realizar.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6">
-
-            {/* Selección de vectores y operación. */}
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-
-              {/* Primer vector. */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Primer vector
-                </label>
-
-                <select
-                  value={firstVectorId}
-                  onChange={(event) =>
-                    setFirstVectorId(
-                      event.target.value,
-                    )
-                  }
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                >
-                  <option value="">
-                    Seleccionar vector
-                  </option>
-
-                  {vectors.map((vector) => (
-                    <option
-                      key={vector.id}
-                      value={vector.id}
-                    >
-                      {vector.name} — [
-                      {vector.values.join(', ')}
-                      ]
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Operación matemática. */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Operación
-                </label>
-
-                <select
-                  value={operationType}
-                  onChange={(event) =>
-                    setOperationType(
-                      event.target.value,
-                    )
-                  }
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                >
-                  {VECTOR_OPERATIONS.map(
-                    (operation) => (
-                      <option
-                        key={operation.value}
-                        value={operation.value}
-                      >
-                        {operation.label}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </div>
-
-              {/* Segundo vector. */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Segundo vector
-                </label>
-
-                <select
-                  value={secondVectorId}
-                  onChange={(event) =>
-                    setSecondVectorId(
-                      event.target.value,
-                    )
-                  }
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                >
-                  <option value="">
-                    Seleccionar vector
-                  </option>
-
-                  {vectors.map((vector) => (
-                    <option
-                      key={vector.id}
-                      value={vector.id}
-                    >
-                      {vector.name} — [
-                      {vector.values.join(', ')}
-                      ]
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Botón para ejecutar la operación. */}
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={handleOperation}
-                disabled={calculating}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                <Sparkles className="h-4 w-4" />
-
-                {calculating
-                  ? 'Calculando...'
-                  : 'Ejecutar operación'}
-
-                {!calculating && (
-                  <ArrowRight className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-
-            {/* Resultado de la operación. */}
-            {operationResult !== null && (
-              <div className="mt-6 overflow-hidden rounded-2xl border border-cyan-200 bg-cyan-50">
-                <div className="flex items-center gap-3 border-b border-cyan-100 px-5 py-4">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white">
-                    <CheckCircle2 className="h-5 w-5 text-cyan-600" />
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">
-                      Resultado de la operación
-                    </p>
-
-                    <p className="text-xs text-slate-500">
-                      Cálculo completado correctamente
-                    </p>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto px-5 py-6">
-                  <code className="text-xl font-bold tracking-wide text-slate-900">
-                    {Array.isArray(operationResult)
-                      ? `[${operationResult.join(', ')}]`
-                      : String(operationResult)}
-                  </code>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
       </div>
     </div>
   )

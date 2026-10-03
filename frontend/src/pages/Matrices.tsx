@@ -7,7 +7,6 @@ import {
 
 import {
   createMatrix,
-  createOperation,
   getBranches,
   getInventory,
   getMatrices,
@@ -18,14 +17,6 @@ import {
 // Empresa utilizada actualmente para registrar las operaciones.
 // Se mantiene para conservar la integración existente.
 const DEFAULT_COMPANY_ID = 2
-
-// Operaciones matriciales disponibles en la aplicación.
-type MatrixOperation =
-  | 'add_matrix'
-  | 'subtract_matrix'
-  | 'multiply_matrix'
-  | 'transpose_matrix'
-  | 'scalar_multiply_matrix'
 
 // ============================================================
 // FUENTES DE DATOS EMPRESARIALES
@@ -75,25 +66,6 @@ function Matrices() {
   // Lista de matrices registradas.
   const [matrices, setMatrices] = useState<Matrix[]>([])
 
-  // Matriz seleccionada como primera entrada.
-  const [selectedMatrixA, setSelectedMatrixA] =
-    useState<number | ''>('')
-
-  // Matriz seleccionada como segunda entrada.
-  const [selectedMatrixB, setSelectedMatrixB] =
-    useState<number | ''>('')
-
-  // Valor utilizado para la multiplicación por escalar.
-  const [scalar, setScalar] = useState('2')
-
-  // Resultado de la operación actual.
-  const [operationResult, setOperationResult] =
-    useState<unknown>(null)
-
-  // Operación actualmente seleccionada.
-  const [operation, setOperation] =
-    useState<MatrixOperation>('add_matrix')
-
   // ============================================================
   // FORMULARIO DE CREACIÓN
   // ============================================================
@@ -129,7 +101,6 @@ function Matrices() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [operating, setOperating] = useState(false)
   const [error, setError] = useState('')
 
   // ============================================================
@@ -141,20 +112,11 @@ function Matrices() {
       setLoading(true)
       setError('')
 
-      // Recuperamos las matrices registradas.
+      // Recuperamos las matrices almacenadas en PostgreSQL.
       const data = await getMatrices()
 
+      // Actualizamos la lista mostrada en pantalla.
       setMatrices(data)
-
-      // Seleccionamos automáticamente las primeras matrices
-      // disponibles para facilitar el uso de la herramienta.
-      if (data.length > 0) {
-        setSelectedMatrixA(data[0].id)
-      }
-
-      if (data.length > 1) {
-        setSelectedMatrixB(data[1].id)
-      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -454,102 +416,6 @@ function Matrices() {
     } finally {
       setSaving(false)
     }
-  }
-
-  // ============================================================
-  // EJECUTAR OPERACIÓN MATRICIAL
-  // ============================================================
-
-  async function handleOperation() {
-    try {
-      setOperating(true)
-      setError('')
-      setOperationResult(null)
-
-      // La primera matriz siempre es necesaria.
-      if (selectedMatrixA === '') {
-        throw new Error('Selecciona la primera matriz.')
-      }
-
-      // Buscamos la matriz seleccionada.
-      const matrixA = matrices.find(
-        (matrix) => matrix.id === selectedMatrixA,
-      )
-
-      if (!matrixA) {
-        throw new Error('No se encontró la primera matriz.')
-      }
-
-      // Estas operaciones requieren una segunda matriz.
-      const needsSecondMatrix =
-        operation === 'add_matrix' ||
-        operation === 'subtract_matrix' ||
-        operation === 'multiply_matrix'
-
-      let matrixB: Matrix | undefined
-
-      if (needsSecondMatrix) {
-        if (selectedMatrixB === '') {
-          throw new Error('Selecciona la segunda matriz.')
-        }
-
-        matrixB = matrices.find(
-          (matrix) => matrix.id === selectedMatrixB,
-        )
-
-        if (!matrixB) {
-          throw new Error('No se encontró la segunda matriz.')
-        }
-      }
-
-      // Ejecutamos la operación seleccionada.
-      const response = await createOperation({
-        company_id: DEFAULT_COMPANY_ID,
-        name: `Operación ${operation}`,
-        operation_type: operation,
-        first_values: matrixA.values,
-        second_values: matrixB?.values ?? null,
-        scalar:
-          operation === 'scalar_multiply_matrix'
-            ? Number(scalar)
-            : null,
-        first_matrix_id: matrixA.id,
-        second_matrix_id: matrixB?.id ?? null,
-      })
-
-      // Mostramos únicamente el resultado obtenido.
-      setOperationResult(response.result)
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'No se pudo ejecutar la operación.',
-      )
-    } finally {
-      setOperating(false)
-    }
-  }
-
-  // ============================================================
-  // RENDERIZAR MATRIZ
-  // ============================================================
-
-  function renderMatrix(
-    values: number[][],
-    className = 'text-slate-900',
-  ) {
-    return (
-      <div className="space-y-2">
-        {values.map((row, rowIndex) => (
-          <p
-            key={rowIndex}
-            className={`font-mono text-base ${className}`}
-          >
-            [{row.join(', ')}]
-          </p>
-        ))}
-      </div>
-    )
   }
 
   // ============================================================
@@ -985,215 +851,6 @@ function Matrices() {
             </div>
           )}
         </section>
-
-        {/* =====================================================
-            OPERACIONES MATRICIALES
-            ===================================================== */}
-
-        {matrices.length > 0 && (
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 font-mono text-sm font-bold text-white">
-                  ∑
-                </div>
-
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    Operaciones matriciales
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Selecciona las matrices y la operación que
-                    deseas ejecutar.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6">
-              {/* Selección de matrices */}
-              <div className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Matriz A
-                  </label>
-
-                  <select
-                    value={selectedMatrixA}
-                    onChange={(event) =>
-                      setSelectedMatrixA(
-                        event.target.value
-                          ? Number(event.target.value)
-                          : '',
-                      )
-                    }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                  >
-                    <option value="">
-                      Seleccionar matriz A
-                    </option>
-
-                    {matrices.map((matrix) => (
-                      <option
-                        key={matrix.id}
-                        value={matrix.id}
-                      >
-                        {matrix.name} — {matrix.rows}×
-                        {matrix.columns}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Matriz B
-                  </label>
-
-                  <select
-                    value={selectedMatrixB}
-                    onChange={(event) =>
-                      setSelectedMatrixB(
-                        event.target.value
-                          ? Number(event.target.value)
-                          : '',
-                      )
-                    }
-                    disabled={
-                      operation === 'transpose_matrix' ||
-                      operation ===
-                      'scalar_multiply_matrix'
-                    }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                  >
-                    <option value="">
-                      Seleccionar matriz B
-                    </option>
-
-                    {matrices.map((matrix) => (
-                      <option
-                        key={matrix.id}
-                        value={matrix.id}
-                      >
-                        {matrix.name} — {matrix.rows}×
-                        {matrix.columns}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Tipo de operación */}
-              <div className="mt-5">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Operación
-                </label>
-
-                <select
-                  value={operation}
-                  onChange={(event) =>
-                    setOperation(
-                      event.target.value as MatrixOperation,
-                    )
-                  }
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                >
-                  <option value="add_matrix">
-                    Suma A + B
-                  </option>
-
-                  <option value="subtract_matrix">
-                    Resta A − B
-                  </option>
-
-                  <option value="multiply_matrix">
-                    Multiplicación A × B
-                  </option>
-
-                  <option value="transpose_matrix">
-                    Transpuesta de A
-                  </option>
-
-                  <option value="scalar_multiply_matrix">
-                    Multiplicación de A por escalar
-                  </option>
-                </select>
-              </div>
-
-              {/* Escalar */}
-              {operation === 'scalar_multiply_matrix' && (
-                <div className="mt-5 max-w-xs">
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Escalar
-                  </label>
-
-                  <input
-                    type="number"
-                    value={scalar}
-                    onChange={(event) =>
-                      setScalar(event.target.value)
-                    }
-                    placeholder="Ej. 2"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                  />
-                </div>
-              )}
-
-              {/* Botón de ejecución */}
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleOperation}
-                  disabled={operating}
-                  className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                >
-                  {operating
-                    ? 'Ejecutando...'
-                    : 'Ejecutar operación'}
-                </button>
-              </div>
-
-              {/* =================================================
-                  RESULTADO
-                  ================================================= */}
-
-              {operationResult !== null && (
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        Resultado
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-500">
-                        Resultado de la operación seleccionada
-                      </p>
-                    </div>
-
-                    <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      Calculado
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-5">
-                    {Array.isArray(operationResult) &&
-                      Array.isArray(operationResult[0]) ? (
-                      renderMatrix(
-                        operationResult as number[][],
-                        'text-slate-900',
-                      )
-                    ) : (
-                      <p className="font-mono text-lg font-bold text-slate-900">
-                        {String(operationResult)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
       </div>
     </div>
   )
