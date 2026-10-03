@@ -6,6 +6,7 @@ import {
   AlertCircle,
   Building2,
   CheckCircle2,
+  Filter,
   MapPin,
   Pencil,
   Plus,
@@ -36,6 +37,11 @@ function Sucursales() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+
+  // Empresa utilizada para filtrar las sucursales.
+  // Una cadena vacía representa "Todas las empresas".
+  const [companyFilter, setCompanyFilter] =
+    useState('')
 
   // Control del formulario.
   const [showForm, setShowForm] = useState(false)
@@ -91,8 +97,19 @@ function Sucursales() {
       .join(' ')
       .toLowerCase()
 
-    return searchableText.includes(
-      search.trim().toLowerCase(),
+    const matchesSearch =
+      searchableText.includes(
+        search.trim().toLowerCase(),
+      )
+
+    const matchesCompany =
+      !companyFilter ||
+      branch.company_id ===
+      Number(companyFilter)
+
+    return (
+      matchesSearch &&
+      matchesCompany
     )
   })
 
@@ -340,21 +357,57 @@ function Sucursales() {
             </p>
           </div>
 
-          <div className="relative w-full md:max-w-sm">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+          {/* Búsqueda y filtro por empresa.
+              Se reutiliza el mismo patrón visual del Historial. */}
+          <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto">
+            <div className="relative md:w-72">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-            <input
-              type="text"
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-              placeholder="Buscar sucursal, empresa o dirección..."
-              className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-            />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Buscar sucursal o dirección..."
+                className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+            </div>
+
+            <div className="relative md:w-60">
+              <Filter
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <select
+                value={companyFilter}
+                onChange={(event) =>
+                  setCompanyFilter(
+                    event.target.value,
+                  )
+                }
+                className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-8 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              >
+                <option value="">
+                  Todas las empresas
+                </option>
+
+                {companies.map(
+                  (company) => (
+                    <option
+                      key={company.id}
+                      value={company.id}
+                    >
+                      {company.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
           </div>
         </div>
 

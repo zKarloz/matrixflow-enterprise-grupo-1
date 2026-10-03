@@ -5,6 +5,7 @@ import Modal from '../components/ui/Modal'
 import {
   AlertCircle,
   CheckCircle2,
+  Filter,
   Package,
   PackageSearch,
   Pencil,
@@ -40,8 +41,8 @@ function Productos() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // Controla la creación rápida de categorías dentro
-  // del formulario de productos.
+  // Controla la vista de creación dentro
+  // del modal independiente de categorías.
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [categorySaving, setCategorySaving] = useState(false)
   const [categoryError, setCategoryError] = useState('')
@@ -55,7 +56,7 @@ function Productos() {
   // Esta lista se utiliza solo en el panel de administración.
   const [allCategories, setAllCategories] = useState<Category[]>([])
 
-  // Control del panel de administración.
+  // Control del modal independiente de categorías.
   const [showCategoryManager, setShowCategoryManager] =
     useState(false)
 
@@ -84,6 +85,11 @@ function Productos() {
   const [formError, setFormError] = useState('')
 
   const [search, setSearch] = useState('')
+
+  // Categoría utilizada para filtrar el catálogo.
+  // Una cadena vacía representa "Todas las categorías".
+  const [categoryFilter, setCategoryFilter] =
+    useState('')
 
   // Control del formulario.
   const [showForm, setShowForm] = useState(false)
@@ -132,8 +138,29 @@ function Productos() {
   }, [])
 
   // ------------------------------------------------------------
-  // FILTRO E INDICADORES
+  // FILTROS E INDICADORES
   // ------------------------------------------------------------
+
+  // Construimos las categorías disponibles directamente desde
+  // los productos cargados. Así el filtro puede mostrar también
+  // categorías asociadas a productos existentes aunque luego
+  // hayan sido desactivadas.
+  const categoryOptions = Array.from(
+    new Map(
+      products.map((product) => [
+        product.category_id,
+        {
+          id: product.category_id,
+          name: product.category,
+        },
+      ]),
+    ).values(),
+  ).sort((a, b) =>
+    a.name.localeCompare(
+      b.name,
+      'es',
+    ),
+  )
 
   const filteredProducts = products.filter((product) => {
     const searchableText = [
@@ -145,8 +172,19 @@ function Productos() {
       .join(' ')
       .toLowerCase()
 
-    return searchableText.includes(
-      search.trim().toLowerCase(),
+    const matchesSearch =
+      searchableText.includes(
+        search.trim().toLowerCase(),
+      )
+
+    const matchesCategory =
+      !categoryFilter ||
+      product.category_id ===
+      Number(categoryFilter)
+
+    return (
+      matchesSearch &&
+      matchesCategory
     )
   })
 
@@ -429,19 +467,26 @@ function Productos() {
           newCategoryDescription.trim() || null,
       })
 
-      // Volvemos a consultar las categorías activas para
-      // mantener el selector sincronizado con el backend.
-      const updatedCategories =
-        await getActiveCategories()
+      // Actualizamos tanto las categorías activas como
+      // la lista completa mostrada en el modal.
+      const [
+        updatedCategories,
+        completeCategories,
+      ] = await Promise.all([
+        getActiveCategories(),
+        getCategories(),
+      ])
 
       setCategories(updatedCategories)
+      setAllCategories(completeCategories)
 
-      // Seleccionamos automáticamente la categoría recién creada.
+      // Dejamos disponible la categoría recién creada para
+      // el próximo producto que se registre.
       setCategoryId(
         String(createdCategory.id),
       )
 
-      // Cerramos únicamente el formulario auxiliar.
+      // Al terminar regresamos a la vista Administrar.
       resetCategoryForm()
     } catch (requestError) {
       setCategoryError(
@@ -591,14 +636,29 @@ function Productos() {
           información comercial e inventario disponible.
         </p>
 
-        <button
-          type="button"
-          onClick={openCreateForm}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
-        >
-          <Plus size={18} />
-          Nuevo producto
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {/* La gestión de categorías queda separada del
+              formulario de productos para simplificarlo. */}
+          <button
+            type="button"
+            onClick={() =>
+              void openCategoryManager()
+            }
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+          >
+            <Tags size={18} />
+            Administrar categorías
+          </button>
+
+          <button
+            type="button"
+            onClick={openCreateForm}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+          >
+            <Plus size={18} />
+            Nuevo producto
+          </button>
+        </div>
       </div>
 
       {/* Indicadores principales. */}
@@ -693,21 +753,57 @@ function Productos() {
             </p>
           </div>
 
-          <div className="relative w-full md:max-w-sm">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+          {/* Búsqueda y filtro por categoría.
+              Mantiene el mismo patrón visual utilizado en Historial. */}
+          <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto">
+            <div className="relative md:w-72">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-            <input
-              type="text"
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-              placeholder="Buscar producto, categoría o SKU..."
-              className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-            />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Buscar producto o SKU..."
+                className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+            </div>
+
+            <div className="relative md:w-60">
+              <Filter
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <select
+                value={categoryFilter}
+                onChange={(event) =>
+                  setCategoryFilter(
+                    event.target.value,
+                  )
+                }
+                className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-8 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              >
+                <option value="">
+                  Todas las categorías
+                </option>
+
+                {categoryOptions.map(
+                  (category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                    >
+                      {category.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -972,42 +1068,12 @@ function Productos() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between gap-3">
-              <label
-                htmlFor="product-category"
-                className="text-sm font-semibold text-slate-700"
-              >
-                Categoría
-              </label>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    void openCategoryManager()
-                  }
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 transition-colors hover:text-slate-900"
-                >
-                  <Tags size={14} />
-                  Administrar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Evitamos mostrar simultáneamente creación
-                    // y administración de categorías.
-                    closeCategoryManager()
-                    setCategoryError('')
-                    setShowCategoryForm(true)
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700"
-                >
-                  <Plus size={14} />
-                  Nueva categoría
-                </button>
-              </div>
-            </div>
+            <label
+              htmlFor="product-category"
+              className="text-sm font-semibold text-slate-700"
+            >
+              Categoría
+            </label>
 
             <select
               id="product-category"
@@ -1043,357 +1109,12 @@ function Productos() {
                 </p>
               )}
 
-            {/* Creación rápida sin abandonar el producto. */}
-            {showCategoryForm && (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Nueva categoría
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-500">
-                      La categoría quedará seleccionada automáticamente.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={resetCategoryForm}
-                    disabled={categorySaving}
-                    aria-label="Cerrar creación de categoría"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white hover:text-slate-700 disabled:opacity-50"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                {categoryError && (
-                  <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-                    <AlertCircle
-                      size={17}
-                      className="mt-0.5 shrink-0 text-red-600"
-                    />
-
-                    <p className="text-xs text-red-700">
-                      {categoryError}
-                    </p>
-                  </div>
-                )}
-
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label
-                      htmlFor="new-category-name"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      Nombre
-                    </label>
-
-                    <input
-                      id="new-category-name"
-                      type="text"
-                      value={newCategoryName}
-                      onChange={(event) =>
-                        setNewCategoryName(event.target.value)
-                      }
-                      placeholder="Ej. Muebles"
-                      className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="new-category-description"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      Descripción
-                    </label>
-
-                    <input
-                      id="new-category-description"
-                      type="text"
-                      value={newCategoryDescription}
-                      onChange={(event) =>
-                        setNewCategoryDescription(
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Descripción opcional"
-                      className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={resetCategoryForm}
-                      disabled={categorySaving}
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void handleCreateCategory()
-                      }
-                      disabled={categorySaving}
-                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {categorySaving
-                        ? 'Creando...'
-                        : 'Crear categoría'}
-                    </button>
-                  </div>
-                </div>
-              </div>
+            {categories.length === 0 && (
+              <p className="mt-2 text-xs text-amber-600">
+                No existen categorías activas. Utiliza
+                Administrar categorías para crear o activar una.
+              </p>
             )}
-
-            {/* Administración de categorías existentes. */}
-            {showCategoryManager && (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Tags
-                        size={17}
-                        className="text-slate-500"
-                      />
-
-                      <p className="text-sm font-semibold text-slate-800">
-                        Administrar categorías
-                      </p>
-                    </div>
-
-                    <p className="mt-1 text-xs text-slate-500">
-                      Edita, activa o desactiva las categorías registradas.
-                    </p>
-                  </div>
-
-                </div>
-
-                {/* Los errores de categorías se muestran dentro del panel. */}
-                {categoryManagerError && (
-                  <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-                    <AlertCircle
-                      size={17}
-                      className="mt-0.5 shrink-0 text-red-600"
-                    />
-
-                    <p className="text-xs text-red-700">
-                      {categoryManagerError}
-                    </p>
-                  </div>
-                )}
-
-                {categoryManagerLoading ? (
-                  <div className="mt-4 space-y-2">
-                    {[1, 2, 3].map((item) => (
-                      <div
-                        key={item}
-                        className="h-16 animate-pulse rounded-lg bg-slate-200"
-                      />
-                    ))}
-                  </div>
-                ) : allCategories.length === 0 ? (
-                  <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white p-5 text-center">
-                    <Tags
-                      size={24}
-                      className="mx-auto text-slate-300"
-                    />
-
-                    <p className="mt-2 text-sm font-medium text-slate-700">
-                      No hay categorías registradas
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-4 space-y-2">
-                    {allCategories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="rounded-lg border border-slate-200 bg-white p-3"
-                      >
-                        {editingCategoryId === category.id ? (
-                          <div className="space-y-3">
-                            <div>
-                              <label
-                                htmlFor={`category-name-${category.id}`}
-                                className="text-xs font-semibold text-slate-700"
-                              >
-                                Nombre
-                              </label>
-
-                              <input
-                                id={`category-name-${category.id}`}
-                                type="text"
-                                value={categoryEditName}
-                                onChange={(event) =>
-                                  setCategoryEditName(
-                                    event.target.value,
-                                  )
-                                }
-                                disabled={categoryUpdating}
-                                className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
-                              />
-                            </div>
-
-                            <div>
-                              <label
-                                htmlFor={`category-description-${category.id}`}
-                                className="text-xs font-semibold text-slate-700"
-                              >
-                                Descripción
-                              </label>
-
-                              <input
-                                id={`category-description-${category.id}`}
-                                type="text"
-                                value={categoryEditDescription}
-                                onChange={(event) =>
-                                  setCategoryEditDescription(
-                                    event.target.value,
-                                  )
-                                }
-                                disabled={categoryUpdating}
-                                placeholder="Descripción opcional"
-                                className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
-                              />
-                            </div>
-
-                            <div className="flex justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={resetCategoryEdit}
-                                disabled={categoryUpdating}
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
-                              >
-                                Cancelar
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleUpdateCategory()
-                                }
-                                disabled={categoryUpdating}
-                                className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {categoryUpdating
-                                  ? 'Guardando...'
-                                  : 'Guardar cambios'}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="truncate text-sm font-semibold text-slate-800">
-                                  {category.name}
-                                </p>
-
-                                <span
-                                  className={`
-                                    rounded-full
-                                    border
-                                    px-2
-                                    py-0.5
-                                    text-[11px]
-                                    font-semibold
-
-                                    ${category.is_active
-                                      ? `
-                                          border-emerald-200
-                                          bg-emerald-50
-                                          text-emerald-700
-                                        `
-                                      : `
-                                          border-slate-200
-                                          bg-slate-100
-                                          text-slate-500
-                                        `
-                                    }
-                                  `}
-                                >
-                                  {category.is_active
-                                    ? 'Activa'
-                                    : 'Inactiva'}
-                                </span>
-                              </div>
-
-                              <p className="mt-1 text-xs text-slate-500">
-                                {category.description ||
-                                  'Sin descripción'}
-                              </p>
-                            </div>
-
-                            <div className="flex shrink-0 items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openCategoryEdit(category)
-                                }
-                                disabled={categoryUpdating}
-                                className="
-                                  inline-flex
-                                  items-center
-                                  gap-1.5
-                                  rounded-lg
-                                  border
-                                  border-blue-200
-                                  px-2.5
-                                  py-2
-                                  text-xs
-                                  font-semibold
-                                  text-blue-600
-                                  transition-colors
-                                  hover:bg-blue-50
-                                  hover:text-blue-700
-                                  disabled:cursor-not-allowed
-                                  disabled:opacity-50
-                                "
-                              >
-                                <Pencil size={13} />
-                                Editar
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleToggleCategoryStatus(
-                                    category,
-                                  )
-                                }
-                                disabled={categoryUpdating}
-                                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${category.is_active
-                                  ? 'border-red-200 text-red-600 hover:bg-red-50'
-                                  : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                                  }`}
-                              >
-                                {category.is_active ? (
-                                  <>
-                                    <PowerOff size={13} />
-                                    Desactivar
-                                  </>
-                                ) : (
-                                  <>
-                                    <Power size={13} />
-                                    Activar
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
           </div>
 
           <div>
@@ -1511,6 +1232,466 @@ function Productos() {
                 ? 'Crear producto'
                 : 'Guardar cambios'}
           </button>
+        </div>
+      </Modal>
+
+      {/* ============================================================
+          MODAL DE CATEGORÍAS
+          ============================================================ */}
+      <Modal
+        open={showCategoryManager}
+        onClose={() => {
+          // No interrumpimos operaciones en curso.
+          if (
+            !categorySaving &&
+            !categoryUpdating
+          ) {
+            closeCategoryManager()
+            resetCategoryForm()
+          }
+        }}
+        panelClassName="max-w-2xl"
+      >
+        {/* Encabezado. */}
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+              <Tags size={19} />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Administrar categorías
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Gestiona las categorías utilizadas por los productos.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              closeCategoryManager()
+              resetCategoryForm()
+            }}
+            disabled={
+              categorySaving ||
+              categoryUpdating
+            }
+            aria-label="Cerrar categorías"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {/* Dos funciones claramente separadas. */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                resetCategoryForm()
+                resetCategoryEdit()
+                void loadCategoryManager()
+              }}
+              className={`
+                inline-flex
+                items-center
+                justify-center
+                gap-2
+                rounded-lg
+                px-4
+                py-2.5
+                text-sm
+                font-semibold
+                transition-colors
+
+                ${!showCategoryForm
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+                }
+              `}
+            >
+              <Tags size={16} />
+              Administrar
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                resetCategoryEdit()
+                setCategoryManagerError('')
+                setCategoryError('')
+                setShowCategoryForm(true)
+              }}
+              className={`
+                inline-flex
+                items-center
+                justify-center
+                gap-2
+                rounded-lg
+                px-4
+                py-2.5
+                text-sm
+                font-semibold
+                transition-colors
+
+                ${showCategoryForm
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+                }
+              `}
+            >
+              <Plus size={16} />
+              Nueva categoría
+            </button>
+          </div>
+
+          {showCategoryForm ? (
+            /* ======================================================
+               CREAR CATEGORÍA
+               ====================================================== */
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Nueva categoría
+              </h3>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Registra una categoría para utilizarla en el catálogo.
+              </p>
+
+              {categoryError && (
+                <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <AlertCircle
+                    size={17}
+                    className="mt-0.5 shrink-0 text-red-600"
+                  />
+
+                  <p className="text-xs text-red-700">
+                    {categoryError}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-5 space-y-4">
+                <div>
+                  <label
+                    htmlFor="new-category-name"
+                    className="text-sm font-semibold text-slate-700"
+                  >
+                    Nombre
+                  </label>
+
+                  <input
+                    id="new-category-name"
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(event) =>
+                      setNewCategoryName(
+                        event.target.value,
+                      )
+                    }
+                    disabled={categorySaving}
+                    placeholder="Ej. Muebles"
+                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="new-category-description"
+                    className="text-sm font-semibold text-slate-700"
+                  >
+                    Descripción
+                  </label>
+
+                  <input
+                    id="new-category-description"
+                    type="text"
+                    value={newCategoryDescription}
+                    onChange={(event) =>
+                      setNewCategoryDescription(
+                        event.target.value,
+                      )
+                    }
+                    disabled={categorySaving}
+                    placeholder="Descripción opcional"
+                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={resetCategoryForm}
+                  disabled={categorySaving}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    void handleCreateCategory()
+                  }
+                  disabled={categorySaving}
+                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {categorySaving
+                    ? 'Creando...'
+                    : 'Crear categoría'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ======================================================
+               ADMINISTRAR CATEGORÍAS
+               ====================================================== */
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Categorías registradas
+              </h3>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Edita, activa o desactiva las categorías existentes.
+              </p>
+
+              {categoryManagerError && (
+                <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <AlertCircle
+                    size={17}
+                    className="mt-0.5 shrink-0 text-red-600"
+                  />
+
+                  <p className="text-xs text-red-700">
+                    {categoryManagerError}
+                  </p>
+                </div>
+              )}
+
+              {categoryManagerLoading ? (
+                <div className="mt-4 space-y-2">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="h-16 animate-pulse rounded-lg bg-slate-200"
+                    />
+                  ))}
+                </div>
+              ) : allCategories.length === 0 ? (
+                <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                  <Tags
+                    size={28}
+                    className="mx-auto text-slate-300"
+                  />
+
+                  <p className="mt-3 text-sm font-medium text-slate-700">
+                    No hay categorías registradas
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowCategoryForm(true)
+                    }
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    <Plus size={15} />
+                    Crear primera categoría
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                  {allCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="rounded-lg border border-slate-200 bg-white p-4"
+                    >
+                      {editingCategoryId === category.id ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label
+                              htmlFor={`category-name-${category.id}`}
+                              className="text-xs font-semibold text-slate-700"
+                            >
+                              Nombre
+                            </label>
+
+                            <input
+                              id={`category-name-${category.id}`}
+                              type="text"
+                              value={categoryEditName}
+                              onChange={(event) =>
+                                setCategoryEditName(
+                                  event.target.value,
+                                )
+                              }
+                              disabled={categoryUpdating}
+                              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor={`category-description-${category.id}`}
+                              className="text-xs font-semibold text-slate-700"
+                            >
+                              Descripción
+                            </label>
+
+                            <input
+                              id={`category-description-${category.id}`}
+                              type="text"
+                              value={categoryEditDescription}
+                              onChange={(event) =>
+                                setCategoryEditDescription(
+                                  event.target.value,
+                                )
+                              }
+                              disabled={categoryUpdating}
+                              placeholder="Descripción opcional"
+                              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
+                            />
+                          </div>
+
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={resetCategoryEdit}
+                              disabled={categoryUpdating}
+                              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                            >
+                              Cancelar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleUpdateCategory()
+                              }
+                              disabled={categoryUpdating}
+                              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {categoryUpdating
+                                ? 'Guardando...'
+                                : 'Guardar cambios'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-sm font-semibold text-slate-800">
+                                {category.name}
+                              </p>
+
+                              <span
+                                className={`
+                                  rounded-full
+                                  border
+                                  px-2
+                                  py-0.5
+                                  text-[11px]
+                                  font-semibold
+
+                                  ${category.is_active
+                                    ? `
+                                        border-emerald-200
+                                        bg-emerald-50
+                                        text-emerald-700
+                                      `
+                                    : `
+                                        border-slate-200
+                                        bg-slate-100
+                                        text-slate-500
+                                      `
+                                  }
+                                `}
+                              >
+                                {category.is_active
+                                  ? 'Activa'
+                                  : 'Inactiva'}
+                              </span>
+                            </div>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              {category.description ||
+                                'Sin descripción'}
+                            </p>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openCategoryEdit(
+                                  category,
+                                )
+                              }
+                              disabled={categoryUpdating}
+                              className="
+                                inline-flex
+                                items-center
+                                gap-1.5
+                                rounded-lg
+                                border
+                                border-blue-200
+                                px-2.5
+                                py-2
+                                text-xs
+                                font-semibold
+                                text-blue-600
+                                transition-colors
+                                hover:bg-blue-50
+                                hover:text-blue-700
+                                disabled:cursor-not-allowed
+                                disabled:opacity-50
+                              "
+                            >
+                              <Pencil size={13} />
+                              Editar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleToggleCategoryStatus(
+                                  category,
+                                )
+                              }
+                              disabled={categoryUpdating}
+                              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${category.is_active
+                                ? 'border-red-200 text-red-600 hover:bg-red-50'
+                                : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                }`}
+                            >
+                              {category.is_active ? (
+                                <>
+                                  <PowerOff size={13} />
+                                  Desactivar
+                                </>
+                              ) : (
+                                <>
+                                  <Power size={13} />
+                                  Activar
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
     </div>

@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Banknote,
   Building2,
+  Filter,
   Package,
   Plus,
   ReceiptText,
@@ -59,6 +60,11 @@ function Ventas() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+
+  // Sucursal utilizada para filtrar el historial de ventas.
+  // Una cadena vacía representa "Todas las sucursales".
+  const [branchFilter, setBranchFilter] =
+    useState('')
 
   // Estados del formulario de nueva venta.
   const [showForm, setShowForm] = useState(false)
@@ -186,9 +192,25 @@ function Ventas() {
           .join(' ')
           .toLowerCase()
 
-        return searchableText.includes(term)
+        const matchesSearch =
+          searchableText.includes(term)
+
+        const matchesBranch =
+          !branchFilter ||
+          sale.branch_id ===
+          Number(branchFilter)
+
+        return (
+          matchesSearch &&
+          matchesBranch
+        )
       })
-  }, [sales, branches, search])
+  }, [
+    sales,
+    branches,
+    search,
+    branchFilter,
+  ])
 
 
   const previewTotal = useMemo(
@@ -534,21 +556,57 @@ function Ventas() {
             </p>
           </div>
 
-          <div className="relative w-full md:max-w-sm">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+          {/* Búsqueda y filtro por sucursal.
+              Mantiene el mismo patrón visual de Historial. */}
+          <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto">
+            <div className="relative md:w-72">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-            <input
-              type="text"
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-              placeholder="Buscar venta o sucursal..."
-              className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-            />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Buscar venta..."
+                className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+            </div>
+
+            <div className="relative md:w-60">
+              <Filter
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <select
+                value={branchFilter}
+                onChange={(event) =>
+                  setBranchFilter(
+                    event.target.value,
+                  )
+                }
+                className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-8 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              >
+                <option value="">
+                  Todas las sucursales
+                </option>
+
+                {branches.map(
+                  (branch) => (
+                    <option
+                      key={branch.id}
+                      value={branch.id}
+                    >
+                      {branch.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
           </div>
         </div>
 

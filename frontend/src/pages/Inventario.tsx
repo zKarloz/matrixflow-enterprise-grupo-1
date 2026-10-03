@@ -8,6 +8,7 @@ import {
   Boxes,
   Building2,
   CircleAlert,
+  Filter,
   Package,
   Pencil,
   Plus,
@@ -50,6 +51,11 @@ function Inventario() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+
+  // Sucursal utilizada para filtrar la tabla.
+  // Una cadena vacía representa "Todas las sucursales".
+  const [branchFilter, setBranchFilter] =
+    useState('')
 
   // Estados del formulario.
   const [showForm, setShowForm] = useState(false)
@@ -173,7 +179,7 @@ function Inventario() {
           currentProduct.id === item.product_id,
       )
 
-      return [
+      const matchesSearch = [
         item.id,
         branch?.name ?? '',
         product?.name ?? '',
@@ -184,12 +190,23 @@ function Inventario() {
         .join(' ')
         .toLowerCase()
         .includes(term)
+
+      const matchesBranch =
+        !branchFilter ||
+        item.branch_id ===
+        Number(branchFilter)
+
+      return (
+        matchesSearch &&
+        matchesBranch
+      )
     })
   }, [
     items,
     branches,
     products,
     search,
+    branchFilter,
   ])
 
 
@@ -510,22 +527,58 @@ function Inventario() {
             </p>
           </div>
 
-          <div className="relative w-full md:max-w-sm">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+          {/* Búsqueda y filtro por sucursal.
+              El patrón es equivalente al selector de Historial. */}
+          <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto">
+            <div className="relative md:w-72">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-            <input
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value,
-                )
-              }
-              placeholder="Buscar producto o sucursal..."
-              className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-            />
+              <input
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value,
+                  )
+                }
+                placeholder="Buscar producto o SKU..."
+                className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+            </div>
+
+            <div className="relative md:w-60">
+              <Filter
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <select
+                value={branchFilter}
+                onChange={(event) =>
+                  setBranchFilter(
+                    event.target.value,
+                  )
+                }
+                className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-8 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              >
+                <option value="">
+                  Todas las sucursales
+                </option>
+
+                {branches.map(
+                  (branch) => (
+                    <option
+                      key={branch.id}
+                      value={branch.id}
+                    >
+                      {branch.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
           </div>
         </div>
 
