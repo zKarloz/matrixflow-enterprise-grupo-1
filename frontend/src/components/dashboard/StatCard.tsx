@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 
 interface StatCardProps {
   title: string
-  value: string
+  value: React.ReactNode
   description: string
   icon: LucideIcon
 }

@@ -156,12 +156,15 @@ function Dashboard() {
             title="Ventas totales"
             value={
               loading
-                ? 'Cargando...'
+                ? (
+                  // Animación de respiración durante la carga.
+                  <span className="animate-pulse">
+                    Cargando...
+                  </span>
+                )
                 : dashboard
                   ? `S/ ${Number(
-                    dashboard
-                      .summary
-                      .total_sales,
+                    dashboard.summary.total_sales,
                   ).toLocaleString(
                     'es-PE',
                     {
@@ -179,15 +182,16 @@ function Dashboard() {
             title="Inventario"
             value={
               loading
-                ? 'Cargando...'
+                ? (
+                  // Animación de respiración durante la carga.
+                  <span className="animate-pulse">
+                    Cargando...
+                  </span>
+                )
                 : dashboard
                   ? Number(
-                    dashboard
-                      .summary
-                      .total_inventory,
-                  ).toLocaleString(
-                    'es-PE',
-                  )
+                    dashboard.summary.total_inventory,
+                  ).toLocaleString('es-PE')
                   : 'N/D'
             }
             description="Unidades disponibles"
@@ -199,15 +203,16 @@ function Dashboard() {
             title="Ventas registradas"
             value={
               loading
-                ? 'Cargando...'
+                ? (
+                  // Animación de respiración durante la carga.
+                  <span className="animate-pulse">
+                    Cargando...
+                  </span>
+                )
                 : dashboard
                   ? Number(
-                    dashboard
-                      .summary
-                      .sales_count,
-                  ).toLocaleString(
-                    'es-PE',
-                  )
+                    dashboard.summary.sales_count,
+                  ).toLocaleString('es-PE')
                   : 'N/D'
             }
             description="Operaciones comerciales"
@@ -244,10 +249,15 @@ function Dashboard() {
                 </div>
 
                 <div className="p-6">
-                  {/* En teléfonos el gráfico mantiene un ancho
-                      suficiente para evitar que sus datos se compriman.
-                      La barra horizontal pertenece solo al gráfico. */}
-                  <div className="overflow-x-auto pb-2">
+                  {/* 
+                      En teléfonos permitimos desplazamiento horizontal porque
+                      el gráfico mantiene un ancho mínimo de 680 px.
+
+                      Desde md (tablet/escritorio) eliminamos el comportamiento
+                      de scroll para evitar que el Tooltip de Recharts genere
+                      una scrollbar momentánea al pasar el cursor.
+                  */}
+                  <div className="overflow-x-auto pb-2 md:overflow-x-visible md:pb-0">
                     <div className="min-w-[680px] md:min-w-0">
                       <SalesChart
                         data={
@@ -275,9 +285,15 @@ function Dashboard() {
                   </div>
 
                   <div className="p-6">
-                    {/* Scroll independiente para conservar la
-                        legibilidad del gráfico en teléfonos. */}
-                    <div className="overflow-x-auto pb-2">
+                    {/* 
+                      En teléfonos permitimos desplazamiento horizontal porque
+                      el gráfico mantiene un ancho mínimo de 680 px.
+
+                      Desde md (tablet/escritorio) eliminamos el comportamiento
+                      de scroll para evitar que el Tooltip de Recharts genere
+                      una scrollbar momentánea al pasar el cursor.
+                  */}
+                    <div className="overflow-x-auto pb-2 md:overflow-x-visible md:pb-0">
                       <div className="min-w-[680px] md:min-w-0">
                         <SalesByBranchChart
                           data={
@@ -303,9 +319,15 @@ function Dashboard() {
                   </div>
 
                   <div className="p-6">
-                    {/* Los nombres de productos suelen ser largos,
-                        por eso evitamos comprimirlos en pantallas pequeñas. */}
-                    <div className="overflow-x-auto pb-2">
+                    {/* 
+                      En teléfonos permitimos desplazamiento horizontal porque
+                      el gráfico mantiene un ancho mínimo de 680 px.
+
+                      Desde md (tablet/escritorio) eliminamos el comportamiento
+                      de scroll para evitar que el Tooltip de Recharts genere
+                      una scrollbar momentánea al pasar el cursor.
+                  */}
+                    <div className="overflow-x-auto pb-2 md:overflow-x-visible md:pb-0">
                       <div className="min-w-[680px] md:min-w-0">
                         <SalesByProductChart
                           data={

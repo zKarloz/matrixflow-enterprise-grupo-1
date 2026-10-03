@@ -375,7 +375,7 @@ function Configuracion() {
                     border-blue-500
                     bg-blue-50
                     ring-2
-                    ring-blue-100
+                    ring-blue-500/20
                   `
                 : `
                     border-slate-200
@@ -420,7 +420,7 @@ function Configuracion() {
                     border-blue-500
                     bg-blue-50
                     ring-2
-                    ring-blue-100
+                    ring-blue-500/20
                   `
                 : `
                     border-slate-200
@@ -570,7 +570,7 @@ function Configuracion() {
               ${theme === 'dark'
                 ? `
                     border-blue-500
-                    bg-slate-900
+                    bg-blue-50
                     ring-2
                     ring-blue-500/20
                   `
@@ -668,7 +668,7 @@ function Configuracion() {
                     border-blue-500
                     bg-blue-50
                     ring-2
-                    ring-blue-100
+                    ring-blue-500/20
                   `
                 : `
                     border-slate-200

@@ -536,6 +536,8 @@ function Reportes() {
                 overflow-x-auto
                 overflow-y-hidden
                 pb-2
+                md:overflow-x-visible
+                md:pb-0
               "
             >
               <div
