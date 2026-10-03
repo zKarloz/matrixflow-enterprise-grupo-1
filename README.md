@@ -121,11 +121,11 @@ http://127.0.0.1:8000/docs
 
 MatrixFlow Enterprise utiliza tres niveles de acceso:
 
-| Rol               | Acceso general                                                |
-| ----------------- | ------------------------------------------------------------- |
-| **Administrador** | Acceso completo al sistema                                    |
-| **Analista**      | Ventas, inventario, análisis matemático, historial y reportes |
-| **Consulta**      | Dashboard, reportes y configuración                           |
+| Rol               | Acceso general                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| **Administrador** | Acceso completo al sistema                                                              |
+| **Analista**      | Dashboard, Ventas, inventario, análisis matemático, historial, reportes y configuración |
+| **Consulta**      | Dashboard, reportes y configuración                                                     |
 
 Los permisos se validan tanto en el frontend como en el backend mediante **JWT y RBAC**.
 
