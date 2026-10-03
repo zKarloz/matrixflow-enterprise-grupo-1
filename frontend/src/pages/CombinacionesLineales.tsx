@@ -1,84 +1,179 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+import {
+    CheckCircle2,
+    Sigma,
+    VectorSquare,
+} from 'lucide-react'
 
 import {
     createOperation,
+    getVectors,
     type Operation,
+    type Vector,
 } from '../services/api'
 
-// Empresa utilizada actualmente por MatrixFlow.
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+
+// Empresa utilizada actualmente por los módulos matemáticos.
 const DEFAULT_COMPANY_ID = 2
 
+// ============================================================
+// COMPONENTE
+// ============================================================
+
 function CombinacionesLineales() {
-    // Valores introducidos por el usuario para el primer vector.
-    const [vectorU, setVectorU] = useState('1, 2, 3')
+    // ==========================================================
+    // VECTORES REGISTRADOS
+    // ==========================================================
 
-    // Valores introducidos por el usuario para el segundo vector.
-    const [vectorV, setVectorV] = useState('4, 5, 6')
+    // Vectores recuperados desde PostgreSQL.
+    const [vectors, setVectors] = useState<Vector[]>([])
 
-    // Coeficiente asociado al primer vector.
-    const [coefficientA, setCoefficientA] = useState('2')
+    // Identificadores de los vectores seleccionados.
+    const [firstVectorId, setFirstVectorId] = useState('')
+    const [secondVectorId, setSecondVectorId] = useState('')
 
-    // Coeficiente asociado al segundo vector.
-    const [coefficientB, setCoefficientB] = useState('3')
+    // ==========================================================
+    // COEFICIENTES
+    // ==========================================================
 
-    // Resultado de la combinación lineal.
-    const [result, setResult] = useState<number[] | null>(null)
+    // Coeficiente aplicado al primer vector.
+    const [coefficientA, setCoefficientA] = useState('1')
 
-    // Información de la operación registrada.
-    const [operation, setOperation] = useState<Operation | null>(null)
+    // Coeficiente aplicado al segundo vector.
+    const [coefficientB, setCoefficientB] = useState('1')
 
-    // Estado utilizado durante el cálculo.
-    const [loading, setLoading] = useState(false)
+    // ==========================================================
+    // RESULTADO
+    // ==========================================================
 
-    // Mensaje de validación o error.
+    // Vector resultante de aU + bV.
+    const [result, setResult] =
+        useState<number[] | null>(null)
+
+    // Operación registrada en PostgreSQL.
+    const [operation, setOperation] =
+        useState<Operation | null>(null)
+
+    // ==========================================================
+    // INTERFAZ
+    // ==========================================================
+
+    const [loadingVectors, setLoadingVectors] =
+        useState(true)
+
+    const [calculating, setCalculating] =
+        useState(false)
+
     const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
 
-    // Convierte una cadena como "1, 2, 3" en un arreglo numérico.
-    const parseVector = (value: string): number[] => {
-        return value
-            .split(',')
-            .map((item) => Number(item.trim()))
-    }
+    // ==========================================================
+    // CARGAR VECTORES
+    // ==========================================================
 
-    // Ejecuta la combinación lineal con los datos introducidos.
-    const handleCalculate = async () => {
-        // Limpiamos resultados y mensajes anteriores.
-        setError('')
-        setResult(null)
-        setOperation(null)
+    useEffect(() => {
+        async function loadVectors() {
+            try {
+                setLoadingVectors(true)
+                setError('')
 
+                // Consultamos los vectores ya registrados.
+                const data = await getVectors()
+
+                setVectors(data)
+            } catch (requestError) {
+                console.error(
+                    'Error al cargar vectores:',
+                    requestError,
+                )
+
+                setError(
+                    requestError instanceof Error
+                        ? requestError.message
+                        : 'No se pudieron cargar los vectores.',
+                )
+            } finally {
+                setLoadingVectors(false)
+            }
+        }
+
+        loadVectors()
+    }, [])
+
+    // ==========================================================
+    // VECTORES SELECCIONADOS
+    // ==========================================================
+
+    const firstVector = useMemo(
+        () =>
+            vectors.find(
+                (vector) =>
+                    vector.id === Number(firstVectorId),
+            ),
+        [vectors, firstVectorId],
+    )
+
+    const secondVector = useMemo(
+        () =>
+            vectors.find(
+                (vector) =>
+                    vector.id === Number(secondVectorId),
+            ),
+        [vectors, secondVectorId],
+    )
+
+    // ==========================================================
+    // CALCULAR COMBINACIÓN LINEAL
+    // ==========================================================
+
+    async function handleCalculate() {
         try {
-            // Convertimos los vectores de texto a arreglos numéricos.
-            const parsedU = parseVector(vectorU)
-            const parsedV = parseVector(vectorV)
+            setCalculating(true)
+            setError('')
+            setSuccess('')
+            setResult(null)
+            setOperation(null)
 
-            // Convertimos los coeficientes a números.
+            // ------------------------------------------------------
+            // VALIDAR VECTORES
+            // ------------------------------------------------------
+
+            if (!firstVector) {
+                throw new Error(
+                    'Selecciona el primer vector.',
+                )
+            }
+
+            if (!secondVector) {
+                throw new Error(
+                    'Selecciona el segundo vector.',
+                )
+            }
+
+            // Una combinación lineal requiere vectores
+            // pertenecientes al mismo espacio vectorial.
+            if (
+                firstVector.dimension !==
+                secondVector.dimension
+            ) {
+                throw new Error(
+                    `Los vectores deben tener la misma dimensión. ` +
+                    `El vector U tiene dimensión ${firstVector.dimension} ` +
+                    `y el vector V tiene dimensión ${secondVector.dimension}.`,
+                )
+            }
+
+            // ------------------------------------------------------
+            // VALIDAR COEFICIENTES
+            // ------------------------------------------------------
+
             const parsedA = Number(coefficientA)
             const parsedB = Number(coefficientB)
 
-            // Validamos que ambos vectores tengan componentes.
-            if (parsedU.length === 0 || parsedV.length === 0) {
-                throw new Error('Debes ingresar ambos vectores.')
-            }
-
-            // Validamos que todos los componentes sean números válidos.
-            if (
-                parsedU.some((value) => !Number.isFinite(value)) ||
-                parsedV.some((value) => !Number.isFinite(value))
-            ) {
-                throw new Error(
-                    'Los vectores solamente pueden contener números.',
-                )
-            }
-
-            // Una combinación lineal requiere vectores de igual dimensión.
-            if (parsedU.length !== parsedV.length) {
-                throw new Error(
-                    'Los vectores U y V deben tener la misma dimensión.',
-                )
-            }
-
-            // Validamos los coeficientes.
             if (
                 !Number.isFinite(parsedA) ||
                 !Number.isFinite(parsedB)
@@ -88,292 +183,428 @@ function CombinacionesLineales() {
                 )
             }
 
-            // Activamos el estado de procesamiento.
-            setLoading(true)
+            // ------------------------------------------------------
+            // EJECUTAR OPERACIÓN
+            // ------------------------------------------------------
 
-            // Registramos la operación con sus parámetros.
             const response = await createOperation({
                 company_id: DEFAULT_COMPANY_ID,
-                name: 'Combinación lineal',
+
+                // Guardamos un nombre descriptivo para que
+                // posteriormente el Historial sea comprensible.
+                name:
+                    `Combinación lineal: ` +
+                    `${parsedA}(${firstVector.name}) + ` +
+                    `${parsedB}(${secondVector.name})`,
+
                 operation_type: 'linear_combination',
-                first_values: [parsedU],
-                second_values: [parsedV],
+
+                // El backend espera cada vector dentro
+                // de una matriz de una sola fila.
+                first_values: [
+                    firstVector.values,
+                ],
+
+                second_values: [
+                    secondVector.values,
+                ],
+
+                // Coeficientes de aU + bV.
                 scalar: parsedA,
                 second_scalar: parsedB,
+
+                // Conservamos las relaciones con los vectores
+                // originales almacenados en PostgreSQL.
+                first_vector_id: firstVector.id,
+                second_vector_id: secondVector.id,
             })
 
-            // Guardamos la operación registrada.
-            setOperation(response)
-
-            // Verificamos que el resultado sea un vector.
-            if (Array.isArray(response.result)) {
-                setResult(response.result as number[])
-            } else {
+            // Validamos que FastAPI haya devuelto un vector.
+            if (!Array.isArray(response.result)) {
                 throw new Error(
-                    'No se pudo obtener un vector como resultado.',
+                    'El backend no devolvió un vector como resultado.',
                 )
             }
-        } catch (err) {
-            // Mostramos el mensaje generado por la validación o el cálculo.
+
+            setOperation(response)
+            setResult(response.result as number[])
+
+            setSuccess(
+                'Combinación lineal calculada correctamente.',
+            )
+        } catch (requestError) {
+            console.error(
+                'Error al calcular combinación lineal:',
+                requestError,
+            )
+
             setError(
-                err instanceof Error
-                    ? err.message
+                requestError instanceof Error
+                    ? requestError.message
                     : 'No se pudo calcular la combinación lineal.',
             )
         } finally {
-            // Finalizamos el estado de carga.
-            setLoading(false)
+            setCalculating(false)
         }
     }
+
+    // ==========================================================
+    // RENDER
+    // ==========================================================
 
     return (
         <div className="min-h-full bg-slate-50 p-6">
             <div className="mx-auto max-w-7xl">
-                {/* Encabezado principal del módulo. */}
-                <div className="mb-8">
-                    <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-                        Análisis matemático
-                    </p>
 
-                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                        Combinaciones lineales
-                    </h1>
+                {/* ===================================================
+            MENSAJES
+            =================================================== */}
 
-                    <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                        Combina dos vectores mediante coeficientes para obtener
-                        un nuevo vector.
-                    </p>
-                </div>
-
-                {/* Mensaje de error o validación. */}
                 {error && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                        <span className="font-semibold">Revisa los datos</span>
-                        <span>{error}</span>
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+                        <p className="text-sm font-semibold text-red-800">
+                            No fue posible completar el cálculo
+                        </p>
+
+                        <p className="mt-1 text-sm text-red-700">
+                            {error}
+                        </p>
                     </div>
                 )}
 
-                {/* Panel principal para configurar la combinación. */}
-                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div className="border-b border-slate-200 px-6 py-5">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                            Configuración
-                        </p>
+                {success && (
+                    <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
 
-                        <h2 className="mt-1 text-xl font-bold text-slate-900">
-                            Define los vectores
-                        </h2>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                            Introduce los componentes y coeficientes que formarán
-                            la combinación.
+                        <p className="text-sm font-medium text-emerald-700">
+                            {success}
                         </p>
+                    </div>
+                )}
+
+                {/* ===================================================
+            CONFIGURAR COMBINACIÓN LINEAL
+            =================================================== */}
+
+                <section className="overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm">
+
+                    {/* Encabezado de la tarjeta. */}
+                    <div className="border-b border-cyan-100 px-6 py-5">
+                        <div className="flex items-center gap-3">
+
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
+                                <Sigma className="h-5 w-5 text-cyan-600" />
+                            </div>
+
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-900">
+                                    Construir combinación lineal
+                                </h2>
+
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Combina dos vectores registrados mediante
+                                    coeficientes definidos por el usuario.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="p-6">
-                        <div className="grid gap-6 md:grid-cols-2">
+
+                        {/* ===============================================
+                VECTORES
+                =============================================== */}
+
+                        <div className="grid gap-5 md:grid-cols-2">
+
                             {/* Primer vector. */}
-                            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
-                                <div className="mb-5 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                            Vector
-                                        </p>
-
-                                        <h3 className="mt-1 text-lg font-bold text-slate-900">
-                                            U
-                                        </h3>
-                                    </div>
-
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white">
-                                        U
-                                    </span>
-                                </div>
-
-                                <label
-                                    htmlFor="vector-u"
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
-                                >
-                                    Componentes
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                                    Vector U
                                 </label>
 
-                                <input
-                                    id="vector-u"
-                                    type="text"
-                                    value={vectorU}
-                                    onChange={(event) => setVectorU(event.target.value)}
-                                    placeholder="Ejemplo: 1, 2, 3"
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                                />
+                                <select
+                                    value={firstVectorId}
+                                    disabled={loadingVectors}
+                                    onChange={(event) => {
+                                        setFirstVectorId(
+                                            event.target.value,
+                                        )
 
-                                <label
-                                    htmlFor="coefficient-a"
-                                    className="mt-5 mb-2 block text-sm font-semibold text-slate-700"
+                                        // Eliminamos cualquier resultado anterior.
+                                        setResult(null)
+                                        setSuccess('')
+                                    }}
+                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
                                 >
+                                    <option value="">
+                                        Seleccionar vector U
+                                    </option>
+
+                                    {vectors.map((vector) => (
+                                        <option
+                                            key={vector.id}
+                                            value={vector.id}
+                                        >
+                                            {vector.name} — dimensión{' '}
+                                            {vector.dimension}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Segundo vector. */}
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                                    Vector V
+                                </label>
+
+                                <select
+                                    value={secondVectorId}
+                                    disabled={loadingVectors}
+                                    onChange={(event) => {
+                                        setSecondVectorId(
+                                            event.target.value,
+                                        )
+
+                                        setResult(null)
+                                        setSuccess('')
+                                    }}
+                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+                                >
+                                    <option value="">
+                                        Seleccionar vector V
+                                    </option>
+
+                                    {vectors.map((vector) => (
+                                        <option
+                                            key={vector.id}
+                                            value={vector.id}
+                                        >
+                                            {vector.name} — dimensión{' '}
+                                            {vector.dimension}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* ===============================================
+                VISTA PREVIA DE LOS VECTORES
+                =============================================== */}
+
+                        {(firstVector || secondVector) && (
+                            <div className="mt-6 grid gap-4 md:grid-cols-2">
+
+                                {/* Vector U. */}
+                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex items-center gap-2">
+                                        <VectorSquare className="h-4 w-4 text-slate-500" />
+
+                                        <p className="text-sm font-semibold text-slate-700">
+                                            U
+                                        </p>
+                                    </div>
+
+                                    {firstVector ? (
+                                        <>
+                                            <p className="mt-2 text-sm font-medium text-slate-900">
+                                                {firstVector.name}
+                                            </p>
+
+                                            <code className="mt-3 block overflow-x-auto rounded-lg bg-slate-900 px-4 py-3 text-sm text-white">
+                                                [{firstVector.values.join(', ')}]
+                                            </code>
+                                        </>
+                                    ) : (
+                                        <p className="mt-2 text-sm text-slate-400">
+                                            No seleccionado
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Vector V. */}
+                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex items-center gap-2">
+                                        <VectorSquare className="h-4 w-4 text-slate-500" />
+
+                                        <p className="text-sm font-semibold text-slate-700">
+                                            V
+                                        </p>
+                                    </div>
+
+                                    {secondVector ? (
+                                        <>
+                                            <p className="mt-2 text-sm font-medium text-slate-900">
+                                                {secondVector.name}
+                                            </p>
+
+                                            <code className="mt-3 block overflow-x-auto rounded-lg bg-slate-900 px-4 py-3 text-sm text-white">
+                                                [{secondVector.values.join(', ')}]
+                                            </code>
+                                        </>
+                                    ) : (
+                                        <p className="mt-2 text-sm text-slate-400">
+                                            No seleccionado
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===============================================
+                COEFICIENTES
+                =============================================== */}
+
+                        <div className="mt-6 grid gap-5 md:grid-cols-2">
+
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700">
                                     Coeficiente a
                                 </label>
 
                                 <input
-                                    id="coefficient-a"
                                     type="number"
                                     value={coefficientA}
                                     onChange={(event) =>
-                                        setCoefficientA(event.target.value)
+                                        setCoefficientA(
+                                            event.target.value,
+                                        )
                                     }
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
                                 />
                             </div>
 
-                            {/* Segundo vector. */}
-                            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
-                                <div className="mb-5 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                            Vector
-                                        </p>
-
-                                        <h3 className="mt-1 text-lg font-bold text-slate-900">
-                                            V
-                                        </h3>
-                                    </div>
-
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white">
-                                        V
-                                    </span>
-                                </div>
-
-                                <label
-                                    htmlFor="vector-v"
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
-                                >
-                                    Componentes
-                                </label>
-
-                                <input
-                                    id="vector-v"
-                                    type="text"
-                                    value={vectorV}
-                                    onChange={(event) => setVectorV(event.target.value)}
-                                    placeholder="Ejemplo: 4, 5, 6"
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                                />
-
-                                <label
-                                    htmlFor="coefficient-b"
-                                    className="mt-5 mb-2 block text-sm font-semibold text-slate-700"
-                                >
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700">
                                     Coeficiente b
                                 </label>
 
                                 <input
-                                    id="coefficient-b"
                                     type="number"
                                     value={coefficientB}
                                     onChange={(event) =>
-                                        setCoefficientB(event.target.value)
+                                        setCoefficientB(
+                                            event.target.value,
+                                        )
                                     }
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
                                 />
                             </div>
                         </div>
 
-                        {/* Vista previa de la expresión matemática. */}
-                        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        {/* ===============================================
+                EXPRESIÓN MATEMÁTICA
+                =============================================== */}
+
+                        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 text-center">
+
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                                 Expresión
                             </p>
 
-                            <p className="mt-3 text-2xl font-bold text-slate-900">
-                                {coefficientA || 'a'}U + {coefficientB || 'b'}V
+                            <p className="mt-2 text-2xl font-bold text-slate-900">
+                                {coefficientA || 'a'}U +{' '}
+                                {coefficientB || 'b'}V
                             </p>
 
-                            <p className="mt-2 text-sm text-slate-500">
-                                {coefficientA || 'a'}({vectorU || 'U'}) +{' '}
-                                {coefficientB || 'b'}({vectorV || 'V'})
-                            </p>
+                            {firstVector && secondVector && (
+                                <p className="mt-2 text-sm text-slate-500">
+                                    {coefficientA || 'a'}(
+                                    {firstVector.name}) +{' '}
+                                    {coefficientB || 'b'}(
+                                    {secondVector.name})
+                                </p>
+                            )}
                         </div>
 
-                        {/* Ejecuta el cálculo configurado. */}
-                        <button
-                            type="button"
-                            onClick={handleCalculate}
-                            disabled={loading}
-                            className="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {loading
-                                ? 'Calculando...'
-                                : 'Calcular combinación lineal'}
-                        </button>
+                        {/* Ejecutar cálculo. */}
+                        <div className="mt-6 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={handleCalculate}
+                                disabled={
+                                    calculating ||
+                                    loadingVectors
+                                }
+                                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                            >
+                                {calculating
+                                    ? 'Calculando...'
+                                    : 'Calcular combinación lineal'}
+                            </button>
+                        </div>
                     </div>
                 </section>
 
-                {/* Resultado del cálculo. */}
+                {/* ===================================================
+            RESULTADO
+            =================================================== */}
+
                 {result && (
-                    <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                    Resultado
-                                </p>
+                    <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-                                <h2 className="mt-1 text-xl font-bold text-slate-900">
-                                    Vector resultante
-                                </h2>
+                        <div className="border-b border-slate-100 px-6 py-5">
+                            <div className="flex items-center justify-between gap-4">
+
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-900">
+                                        Vector resultante
+                                    </h2>
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Resultado de aplicar los coeficientes
+                                        a los vectores seleccionados.
+                                    </p>
+                                </div>
+
+                                <span className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                                    Calculado
+                                </span>
                             </div>
-
-                            <span className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                Calculado
-                            </span>
                         </div>
 
-                        {/* Mostramos cada componente del vector resultado. */}
-                        <div className="mt-6 flex flex-wrap gap-3">
-                            {result.map((value, index) => (
-                                <div
-                                    key={index}
-                                    className="flex min-w-20 flex-col items-center rounded-xl border border-slate-200 bg-slate-50 px-5 py-4"
-                                >
-                                    <span className="text-xs font-medium text-slate-400">
-                                        Componente {index + 1}
-                                    </span>
+                        <div className="p-6">
 
-                                    <span className="mt-1 text-2xl font-bold text-slate-900">
-                                        {value}
+                            {/* Representación matemática del resultado. */}
+                            <div className="overflow-x-auto rounded-xl bg-slate-900 p-5">
+                                <p className="font-mono text-lg font-bold text-white">
+                                    [{result.join(', ')}]
+                                </p>
+                            </div>
+
+                            {/* Componentes individuales. */}
+                            <div className="mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+
+                                {result.map((value, index) => (
+                                    <div
+                                        key={index}
+                                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                    >
+                                        <p className="text-xs font-medium text-slate-400">
+                                            Componente {index + 1}
+                                        </p>
+
+                                        <p className="mt-1 font-mono text-lg font-bold text-slate-900">
+                                            {value}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* La operación queda registrada para Historial. */}
+                            {operation && (
+                                <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
+                                    <p className="text-sm text-slate-500">
+                                        Operación registrada en el sistema
+                                    </p>
+
+                                    <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                                        #{operation.id}
                                     </span>
                                 </div>
-                            ))}
+                            )}
                         </div>
-
-                        {/* Identificador de la operación registrada. */}
-                        {operation && (
-                            <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
-                                <span className="text-sm text-slate-500">
-                                    Operación registrada
-                                </span>
-
-                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                    #{operation.id}
-                                </span>
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                {/* Estado inicial cuando todavía no existe un resultado. */}
-                {!result && !loading && !error && (
-                    <section className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-xl font-bold text-slate-600">
-                            aU
-                        </div>
-
-                        <h2 className="mt-4 font-semibold text-slate-700">
-                            Resultado pendiente
-                        </h2>
-
-                        <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
-                            Configura los vectores y sus coeficientes para
-                            visualizar el vector resultante.
-                        </p>
                     </section>
                 )}
             </div>

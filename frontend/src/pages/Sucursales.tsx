@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+
+// Modal compartido para centrar formularios y cubrir todo el viewport.
+import Modal from '../components/ui/Modal'
 import {
   AlertCircle,
   Building2,
@@ -445,8 +448,8 @@ function Sucursales() {
                       <td className="px-5 py-4">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${branch.is_active
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-slate-100 text-slate-500'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500'
                             }`}
                         >
                           {branch.is_active
@@ -474,8 +477,8 @@ function Sucursales() {
                               void handleToggleStatus(branch)
                             }
                             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${branch.is_active
-                                ? 'border-red-200 text-red-600 hover:bg-red-50'
-                                : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                              ? 'border-red-200 text-red-600 hover:bg-red-50'
+                              : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                               }`}
                           >
                             {branch.is_active ? (
@@ -519,176 +522,181 @@ function Sucursales() {
       </div>
 
       {/* Formulario de creación y edición. */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <Modal
+        open={showForm}
+        onClose={() => {
+          // Evitamos cerrar el formulario durante el guardado.
+          if (!saving) {
+            resetForm()
+          }
+        }}
+        panelClassName="max-w-lg"
+      >
 
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {editingId === null
-                    ? 'Nueva sucursal'
-                    : 'Editar sucursal'}
-                </h2>
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {editingId === null
+                ? 'Nueva sucursal'
+                : 'Editar sucursal'}
+            </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  {editingId === null
-                    ? 'Registra una nueva sede en MatrixFlow.'
-                    : 'Actualiza los datos de la sucursal.'}
-                </p>
-              </div>
+            <p className="mt-1 text-sm text-slate-500">
+              {editingId === null
+                ? 'Registra una nueva sede en MatrixFlow.'
+                : 'Actualiza los datos de la sucursal.'}
+            </p>
+          </div>
 
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-                aria-label="Cerrar formulario"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-              >
-                <X size={18} />
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            aria-label="Cerrar formulario"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-            <div className="space-y-5 p-6">
-              <div>
-                <label
-                  htmlFor="branch-company"
-                  className="text-sm font-semibold text-slate-700"
-                >
-                  Empresa
-                </label>
+        <div className="space-y-5 p-6">
+          <div>
+            <label
+              htmlFor="branch-company"
+              className="text-sm font-semibold text-slate-700"
+            >
+              Empresa
+            </label>
 
-                {editingId === null ? (
-                  <select
-                    id="branch-company"
-                    value={companyId}
-                    onChange={(event) =>
-                      setCompanyId(event.target.value)
-                    }
-                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
-                  >
-                    <option value="">
-                      Selecciona una empresa
-                    </option>
-
-                    {companies.map((company) => (
-                      <option
-                        key={company.id}
-                        value={company.id}
-                      >
-                        {company.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
-                    {companies.find(
-                      (company) =>
-                        company.id === Number(companyId),
-                    )?.name ?? `Empresa #${companyId}`}
-                  </div>
-                )}
-
-                {editingId !== null && (
-                  <p className="mt-2 text-xs text-slate-400">
-                    La empresa asociada no puede modificarse.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="branch-name"
-                  className="text-sm font-semibold text-slate-700"
-                >
-                  Nombre de la sucursal
-                </label>
-
-                <input
-                  id="branch-name"
-                  type="text"
-                  value={name}
-                  onChange={(event) =>
-                    setName(event.target.value)
-                  }
-                  placeholder="Ej. Sucursal Cusco"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="branch-address"
-                  className="text-sm font-semibold text-slate-700"
-                >
-                  Dirección
-                </label>
-
-                <input
-                  id="branch-address"
-                  type="text"
-                  value={address}
-                  onChange={(event) =>
-                    setAddress(event.target.value)
-                  }
-                  placeholder="Av. Principal 123"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="branch-phone"
-                  className="text-sm font-semibold text-slate-700"
-                >
-                  Teléfono
-                </label>
-
-                <input
-                  id="branch-phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(event) =>
-                    setPhone(event.target.value)
-                  }
-                  placeholder="999 999 999"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-                className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={
-                  saving ||
-                  (
-                    editingId === null &&
-                    companies.length === 0
-                  )
+            {editingId === null ? (
+              <select
+                id="branch-company"
+                value={companyId}
+                onChange={(event) =>
+                  setCompanyId(event.target.value)
                 }
-                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
               >
-                {saving
-                  ? 'Guardando...'
-                  : editingId === null
-                    ? 'Crear sucursal'
-                    : 'Guardar cambios'}
-              </button>
-            </div>
+                <option value="">
+                  Selecciona una empresa
+                </option>
+
+                {companies.map((company) => (
+                  <option
+                    key={company.id}
+                    value={company.id}
+                  >
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+                {companies.find(
+                  (company) =>
+                    company.id === Number(companyId),
+                )?.name ?? `Empresa #${companyId}`}
+              </div>
+            )}
+
+            {editingId !== null && (
+              <p className="mt-2 text-xs text-slate-400">
+                La empresa asociada no puede modificarse.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="branch-name"
+              className="text-sm font-semibold text-slate-700"
+            >
+              Nombre de la sucursal
+            </label>
+
+            <input
+              id="branch-name"
+              type="text"
+              value={name}
+              onChange={(event) =>
+                setName(event.target.value)
+              }
+              placeholder="Ej. Sucursal Cusco"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="branch-address"
+              className="text-sm font-semibold text-slate-700"
+            >
+              Dirección
+            </label>
+
+            <input
+              id="branch-address"
+              type="text"
+              value={address}
+              onChange={(event) =>
+                setAddress(event.target.value)
+              }
+              placeholder="Av. Principal 123"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="branch-phone"
+              className="text-sm font-semibold text-slate-700"
+            >
+              Teléfono
+            </label>
+
+            <input
+              id="branch-phone"
+              type="tel"
+              value={phone}
+              onChange={(event) =>
+                setPhone(event.target.value)
+              }
+              placeholder="999 999 999"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100"
+            />
           </div>
         </div>
-      )}
+
+        <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={
+              saving ||
+              (
+                editingId === null &&
+                companies.length === 0
+              )
+            }
+            className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving
+              ? 'Guardando...'
+              : editingId === null
+                ? 'Crear sucursal'
+                : 'Guardar cambios'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

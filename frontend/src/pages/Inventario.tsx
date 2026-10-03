@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+// Modal común utilizado por todos los formularios
+// emergentes de MatrixFlow.
+import Modal from '../components/ui/Modal'
+
 import {
   AlertCircle,
   Boxes,
@@ -635,10 +639,10 @@ function Inventario() {
                       <td className="px-5 py-4 text-right">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${item.stock === 0
-                              ? 'bg-red-50 text-red-700'
-                              : lowStock
-                                ? 'bg-amber-50 text-amber-700'
-                                : 'bg-emerald-50 text-emerald-700'
+                            ? 'bg-red-50 text-red-700'
+                            : lowStock
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-emerald-50 text-emerald-700'
                             }`}
                         >
                           {item.stock}
@@ -705,217 +709,230 @@ function Inventario() {
       </div>
 
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {editingId !== null
-                    ? 'Editar inventario'
-                    : 'Nuevo inventario'}
-                </h2>
+      {/* ============================================================
+        MODAL DE INVENTARIO
+        ============================================================ */}
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Define las existencias disponibles del producto.
-                </p>
-              </div>
+      <Modal
+        // El componente Modal ya decide si debe renderizarse.
+        open={showForm}
 
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Cerrar"
-              >
-                <X size={18} />
-              </button>
+        // Evitamos cerrar accidentalmente mientras se está guardando.
+        onClose={() => {
+          if (!saving) {
+            resetForm()
+          }
+        }}
+
+        // Ancho máximo del formulario de inventario.
+        panelClassName="max-w-xl"
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {editingId !== null
+                ? 'Editar inventario'
+                : 'Nuevo inventario'}
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Define las existencias disponibles del producto.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Cerrar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+
+        <div className="space-y-5 p-6">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {formError}
             </div>
+          )}
 
 
-            <div className="space-y-5 p-6">
-              {formError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                  {formError}
-                </div>
-              )}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Sucursal
+              </label>
 
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-semibold text-slate-700">
-                    Sucursal
-                  </label>
-
-                  <select
-                    value={branchId}
-                    onChange={(event) =>
-                      setBranchId(
-                        event.target.value,
-                      )
-                    }
-                    disabled={
-                      editingId !== null ||
-                      saving
-                    }
-                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100"
-                  >
-                    {activeBranches.map(
-                      (branch) => (
-                        <option
-                          key={branch.id}
-                          value={branch.id}
-                        >
-                          {branch.name}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-
-
-                <div>
-                  <label className="text-sm font-semibold text-slate-700">
-                    Producto
-                  </label>
-
-                  <select
-                    value={productId}
-                    onChange={(event) =>
-                      setProductId(
-                        event.target.value,
-                      )
-                    }
-                    disabled={
-                      editingId !== null ||
-                      saving
-                    }
-                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100"
-                  >
-                    <option value="">
-                      Selecciona un producto
-                    </option>
-
-                    {activeProducts.map(
-                      (product) => (
-                        <option
-                          key={product.id}
-                          value={product.id}
-                        >
-                          {product.name} · {product.sku}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-              </div>
-
-
-              {selectedCombinationExists && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-                  Este producto ya tiene inventario registrado en la sucursal seleccionada.
-                </div>
-              )}
-
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="text-sm font-semibold text-slate-700">
-                    Stock
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={stock}
-                    onChange={(event) =>
-                      setStock(
-                        event.target.value,
-                      )
-                    }
-                    disabled={saving}
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
-                  />
-                </div>
-
-
-                <div>
-                  <label className="text-sm font-semibold text-slate-700">
-                    Stock mínimo
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={minimumStock}
-                    onChange={(event) =>
-                      setMinimumStock(
-                        event.target.value,
-                      )
-                    }
-                    disabled={saving}
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
-                  />
-                </div>
-
-
-                <div>
-                  <label className="text-sm font-semibold text-slate-700">
-                    Costo unitario
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={unitCost}
-                    onChange={(event) =>
-                      setUnitCost(
-                        event.target.value,
-                      )
-                    }
-                    disabled={saving}
-                    placeholder="0.00"
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-                className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  void handleSave()
+              <select
+                value={branchId}
+                onChange={(event) =>
+                  setBranchId(
+                    event.target.value,
+                  )
                 }
                 disabled={
-                  saving ||
-                  selectedCombinationExists
+                  editingId !== null ||
+                  saving
                 }
-                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100"
               >
-                {saving
-                  ? 'Guardando...'
-                  : editingId !== null
-                    ? 'Guardar cambios'
-                    : 'Crear inventario'}
-              </button>
+                {activeBranches.map(
+                  (branch) => (
+                    <option
+                      key={branch.id}
+                      value={branch.id}
+                    >
+                      {branch.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+
+
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Producto
+              </label>
+
+              <select
+                value={productId}
+                onChange={(event) =>
+                  setProductId(
+                    event.target.value,
+                  )
+                }
+                disabled={
+                  editingId !== null ||
+                  saving
+                }
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100"
+              >
+                <option value="">
+                  Selecciona un producto
+                </option>
+
+                {activeProducts.map(
+                  (product) => (
+                    <option
+                      key={product.id}
+                      value={product.id}
+                    >
+                      {product.name} · {product.sku}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+          </div>
+
+
+          {selectedCombinationExists && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+              Este producto ya tiene inventario registrado en la sucursal seleccionada.
+            </div>
+          )}
+
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Stock
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={stock}
+                onChange={(event) =>
+                  setStock(
+                    event.target.value,
+                  )
+                }
+                disabled={saving}
+                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+              />
+            </div>
+
+
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Stock mínimo
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={minimumStock}
+                onChange={(event) =>
+                  setMinimumStock(
+                    event.target.value,
+                  )
+                }
+                disabled={saving}
+                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+              />
+            </div>
+
+
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Costo unitario
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={unitCost}
+                onChange={(event) =>
+                  setUnitCost(
+                    event.target.value,
+                  )
+                }
+                disabled={saving}
+                placeholder="0.00"
+                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+              />
             </div>
           </div>
         </div>
-      )}
+
+
+        <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              void handleSave()
+            }
+            disabled={
+              saving ||
+              selectedCombinationExists
+            }
+            className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving
+              ? 'Guardando...'
+              : editingId !== null
+                ? 'Guardar cambios'
+                : 'Crear inventario'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

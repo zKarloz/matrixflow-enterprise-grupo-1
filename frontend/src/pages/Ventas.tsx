@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+
+// Modal compartido para centrar formularios y cubrir todo el viewport.
+import Modal from '../components/ui/Modal'
 import {
   AlertCircle,
   Banknote,
@@ -693,364 +696,369 @@ function Ventas() {
 
 
       {/* Formulario para registrar una nueva venta. */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+      <Modal
+        open={showForm}
+        onClose={() => {
+          // Evitamos cerrar el formulario mientras la venta se guarda.
+          if (!saving) {
+            resetForm()
+          }
+        }}
+        panelClassName="max-w-3xl"
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShoppingCart
+                size={20}
+                className="text-slate-700"
+              />
+
+              <h2 className="text-lg font-bold text-slate-900">
+                Nueva venta
+              </h2>
+            </div>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Registra uno o más productos en una sola operación.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            aria-label="Cerrar formulario"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+
+        {formError && (
+          <div className="mx-6 mt-5 rounded-lg border border-red-200 bg-red-50 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle
+                size={18}
+                className="mt-0.5 shrink-0 text-red-600"
+              />
+
               <div>
-                <div className="flex items-center gap-2">
-                  <ShoppingCart
-                    size={20}
-                    className="text-slate-700"
-                  />
+                <p className="text-sm font-semibold text-red-800">
+                  No fue posible registrar la venta
+                </p>
 
-                  <h2 className="text-lg font-bold text-slate-900">
-                    Nueva venta
-                  </h2>
-                </div>
+                <p className="mt-1 text-sm text-red-700">
+                  {formError}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Registra uno o más productos en una sola operación.
+
+        <div className="space-y-6 p-6">
+          <div>
+            <label
+              htmlFor="sale-branch"
+              className="text-sm font-semibold text-slate-700"
+            >
+              Sucursal
+            </label>
+
+            <select
+              id="sale-branch"
+              value={selectedBranchId}
+              onChange={(event) =>
+                setSelectedBranchId(
+                  event.target.value,
+                )
+              }
+              disabled={saving}
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
+            >
+              {activeBranches.map(
+                (branch) => (
+                  <option
+                    key={branch.id}
+                    value={branch.id}
+                  >
+                    {branch.name}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+
+
+          <div>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">
+                  Productos
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Agrega los productos incluidos en la venta.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={resetForm}
-                disabled={saving}
-                aria-label="Cerrar formulario"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                onClick={addDetail}
+                disabled={
+                  saving ||
+                  details.length >=
+                  activeProducts.length
+                }
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <X size={18} />
+                <Plus size={14} />
+                Agregar producto
               </button>
             </div>
 
 
-            {formError && (
-              <div className="mx-6 mt-5 rounded-lg border border-red-200 bg-red-50 p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle
-                    size={18}
-                    className="mt-0.5 shrink-0 text-red-600"
-                  />
-
-                  <div>
-                    <p className="text-sm font-semibold text-red-800">
-                      No fue posible registrar la venta
-                    </p>
-
-                    <p className="mt-1 text-sm text-red-700">
-                      {formError}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-
-            <div className="space-y-6 p-6">
-              <div>
-                <label
-                  htmlFor="sale-branch"
-                  className="text-sm font-semibold text-slate-700"
-                >
-                  Sucursal
-                </label>
-
-                <select
-                  id="sale-branch"
-                  value={selectedBranchId}
-                  onChange={(event) =>
-                    setSelectedBranchId(
-                      event.target.value,
-                    )
-                  }
-                  disabled={saving}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
-                >
-                  {activeBranches.map(
-                    (branch) => (
-                      <option
-                        key={branch.id}
-                        value={branch.id}
-                      >
-                        {branch.name}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </div>
-
-
-              <div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">
-                      Productos
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-500">
-                      Agrega los productos incluidos en la venta.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={addDetail}
-                    disabled={
-                      saving ||
-                      details.length >=
-                      activeProducts.length
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Plus size={14} />
-                    Agregar producto
-                  </button>
-                </div>
-
-
-                <div className="mt-4 space-y-3">
-                  {details.map(
-                    (detail, index) => {
-                      const selectedProduct =
-                        activeProducts.find(
-                          (product) =>
-                            product.id ===
-                            Number(
-                              detail.productId,
-                            ),
-                        )
-
-                      const quantity =
+            <div className="mt-4 space-y-3">
+              {details.map(
+                (detail, index) => {
+                  const selectedProduct =
+                    activeProducts.find(
+                      (product) =>
+                        product.id ===
                         Number(
-                          detail.quantity,
-                        ) || 0
+                          detail.productId,
+                        ),
+                    )
 
-                      const subtotal =
-                        selectedProduct
-                          ? Number(
-                            selectedProduct.price,
-                          ) * quantity
-                          : 0
+                  const quantity =
+                    Number(
+                      detail.quantity,
+                    ) || 0
 
-                      const selectedIds =
-                        details
-                          .map(
-                            (item) =>
-                              item.productId,
-                          )
-                          .filter(Boolean)
+                  const subtotal =
+                    selectedProduct
+                      ? Number(
+                        selectedProduct.price,
+                      ) * quantity
+                      : 0
 
-                      return (
-                        <div
-                          key={index}
-                          className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                        >
-                          <div className="grid gap-4 md:grid-cols-[1fr_110px_130px_40px] md:items-end">
-                            <div>
-                              <label
-                                htmlFor={`sale-product-${index}`}
-                                className="text-xs font-semibold text-slate-700"
-                              >
-                                Producto
-                              </label>
+                  const selectedIds =
+                    details
+                      .map(
+                        (item) =>
+                          item.productId,
+                      )
+                      .filter(Boolean)
 
-                              <select
-                                id={`sale-product-${index}`}
-                                value={
-                                  detail.productId
-                                }
-                                onChange={(
-                                  event,
-                                ) =>
-                                  updateDetail(
-                                    index,
-                                    'productId',
-                                    event.target
-                                      .value,
-                                  )
-                                }
-                                disabled={saving}
-                                className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
-                              >
-                                <option value="">
-                                  Selecciona un producto
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="grid gap-4 md:grid-cols-[1fr_110px_130px_40px] md:items-end">
+                        <div>
+                          <label
+                            htmlFor={`sale-product-${index}`}
+                            className="text-xs font-semibold text-slate-700"
+                          >
+                            Producto
+                          </label>
+
+                          <select
+                            id={`sale-product-${index}`}
+                            value={
+                              detail.productId
+                            }
+                            onChange={(
+                              event,
+                            ) =>
+                              updateDetail(
+                                index,
+                                'productId',
+                                event.target
+                                  .value,
+                              )
+                            }
+                            disabled={saving}
+                            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
+                          >
+                            <option value="">
+                              Selecciona un producto
+                            </option>
+
+                            {activeProducts.map(
+                              (product) => (
+                                <option
+                                  key={
+                                    product.id
+                                  }
+                                  value={
+                                    product.id
+                                  }
+                                  disabled={
+                                    selectedIds.includes(
+                                      String(
+                                        product.id,
+                                      ),
+                                    ) &&
+                                    detail.productId !==
+                                    String(
+                                      product.id,
+                                    )
+                                  }
+                                >
+                                  {
+                                    product.name
+                                  }{' '}
+                                  ·{' '}
+                                  {
+                                    product.sku
+                                  }
                                 </option>
+                              ),
+                            )}
+                          </select>
 
-                                {activeProducts.map(
-                                  (product) => (
-                                    <option
-                                      key={
-                                        product.id
-                                      }
-                                      value={
-                                        product.id
-                                      }
-                                      disabled={
-                                        selectedIds.includes(
-                                          String(
-                                            product.id,
-                                          ),
-                                        ) &&
-                                        detail.productId !==
-                                        String(
-                                          product.id,
-                                        )
-                                      }
-                                    >
-                                      {
-                                        product.name
-                                      }{' '}
-                                      ·{' '}
-                                      {
-                                        product.sku
-                                      }
-                                    </option>
-                                  ),
-                                )}
-                              </select>
-
-                              {selectedProduct && (
-                                <p className="mt-1.5 text-xs text-slate-500">
-                                  Precio:{' '}
-                                  {formatCurrency(
-                                    Number(
-                                      selectedProduct.price,
-                                    ),
-                                  )}
-                                </p>
+                          {selectedProduct && (
+                            <p className="mt-1.5 text-xs text-slate-500">
+                              Precio:{' '}
+                              {formatCurrency(
+                                Number(
+                                  selectedProduct.price,
+                                ),
                               )}
-                            </div>
+                            </p>
+                          )}
+                        </div>
 
 
-                            <div>
-                              <label
-                                htmlFor={`sale-quantity-${index}`}
-                                className="text-xs font-semibold text-slate-700"
-                              >
-                                Cantidad
-                              </label>
+                        <div>
+                          <label
+                            htmlFor={`sale-quantity-${index}`}
+                            className="text-xs font-semibold text-slate-700"
+                          >
+                            Cantidad
+                          </label>
 
-                              <input
-                                id={`sale-quantity-${index}`}
-                                type="number"
-                                min="1"
-                                step="1"
-                                value={
-                                  detail.quantity
-                                }
-                                onChange={(
-                                  event,
-                                ) =>
-                                  updateDetail(
-                                    index,
-                                    'quantity',
-                                    event.target
-                                      .value,
-                                  )
-                                }
-                                disabled={saving}
-                                className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
-                              />
-                            </div>
-
-
-                            <div>
-                              <p className="text-xs font-semibold text-slate-700">
-                                Subtotal
-                              </p>
-
-                              <div className="mt-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900">
-                                {formatCurrency(
-                                  subtotal,
-                                )}
-                              </div>
-                            </div>
+                          <input
+                            id={`sale-quantity-${index}`}
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={
+                              detail.quantity
+                            }
+                            onChange={(
+                              event,
+                            ) =>
+                              updateDetail(
+                                index,
+                                'quantity',
+                                event.target
+                                  .value,
+                              )
+                            }
+                            disabled={saving}
+                            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-100 disabled:bg-slate-100"
+                          />
+                        </div>
 
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removeDetail(
-                                  index,
-                                )
-                              }
-                              disabled={
-                                saving ||
-                                details.length <= 1
-                              }
-                              aria-label="Eliminar producto de la venta"
-                              className="flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
-                            >
-                              <Trash2
-                                size={16}
-                              />
-                            </button>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-700">
+                            Subtotal
+                          </p>
+
+                          <div className="mt-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900">
+                            {formatCurrency(
+                              subtotal,
+                            )}
                           </div>
                         </div>
-                      )
-                    },
-                  )}
-                </div>
-              </div>
 
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">
-                      Total estimado
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-500">
-                      FastAPI volverá a calcular precios y total antes de guardar.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Package
-                      size={20}
-                      className="text-slate-400"
-                    />
-
-                    <p className="text-2xl font-bold text-slate-900">
-                      {formatCurrency(
-                        previewTotal,
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeDetail(
+                              index,
+                            )
+                          }
+                          disabled={
+                            saving ||
+                            details.length <= 1
+                          }
+                          aria-label="Eliminar producto de la venta"
+                          className="flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <Trash2
+                            size={16}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                },
+              )}
             </div>
+          </div>
 
 
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-                className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">
+                  Total estimado
+                </p>
 
-              <button
-                type="button"
-                onClick={() =>
-                  void handleSave()
-                }
-                disabled={saving}
-                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving
-                  ? 'Registrando...'
-                  : 'Registrar venta'}
-              </button>
+                <p className="mt-1 text-xs text-slate-500">
+                  FastAPI volverá a calcular precios y total antes de guardar.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Package
+                  size={20}
+                  className="text-slate-400"
+                />
+
+                <p className="text-2xl font-bold text-slate-900">
+                  {formatCurrency(
+                    previewTotal,
+                  )}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      )}
+
+
+        <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              void handleSave()
+            }
+            disabled={saving}
+            className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving
+              ? 'Registrando...'
+              : 'Registrar venta'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -26,10 +26,18 @@ from app.models.operation import (
 def get_all_operations(db: Session):
     """
     Obtiene todas las operaciones registradas.
+
+    Las operaciones más recientes se muestran primero
+    para facilitar su consulta desde el historial.
     """
 
-    # Consultamos la tabla principal de operaciones.
-    return db.query(Operation).all()
+    # Ordenamos por ID descendente porque cada nueva
+    # operación recibe un ID mayor.
+    return (
+        db.query(Operation)
+        .order_by(Operation.id.desc())
+        .all()
+    )
 
 
 def get_operation_by_id(
@@ -159,31 +167,40 @@ def create_operation_result(
     operation_id: int,
     matrix_id: int | None = None,
     vector_id: int | None = None,
+    scalar_value: float | None = None,
     execution_time: float | None = None,
 ):
     """
     Crea un resultado asociado a una operación.
 
-    El resultado apunta a una matriz o vector almacenado
-    previamente.
+    El resultado puede ser:
+    - una matriz,
+    - un vector,
+    - o un valor escalar.
     """
 
-    # Creamos el resultado utilizando únicamente las
-    # columnas existentes en operation_results.
+    # Creamos el resultado utilizando las columnas reales
+    # disponibles en operation_results.
     operation_result = OperationResult(
         operation_id=operation_id,
         matrix_id=matrix_id,
         vector_id=vector_id,
+
+        # Guardamos aquí resultados numéricos simples,
+        # por ejemplo el producto punto.
+        scalar_value=scalar_value,
+
+        # Tiempo empleado durante la ejecución.
         execution_time=execution_time,
     )
 
-    # Guardamos el resultado.
+    # Agregamos el resultado a la sesión.
     db.add(operation_result)
 
     # Confirmamos la transacción.
     db.commit()
 
-    # Recuperamos el ID generado.
+    # Recuperamos el ID generado por PostgreSQL.
     db.refresh(operation_result)
 
     return operation_result

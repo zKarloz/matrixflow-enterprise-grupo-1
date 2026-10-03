@@ -13,7 +13,18 @@
 # de PostgreSQL.
 # ============================================================
 
-from sqlalchemy import Column, ForeignKey, Integer, Numeric, String, Text
+# Importamos DateTime y func para registrar automáticamente
+# la fecha y hora en la que se crea cada operación.
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+)
 
 from app.core.database import Base
 
@@ -60,6 +71,13 @@ class Operation(Base):
         nullable=True,
     )
 
+    # Fecha y hora en la que se registró la operación.
+    # PostgreSQL establece este valor automáticamente.
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
 
 class OperationInput(Base):
     """
@@ -154,6 +172,16 @@ class OperationResult(Base):
     vector_id = Column(
         Integer,
         ForeignKey("vectors.id"),
+        nullable=True,
+    )
+
+    # Resultado numérico cuando la operación devuelve
+    # un escalar en lugar de un vector o una matriz.
+    #
+    # Ejemplo:
+    # producto punto [1, 2, 3] · [4, 5, 6] = 32
+    scalar_value = Column(
+        Numeric(20, 4),
         nullable=True,
     )
 

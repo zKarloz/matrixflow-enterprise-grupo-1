@@ -33,17 +33,24 @@ from app.algorithms import (
 from app.repositories.matrix_repository import (
     create_matrix,
     create_matrix_value,
+    get_matrix_by_id,
+    get_matrix_values,
 )
 
 from app.repositories.vector_repository import (
     create_vector,
     create_vector_value,
+    get_vector_by_id,
+    get_vector_values,
 )
 
 from app.repositories.operation_repository import (
     create_operation,
     create_operation_input,
     create_operation_result,
+    get_all_operations,
+    get_operation_inputs,
+    get_operation_results,
 )
 
 
@@ -353,12 +360,23 @@ def execute_operation(
     # --------------------------------------------------------
 
     elif isinstance(result, (int, float)):
-        # Actualmente no existe una tabla específica para
-        # almacenar resultados escalares.
+        # Algunas operaciones, como el producto punto,
+        # devuelven un único número en lugar de un vector
+        # o una matriz.
         #
-        # El resultado se devuelve correctamente al endpoint,
-        # pero no se crea un operation_result para este caso.
-        pass
+        # Ahora podemos persistir ese resultado directamente
+        # en operation_results.scalar_value.
+        create_operation_result(
+            db=db,
+            operation_id=operation_record.id,
+
+            # Guardamos el valor numérico calculado.
+            scalar_value=float(result),
+
+            # Conservamos también el tiempo empleado
+            # exclusivamente por el cálculo matemático.
+            execution_time=execution_time,
+        )
 
     # --------------------------------------------------------
     # Caso 4: resultado matricial
@@ -441,3 +459,233 @@ def execute_operation(
 
     # El endpoint recibe tanto el registro como el resultado.
     return operation_record, result
+
+# ============================================================
+# HISTORIAL DE OPERACIONES
+# ============================================================
+
+def list_operation_history(db: Session):
+    """
+    Construye el historial matemático completo.
+
+    Cada registro incluye:
+    - información principal de la operación,
+    - vectores o matrices utilizados como entrada,
+    - resultado calculado,
+    - tiempo de ejecución,
+    - fecha de creación.
+    """
+
+    # Recuperamos todas las operaciones registradas.
+    operations = get_all_operations(db)
+
+    # Aquí construiremos la respuesta final para React.
+    history = []
+
+    for operation in operations:
+        # ----------------------------------------------------
+        # ENTRADAS
+        # ----------------------------------------------------
+
+        stored_inputs = get_operation_inputs(
+            db,
+            operation.id,
+        )
+
+        inputs = []
+
+        for operation_input in stored_inputs:
+            # ----------------------------------------------
+            # Entrada vectorial
+            # ----------------------------------------------
+
+            if (
+                operation_input.input_type == "vector"
+                and operation_input.vector_id is not None
+            ):
+                vector = get_vector_by_id(
+                    db,
+                    operation_input.vector_id,
+                )
+
+                # La referencia podría haber sido eliminada
+                # en el futuro, por eso comprobamos que exista.
+                if vector is not None:
+                    inputs.append(
+                        {
+                            "name": operation_input.input_name,
+                            "type": "vector",
+                            "id": vector.id,
+                            "source_name": vector.name,
+                        }
+                    )
+
+            # ----------------------------------------------
+            # Entrada matricial
+            # ----------------------------------------------
+
+            elif (
+                operation_input.input_type == "matrix"
+                and operation_input.matrix_id is not None
+            ):
+                matrix = get_matrix_by_id(
+                    db,
+                    operation_input.matrix_id,
+                )
+
+                if matrix is not None:
+                    inputs.append(
+                        {
+                            "name": operation_input.input_name,
+                            "type": "matrix",
+                            "id": matrix.id,
+                            "source_name": matrix.name,
+                        }
+                    )
+
+        # ----------------------------------------------------
+        # RESULTADO
+        # ----------------------------------------------------
+
+        stored_results = get_operation_results(
+            db,
+            operation.id,
+        )
+
+        result = None
+        result_type = None
+        execution_time = None
+
+        # Actualmente cada operación genera como máximo
+        # un resultado principal.
+        if stored_results:
+            stored_result = stored_results[0]
+
+            # Convertimos NUMERIC de PostgreSQL a float.
+            if stored_result.execution_time is not None:
+                execution_time = float(
+                    stored_result.execution_time
+                )
+
+            # ----------------------------------------------
+            # Resultado escalar
+            # ----------------------------------------------
+
+            if stored_result.scalar_value is not None:
+                result_type = "scalar"
+
+                result = float(
+                    stored_result.scalar_value
+                )
+
+            # ----------------------------------------------
+            # Resultado vectorial
+            # ----------------------------------------------
+
+            elif stored_result.vector_id is not None:
+                result_type = "vector"
+
+                vector = get_vector_by_id(
+                    db,
+                    stored_result.vector_id,
+                )
+
+                vector_values = get_vector_values(
+                    db,
+                    stored_result.vector_id,
+                )
+
+                result = {
+                    "id": stored_result.vector_id,
+                    "name": (
+                        vector.name
+                        if vector is not None
+                        else "Vector resultado"
+                    ),
+                    "values": [
+                        float(item.value)
+                        for item in vector_values
+                    ],
+                }
+
+            # ----------------------------------------------
+            # Resultado matricial
+            # ----------------------------------------------
+
+            elif stored_result.matrix_id is not None:
+                result_type = "matrix"
+
+                matrix = get_matrix_by_id(
+                    db,
+                    stored_result.matrix_id,
+                )
+
+                matrix_values = get_matrix_values(
+                    db,
+                    stored_result.matrix_id,
+                )
+
+                # Reconstruimos la matriz utilizando
+                # fila y columna.
+                values_by_position = {}
+
+                for item in matrix_values:
+                    values_by_position.setdefault(
+                        item.row,
+                        {},
+                    )
+
+                    values_by_position[
+                        item.row
+                    ][item.column] = float(
+                        item.value
+                    )
+
+                values = []
+
+                for row_index in sorted(
+                    values_by_position
+                ):
+                    row = []
+
+                    for column_index in sorted(
+                        values_by_position[row_index]
+                    ):
+                        row.append(
+                            values_by_position[
+                                row_index
+                            ][column_index]
+                        )
+
+                    values.append(row)
+
+                result = {
+                    "id": stored_result.matrix_id,
+                    "name": (
+                        matrix.name
+                        if matrix is not None
+                        else "Matriz resultado"
+                    ),
+                    "values": values,
+                }
+
+        # ----------------------------------------------------
+        # REGISTRO FINAL
+        # ----------------------------------------------------
+
+        history.append(
+            {
+                "id": operation.id,
+                "company_id": operation.company_id,
+                "name": operation.name,
+                "operation_type": operation.operation_type,
+                "description": operation.description,
+                "created_at": operation.created_at,
+                "inputs": inputs,
+                "result_type": result_type,
+                "result": result,
+                "execution_time": execution_time,
+            }
+        )
+
+    return history

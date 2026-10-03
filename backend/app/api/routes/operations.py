@@ -16,7 +16,10 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import require_roles
 from app.schemas.operation import OperationCreate
-from app.services.operation_service import execute_operation
+from app.services.operation_service import (
+    execute_operation,
+    list_operation_history,
+)
 
 
 # ------------------------------------------------------------
@@ -99,14 +102,9 @@ def get_operations(
     ),
 ):
     """
-    Obtiene todas las operaciones registradas.
+    Obtiene el historial completo de operaciones matemáticas.
     """
 
-    # Importamos el repository aquí para mantener la ruta
-    # sencilla y evitar lógica de persistencia en este archivo.
-    from app.repositories.operation_repository import (
-        get_all_operations,
-    )
-
-    # Devolvemos las operaciones almacenadas.
-    return get_all_operations(db)
+    # El servicio reconstruye entradas, resultados,
+    # fecha y tiempo de ejecución.
+    return list_operation_history(db)

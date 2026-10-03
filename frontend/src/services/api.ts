@@ -1992,19 +1992,70 @@ export async function createOperation(
   return response.json()
 }
 
+// ============================================================
+// HISTORIAL DE OPERACIONES MATEMÁTICAS
+// ============================================================
+
+// Entrada utilizada por una operación registrada.
+export interface OperationHistoryInput {
+  name: string
+  type: 'vector' | 'matrix'
+  id: number
+  source_name: string
+}
+
+// Resultado vectorial o matricial reconstruido
+// desde PostgreSQL.
+export interface OperationHistoryStructuredResult {
+  id: number
+  name: string
+  values: number[] | number[][]
+}
+
+// Registro completo utilizado por Historial.tsx.
+export interface OperationHistoryItem {
+  id: number
+  company_id: number
+  name: string
+  operation_type: string
+  description: string | null
+  created_at: string
+
+  inputs: OperationHistoryInput[]
+
+  result_type:
+  | 'scalar'
+  | 'vector'
+  | 'matrix'
+  | null
+
+  result:
+  | number
+  | OperationHistoryStructuredResult
+  | null
+
+  execution_time: number | null
+}
+
 /**
- * Obtiene el historial de operaciones matemáticas.
+ * Obtiene el historial completo de operaciones matemáticas.
  *
  * Endpoint:
  * GET /api/v1/operations
  */
-export async function getOperations(): Promise<Operation[]> {
+export async function getOperations(): Promise<
+  OperationHistoryItem[]
+> {
+  // authenticatedFetch devuelve un objeto Response.
   const response = await authenticatedFetch(
-    '/api/v1/operations'
+    '/api/v1/operations',
   )
 
+  // Si FastAPI devuelve un error,
+  // intentamos recuperar el mensaje correspondiente.
   if (!response.ok) {
-    let message = 'No se pudieron obtener las operaciones.'
+    let message =
+      'No se pudieron obtener las operaciones.'
 
     try {
       const errorData = await response.json()
@@ -2013,11 +2064,14 @@ export async function getOperations(): Promise<Operation[]> {
         message = errorData.detail
       }
     } catch {
-      // Conservamos el mensaje genérico.
+      // Conservamos el mensaje genérico si la
+      // respuesta del backend no contiene JSON.
     }
 
     throw new Error(message)
   }
 
+  // Convertimos el JSON recibido al contrato
+  // utilizado por Historial.tsx.
   return response.json()
 }
