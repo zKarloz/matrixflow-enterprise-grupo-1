@@ -73,18 +73,6 @@
 }
 
 
-/*
- * Volvemos a ocultar expresamente el scrollbar
- * del sidebar después de las reglas globales.
- */
-.sidebar-scroll {
-    scrollbar-width: none;
-}
-
-.sidebar-scroll::-webkit-scrollbar {
-    display: none;
-}
-
 /* ============================================================
    TEMA OSCURO GLOBAL DE MATRIXFLOW
    ============================================================
@@ -212,19 +200,76 @@
    SCROLLBAR EN MODO OSCURO
    ------------------------------------------------------------ */
 
+/*
+ * Scrollbar principal de la página.
+ *
+ * La clase "dark" está aplicada directamente sobre <html>,
+ * por eso debemos estilizar html.dark explícitamente.
+ * Sin esta regla, el scrollbar general puede conservar
+ * el fondo claro definido para el tema normal.
+ */
+html.dark {
+    scrollbar-color: #475569 #020617;
+}
+
+
+/* Track del scrollbar principal en Chrome, Edge y Brave. */
+html.dark::-webkit-scrollbar-track {
+    background: #020617;
+}
+
+
+/* Barra móvil del scrollbar principal. */
+html.dark::-webkit-scrollbar-thumb {
+    background-color: #475569;
+    border: 2px solid #020617;
+    border-radius: 999px;
+}
+
+
+/* Hover del scrollbar principal. */
+html.dark::-webkit-scrollbar-thumb:hover {
+    background-color: #64748b;
+}
+
+
+/*
+ * Esquina que aparece cuando coinciden un scrollbar
+ * horizontal y uno vertical.
+ */
+html.dark::-webkit-scrollbar-corner {
+    background-color: #020617;
+}
+
+
+/* ------------------------------------------------------------
+   SCROLLBARS INTERNOS
+   ------------------------------------------------------------ */
+
+/*
+ * Estas reglas cubren tablas, gráficos, paneles y cualquier
+ * otro contenedor desplazable dentro de MatrixFlow.
+ */
 .dark *::-webkit-scrollbar-track {
     background: #0f172a;
 }
 
 .dark *::-webkit-scrollbar-thumb {
     background-color: #475569;
-    border-color: #0f172a;
+    border: 2px solid #0f172a;
+    border-radius: 999px;
 }
 
 .dark *::-webkit-scrollbar-thumb:hover {
     background-color: #64748b;
 }
 
+.dark *::-webkit-scrollbar-corner {
+    background-color: #0f172a;
+}
+
+
+/* Firefox para elementos internos. */
 .dark * {
     scrollbar-color: #475569 #0f172a;
 }
@@ -293,6 +338,20 @@
     color: #f8fafc !important;
 }
 
+/* ============================================================
+   REPORTES - GRÁFICO CIRCULAR EN MODO OSCURO
+   ============================================================ */
+
+/*
+ * Recharts utiliza por defecto un borde claro alrededor
+ * de cada sector del gráfico circular.
+ *
+ * En modo oscuro sustituimos ese borde por slate para que
+ * mantenga la separación entre sectores sin verse blanco.
+ */
+.dark .matrixflow-app .report-inventory-pie .recharts-pie-sector path {
+    stroke: #0f172a !important;
+}
 
 /* ============================================================
    FONDOS DE ICONOS - MODO OSCURO
@@ -310,9 +369,6 @@
     background-color: rgb(59 130 246 / 0.14) !important;
 }
 
-.dark .matrixflow-app .bg-emerald-50 {
-    background-color: rgb(16 185 129 / 0.14) !important;
-}
 
 .dark .matrixflow-app .bg-red-50 {
     background-color: rgb(239 68 68 / 0.14) !important;
@@ -326,12 +382,6 @@
     background-color: rgb(168 85 247 / 0.14) !important;
 }
 
-/*
- * slate-100 se utiliza en varios iconos neutros.
- */
-.dark .matrixflow-app .bg-slate-100 {
-    background-color: #1e293b !important;
-}
 
 /* ============================================================
    RECHARTS - FONDO AL PASAR EL CURSOR POR UNA BARRA
@@ -426,24 +476,9 @@
  * Acciones positivas:
  * Activar, habilitar, confirmar, etc.
  */
-.dark .matrixflow-app .border-emerald-200 {
-    border-color: rgb(16 185 129 / 0.35) !important;
-}
 
 .dark .matrixflow-app .hover\:bg-emerald-50:hover {
     background-color: rgb(6 78 59 / 0.35) !important;
-}
-
-
-/*
- * Acciones informativas o secundarias azules.
- */
-.dark .matrixflow-app .border-blue-200 {
-    border-color: rgb(59 130 246 / 0.35) !important;
-}
-
-.dark .matrixflow-app .hover\:bg-blue-50:hover {
-    background-color: rgb(30 64 175 / 0.30) !important;
 }
 
 
@@ -458,13 +493,6 @@
     background-color: rgb(120 53 15 / 0.35) !important;
 }
 
-.dark .matrixflow-app .border-blue-200 {
-    border-color: rgb(59 130 246 / 0.35) !important;
-}
-
-.dark .matrixflow-app .hover\:bg-blue-50:hover {
-    background-color: rgb(30 64 175 / 0.30) !important;
-}
 
 /* ============================================================
    VECTOR EMPRESARIAL - TONOS CYAN EN MODO OSCURO
@@ -945,44 +973,6 @@
     color: #f1f5f9 !important;
 }
 
-/* ============================================================
-   MODALES - BOTONES DE ESTADO
-   ============================================================ */
-
-/*
- * Acción destructiva:
- * Desactivar, bloquear, etc.
- */
-.dark .matrixflow-modal-panel .border-red-200 {
-    border-color: rgb(239 68 68 / 0.35) !important;
-}
-
-.dark .matrixflow-modal-panel .text-red-600,
-.dark .matrixflow-modal-panel .text-red-700 {
-    color: #f87171 !important;
-}
-
-.dark .matrixflow-modal-panel .hover\:bg-red-50:hover {
-    background-color: rgb(127 29 29 / 0.35) !important;
-}
-
-
-/*
- * Acción positiva:
- * Activo, activar, habilitar, etc.
- */
-.dark .matrixflow-modal-panel .border-emerald-200 {
-    border-color: rgb(16 185 129 / 0.35) !important;
-}
-
-.dark .matrixflow-modal-panel .text-emerald-600,
-.dark .matrixflow-modal-panel .text-emerald-700 {
-    color: #34d399 !important;
-}
-
-.dark .matrixflow-modal-panel .hover\:bg-emerald-50:hover {
-    background-color: rgb(6 78 59 / 0.35) !important;
-}
 
 /* ============================================================
    SKELETON / CARGA - MODO OSCURO

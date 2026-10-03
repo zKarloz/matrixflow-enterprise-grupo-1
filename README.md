@@ -1,193 +1,230 @@
-# Matrixflow Enterprise - Semestre IV - Grupo 1
+# MatrixFlow Enterprise — Semestre IV — Grupo 1
 
-Hola, para correr el proyecto, abrirás 2 terminales de Git Bash
+**MatrixFlow Enterprise** es un sistema web empresarial para la gestión y análisis de **ventas, inventario, productos y sucursales**, integrando operaciones de **álgebra lineal con vectores y matrices**.
 
-## Primera terminal (Para frontend)
+El proyecto utiliza:
 
-1. Entrar a la carpeta frontend
-   `cd frontend`
+- **Frontend:** React + TypeScript + Vite
+- **Backend:** Python + FastAPI
+- **Base de datos:** PostgreSQL / Supabase
+- **Motor matemático:** NumPy
+- **Autenticación:** JWT + control de acceso por roles
 
-2. Instalar los node modules
-   `npm install`
+---
 
-3. Correr el servidor de Vite (Para ver la página)
-   `npm run dev`
+## Requisitos previos
 
-## Segunda terminal (Para backend)
+Antes de ejecutar el proyecto debes tener instalado:
 
-1. Entrar a la carpeta backend
-   `cd backend`
+- Node.js
+- npm
+- Python
+- Git Bash
+- Acceso a una base de datos PostgreSQL
 
-2. Crear el entorno virtual de Python
-   `python -m venv .venv`
+Para ejecutar el proyecto localmente se recomienda utilizar **2 terminales de Git Bash**.
 
-3. Activar el entorno virtual de Python
-   `source .venv/Scripts/activate`
+---
 
-4. Instalar librerías de requirements.txt
-   `pip install -r requirements.txt`
+## Primera terminal — Frontend
 
-5. Correr el servidor del backend
-   `uvicorn app.main:app --reload`
+### 1. Entrar a la carpeta frontend
 
-## Estructura del proyecto (28/09)
-
+```bash
+cd frontend
 ```
-matrixflow-enterprise-grupo-1-definitivo
-├─ backend
-│  ├─ alembic
-│  │  ├─ env.py
-│  │  ├─ README
-│  │  ├─ script.py.mako
-│  │  └─ versions
-│  ├─ alembic.ini
-│  ├─ app
-│  │  ├─ algorithms
-│  │  │  ├─ matrix_operations.py
-│  │  │  ├─ validation.py
-│  │  │  ├─ vector_operations.py
-│  │  │  └─ __init__.py
-│  │  ├─ api
-│  │  │  └─ routes
-│  │  │     ├─ audit.py
-│  │  │     ├─ auth.py
-│  │  │     ├─ branches.py
-│  │  │     ├─ categories.py
-│  │  │     ├─ companies.py
-│  │  │     ├─ inventory.py
-│  │  │     ├─ matrices.py
-│  │  │     ├─ operations.py
-│  │  │     ├─ products.py
-│  │  │     ├─ reports.py
-│  │  │     ├─ sales.py
-│  │  │     ├─ users.py
-│  │  │     ├─ vectors.py
-│  │  │     └─ __init__.py
-│  │  ├─ core
-│  │  │  ├─ config.py
-│  │  │  ├─ database.py
-│  │  │  └─ security.py
-│  │  ├─ main.py
-│  │  ├─ models
-│  │  │  ├─ audit.py
-│  │  │  ├─ branch.py
-│  │  │  ├─ category.py
-│  │  │  ├─ company.py
-│  │  │  ├─ inventory.py
-│  │  │  ├─ matrix.py
-│  │  │  ├─ operation.py
-│  │  │  ├─ product.py
-│  │  │  ├─ role.py
-│  │  │  ├─ sale.py
-│  │  │  ├─ target.py
-│  │  │  ├─ user.py
-│  │  │  ├─ vector.py
-│  │  │  └─ __init__.py
-│  │  ├─ repositories
-│  │  │  ├─ audit_repository.py
-│  │  │  ├─ branch_repository.py
-│  │  │  ├─ category_repository.py
-│  │  │  ├─ company_repository.py
-│  │  │  ├─ inventory_repository.py
-│  │  │  ├─ matrix_repository.py
-│  │  │  ├─ operation_repository.py
-│  │  │  ├─ product_repository.py
-│  │  │  ├─ sale_repository.py
-│  │  │  ├─ user_repository.py
-│  │  │  ├─ vector_repository.py
-│  │  │  └─ __init__.py
-│  │  ├─ schemas
-│  │  │  ├─ auth.py
-│  │  │  ├─ branch.py
-│  │  │  ├─ category.py
-│  │  │  ├─ company.py
-│  │  │  ├─ inventory.py
-│  │  │  ├─ matrix.py
-│  │  │  ├─ operation.py
-│  │  │  ├─ product.py
-│  │  │  ├─ report.py
-│  │  │  ├─ sale.py
-│  │  │  ├─ user.py
-│  │  │  ├─ vector.py
-│  │  │  └─ __init__.py
-│  │  └─ services
-│  │     ├─ audit_service.py
-│  │     ├─ auth_service.py
-│  │     ├─ branch_service.py
-│  │     ├─ category_service.py
-│  │     ├─ company_service.py
-│  │     ├─ inventory_service.py
-│  │     ├─ matrix_service.py
-│  │     ├─ operation_service.py
-│  │     ├─ product_service.py
-│  │     ├─ report_service.py
-│  │     ├─ sale_service.py
-│  │     ├─ vector_service.py
-│  │     └─ __init__.py
-│  ├─ README.md
-│  ├─ requirements.txt
-│  ├─ schema_audit.py
-│  └─ schema_constraints_audit.py
-├─ docker-compose.yml
-├─ frontend
-│  ├─ eslint.config.js
-│  ├─ index.html
-│  ├─ package-lock.json
-│  ├─ package.json
-│  ├─ public
-│  │  ├─ favicon.svg
-│  │  └─ icons.svg
-│  ├─ README.md
-│  ├─ src
-│  │  ├─ App.css
-│  │  ├─ App.tsx
-│  │  ├─ components
-│  │  │  ├─ auth
-│  │  │  │  └─ ProtectedRoute.tsx
-│  │  │  ├─ company
-│  │  │  │  └─ CompanyInfoCard.tsx
-│  │  │  ├─ dashboard
-│  │  │  │  ├─ RecentActivity.tsx
-│  │  │  │  ├─ SalesByBranchChart.tsx
-│  │  │  │  ├─ SalesByProductChart.tsx
-│  │  │  │  ├─ SalesChart.tsx
-│  │  │  │  └─ StatCard.tsx
-│  │  │  ├─ layout
-│  │  │  │  ├─ Header.tsx
-│  │  │  │  └─ Sidebar.tsx
-│  │  │  └─ security
-│  │  │     └─ PeruAccessMap.tsx
-│  │  ├─ data
-│  │  │  └─ peru-departments.json
-│  │  ├─ index.css
-│  │  ├─ main.tsx
-│  │  ├─ pages
-│  │  │  ├─ CombinacionesLineales.tsx
-│  │  │  ├─ Configuracion.tsx
-│  │  │  ├─ Dashboard.tsx
-│  │  │  ├─ Empresa.tsx
-│  │  │  ├─ Historial.tsx
-│  │  │  ├─ Inventario.tsx
-│  │  │  ├─ Login.tsx
-│  │  │  ├─ Matrices.tsx
-│  │  │  ├─ Operaciones.tsx
-│  │  │  ├─ Productos.tsx
-│  │  │  ├─ Reportes.tsx
-│  │  │  ├─ Seguridad.tsx
-│  │  │  ├─ Sucursales.tsx
-│  │  │  ├─ Usuarios.tsx
-│  │  │  ├─ Vectores.tsx
-│  │  │  └─ Ventas.tsx
-│  │  └─ services
-│  │     └─ api.ts
-│  ├─ tsconfig.app.json
-│  ├─ tsconfig.json
-│  ├─ tsconfig.node.json
-│  ├─ vercel.json
-│  ├─ vite-env.d.ts
-│  └─ vite.config.ts
-├─ package-lock.json
-├─ package.json
-└─ README.md
 
+### 2. Instalar las dependencias
+
+```bash
+npm install
 ```
+
+### 3. Iniciar Vite
+
+```bash
+npm run dev
+```
+
+El frontend estará disponible normalmente en:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## Segunda terminal — Backend
+
+### 1. Entrar a la carpeta backend
+
+```bash
+cd backend
+```
+
+### 2. Crear el entorno virtual
+
+```bash
+python -m venv .venv
+```
+
+### 3. Activar el entorno virtual
+
+```bash
+source .venv/Scripts/activate
+```
+
+### 4. Instalar las dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+### 5. Configurar las variables de entorno
+
+Crear o configurar el archivo:
+
+```text
+backend/.env
+```
+
+Variables requeridas:
+
+```env
+DATABASE_URL=TU_URL_DE_POSTGRESQL
+SECRET_KEY=TU_CLAVE_SECRETA
+```
+
+> El archivo `.env` contiene información sensible y no debe subirse al repositorio.
+
+### 6. Iniciar FastAPI
+
+```bash
+uvicorn app.main:app --reload
+```
+
+El backend estará disponible en:
+
+```text
+http://127.0.0.1:8000
+```
+
+Documentación Swagger:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## Roles del sistema
+
+MatrixFlow Enterprise utiliza tres niveles de acceso:
+
+| Rol               | Acceso general                                                |
+| ----------------- | ------------------------------------------------------------- |
+| **Administrador** | Acceso completo al sistema                                    |
+| **Analista**      | Ventas, inventario, análisis matemático, historial y reportes |
+| **Consulta**      | Dashboard, reportes y configuración                           |
+
+Los permisos se validan tanto en el frontend como en el backend mediante **JWT y RBAC**.
+
+---
+
+## Módulos principales
+
+```text
+MatrixFlow Enterprise
+├── Login
+├── Dashboard
+├── Empresa
+│   ├── Sucursales
+│   └── Productos
+├── Ventas
+├── Inventario
+├── Análisis Matemático
+│   ├── Vectores
+│   ├── Matrices
+│   ├── Operaciones
+│   └── Combinaciones lineales
+├── Historial
+├── Reportes
+├── Usuarios
+├── Seguridad y accesos
+└── Configuración
+```
+
+---
+
+## Estructura general del proyecto
+
+Actualizada al **03/10/2026**.
+
+```text
+matrixflow-enterprise-grupo-1-definitivo/
+│
+├── backend/
+│   ├── alembic/
+│   ├── app/
+│   │   ├── algorithms/
+│   │   ├── api/routes/
+│   │   ├── core/
+│   │   ├── models/
+│   │   ├── repositories/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   └── main.py
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   └── README.md
+│
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── data/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── vercel.json
+│   └── README.md
+│
+├── docker-compose.yml
+├── package.json
+└── README.md
+```
+
+---
+
+## Documentación adicional
+
+Para información técnica más detallada consulta:
+
+- [`frontend/README.md`](frontend/README.md) — interfaz, páginas, integración y módulos del frontend.
+- [`backend/README.md`](backend/README.md) — FastAPI, PostgreSQL, NumPy, JWT, RBAC y endpoints.
+
+---
+
+## Arquitectura general
+
+```text
+Usuario
+   ↓
+React + TypeScript
+   ↓ HTTP / JSON
+FastAPI + Python
+   ↓
+├── Servicios empresariales
+├── Seguridad JWT / RBAC
+├── Motor matemático NumPy
+└── PostgreSQL / Supabase
+   ↓
+Dashboard / Historial / Reportes
+```
+
+MatrixFlow Enterprise fue desarrollado siguiendo el **Plan Maestro de Desarrollo**, organizando el proyecto en frontend, backend, persistencia, motor matemático, integración, seguridad, reportes y pruebas.

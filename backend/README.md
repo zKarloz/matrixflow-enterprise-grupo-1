@@ -1,831 +1,802 @@
-# MatrixFlow Enterprise — Resumen del trabajo realizado
+# MatrixFlow Enterprise — Backend
 
-## 1. Objetivo general
+Backend REST de **MatrixFlow Enterprise**, desarrollado con Python y FastAPI.
 
-MatrixFlow Enterprise es una aplicación empresarial con:
+Este módulo implementa la capa de servicios, persistencia, seguridad y procesamiento matemático descrita en el **Plan Maestro de Desarrollo — MatrixFlow Enterprise v1.0 (septiembre de 2026)**.
 
-- **Backend:** FastAPI + SQLAlchemy + PostgreSQL.
-- **Frontend:** React + TypeScript + Vite + Tailwind CSS.
-- **Base de datos:** Supabase PostgreSQL.
-- **Autenticación:** JWT + bcrypt.
-- **Arquitectura:** rutas → servicios → repositorios → modelos.
-
-La prioridad ha sido avanzar paso a paso y conservar el diseño existente del frontend.
+Su responsabilidad principal es conectar la información empresarial con PostgreSQL y con el motor matemático NumPy, exponiendo los resultados al frontend mediante HTTP/JSON.
 
 ---
 
-# 2. Seguridad del backend
+## 1. Propósito
 
-Se trabajó primero en la autenticación.
+El backend concentra:
 
-## Archivo
+- autenticación;
+- autorización mediante roles;
+- lógica de negocio;
+- validación de datos;
+- persistencia PostgreSQL;
+- gestión de ventas e inventario;
+- vectores y matrices;
+- operaciones matemáticas;
+- combinaciones lineales;
+- historial;
+- reportes;
+- auditoría.
 
-`backend/app/core/security.py`
-
-Se implementaron funciones para:
-
-- Verificar contraseñas.
-- Generar hashes con bcrypt.
-- Crear tokens JWT.
-- Decodificar tokens JWT.
-
-Configuración utilizada:
-
-- Algoritmo: `HS256`.
-- Expiración del token: 60 minutos.
-- Clave secreta tomada desde `settings.SECRET_KEY`.
-
-También se instaló:
+### Arquitectura general
 
 ```text
-bcrypt==4.0.1
+React + TypeScript
+        ↓ HTTP / JSON
+FastAPI + Python
+        ↓
+Pydantic / Services / Repositories
+        ↓
+├── PostgreSQL
+└── NumPy
+        ↓
+Historial / Auditoría
+        ↓
+JSON
+        ↓
+Frontend
 ```
 
-La versión se fijó porque era necesaria para mantener compatibilidad con Passlib.
+---
+
+## 2. Tecnologías utilizadas
+
+| Tecnología          | Uso                                |
+| ------------------- | ---------------------------------- |
+| Python              | Lenguaje principal                 |
+| FastAPI             | API REST                           |
+| Uvicorn             | Servidor ASGI                      |
+| SQLAlchemy          | ORM                                |
+| PostgreSQL          | Persistencia                       |
+| Supabase PostgreSQL | Infraestructura de base de datos   |
+| Psycopg 3           | Driver PostgreSQL                  |
+| Pydantic            | Validación y serialización         |
+| Pydantic Settings   | Variables de entorno               |
+| NumPy               | Motor matemático                   |
+| Alembic             | Migraciones                        |
+| python-jose         | JWT                                |
+| Passlib + bcrypt    | Hash y verificación de contraseñas |
+| Pytest              | Pruebas                            |
+| HTTPX               | Pruebas HTTP                       |
 
 ---
 
-# 3. Servicio de autenticación
+## 3. Fases del Plan Maestro relacionadas
 
-## Archivo
+### Fase 2 — Backend Python + FastAPI
 
-`backend/app/services/auth_service.py`
+El backend implementa la API REST del sistema.
 
-El servicio de autenticación ahora:
-
-1. Busca al usuario por correo.
-2. Verifica la contraseña.
-3. Busca el rol asociado al usuario.
-4. Devuelve el usuario y su rol.
-5. Lanza un error si las credenciales no son válidas.
-
-Esto permite separar la lógica de autenticación de las rutas HTTP.
-
----
-
-# 4. Endpoint de login
-
-## Archivo
-
-`backend/app/api/routes/auth.py`
-
-El login ahora genera un JWT con información básica:
+El Plan Maestro define una separación entre:
 
 ```text
-sub  → ID del usuario
-role → nombre del rol
+Routers
+↓
+Services
+↓
+Repositories
+↓
+Algorithms / PostgreSQL
 ```
 
-La respuesta tiene la estructura:
-
-```json
-{
-  "access_token": "TOKEN",
-  "token_type": "bearer"
-}
-```
-
-Los errores de autenticación devuelven HTTP 401.
+Esta arquitectura busca mantener responsabilidades separadas y facilitar pruebas y mantenimiento.
 
 ---
 
-# 5. Configuración del backend
+### Fase 3 — PostgreSQL y modelo de datos
 
-## Archivo
+La persistencia utiliza PostgreSQL mediante SQLAlchemy.
 
-`backend/app/core/config.py`
+Entre las entidades principales se encuentran:
 
-Se centralizó la configuración de MatrixFlow.
+- usuarios;
+- roles;
+- empresas;
+- sucursales;
+- productos;
+- ventas;
+- detalles de venta;
+- inventario;
+- vectores;
+- matrices;
+- operaciones;
+- auditoría.
 
-Incluye:
+La conexión se obtiene desde la variable:
 
-- Nombre de la aplicación.
-- Versión.
-- Prefijo de la API.
-- Configuración PostgreSQL.
-- `DATABASE_URL`.
-- `SECRET_KEY`.
+```env
+DATABASE_URL=...
+```
 
-La configuración permite utilizar `.env` sin tener que escribir las credenciales directamente en el código.
+El frontend nunca se conecta directamente a PostgreSQL.
 
 ---
 
-# 6. Conexión a la base de datos
+### Fase 4 — Motor matemático Python + NumPy
 
-## Archivo
+NumPy se utiliza como núcleo de cálculo para operaciones con vectores y matrices.
 
-`backend/app/core/database.py`
+Operaciones contempladas:
 
-Se configuró SQLAlchemy mediante:
+#### Vectores
 
 ```text
-engine
-SessionLocal
-Base
-get_db()
+sum_vector()
+subtract_vector()
+scalar_multiply()
+dot_product()
 ```
 
-`get_db()` crea una sesión para cada petición HTTP y la cierra al terminar.
+#### Matrices
+
+```text
+add_matrix()
+subtract_matrix()
+multiply_matrix()
+transpose_matrix()
+scalar_multiply_matrix()
+```
+
+#### Álgebra lineal
+
+```text
+linear_combination()
+validate_dimensions()
+validate_vector()
+validate_matrix()
+```
+
+El objetivo es mantener los algoritmos matemáticos independientes, reutilizables y comprobables.
 
 ---
 
-# 7. CORS
+### Fase 5 — Integración
 
-## Archivo
-
-`backend/app/main.py`
-
-Se agregó CORS para permitir que el frontend React pueda comunicarse con FastAPI.
-
-Se permitieron:
+El backend constituye la capa intermedia entre React y PostgreSQL/NumPy:
 
 ```text
-http://localhost:5173
-http://127.0.0.1:5173
-```
-
-También se registraron las rutas principales del backend bajo:
-
-```text
-/api/v1
+React
+  ↓
+FastAPI
+  ↓
+Services
+  ├── lógica empresarial
+  └── NumPy
+  ↓
+PostgreSQL
+  ↓
+JSON
 ```
 
 ---
 
-# 8. Conexión del frontend con el backend
+### Fase 6 — Seguridad y auditoría
 
-## Archivo
+El sistema utiliza:
 
-`frontend/src/services/api.ts`
+- JWT;
+- autenticación Bearer;
+- bcrypt para contraseñas;
+- RBAC;
+- validación del usuario activo;
+- auditoría de accesos.
 
-Se creó el cliente básico para comunicarse con FastAPI.
+Roles:
 
-La URL actual es:
+| Rol           | Alcance general                                                   |
+| ------------- | ----------------------------------------------------------------- |
+| Administrador | Acceso completo                                                   |
+| Analista      | Operación comercial, inventario, matemática, historial y reportes |
+| Consulta      | Dashboard y reportes autorizados                                  |
+
+La autorización real se realiza en FastAPI y no depende únicamente de que el frontend oculte opciones.
+
+---
+
+### Fase 7 — Dashboard y reportes
+
+El backend consolida información persistida para alimentar:
+
+- ventas por período;
+- ventas por sucursal;
+- ventas por producto;
+- inventario;
+- actividad reciente;
+- reportes empresariales.
+
+---
+
+### Fase 8 — Pruebas
+
+El backend contempla validaciones de:
+
+- algoritmos matemáticos;
+- endpoints;
+- autenticación;
+- autorización;
+- integración con PostgreSQL;
+- errores HTTP;
+- reglas de negocio.
+
+---
+
+## 4. Estructura principal
+
+La estructura sigue la separación planteada por el Plan Maestro:
+
+```text
+backend/
+├── app/
+│   ├── api/
+│   │   └── routes/
+│   │       ├── auth.py
+│   │       ├── users.py
+│   │       ├── companies.py
+│   │       ├── branches.py
+│   │       ├── products.py
+│   │       ├── sales.py
+│   │       ├── inventory.py
+│   │       ├── vectors.py
+│   │       ├── matrices.py
+│   │       ├── operations.py
+│   │       └── reports.py
+│   ├── algorithms/
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   └── security.py
+│   ├── models/
+│   ├── repositories/
+│   ├── schemas/
+│   ├── services/
+│   └── main.py
+├── tests/
+├── alembic/
+├── alembic.ini
+├── requirements.txt
+└── .env
+```
+
+---
+
+## 5. Configuración
+
+La configuración central se encuentra en:
+
+```text
+app/core/config.py
+```
+
+Actualmente las variables obligatorias del backend son:
+
+```env
+DATABASE_URL=
+SECRET_KEY=
+```
+
+### Ejemplo
+
+```env
+# PostgreSQL.
+DATABASE_URL=postgresql+psycopg://USUARIO:CONTRASENA@HOST:5432/postgres?sslmode=require
+
+# Clave utilizada para firmar JWT.
+SECRET_KEY=CAMBIAR_POR_UNA_CLAVE_SEGURA
+```
+
+> `.env` contiene secretos reales y no debe versionarse.
+
+El repositorio debe incluir únicamente un `.env.example` con valores ficticios.
+
+---
+
+## 6. Base de datos
+
+La conexión se crea mediante SQLAlchemy:
+
+```text
+DATABASE_URL
+     ↓
+Pydantic Settings
+     ↓
+SQLAlchemy create_engine()
+     ↓
+PostgreSQL
+```
+
+El proyecto utiliza Psycopg 3:
+
+```text
+psycopg[binary]
+```
+
+por lo que la URL SQLAlchemy utiliza:
+
+```text
+postgresql+psycopg://
+```
+
+---
+
+## 7. Seguridad
+
+### Hash de contraseñas
+
+Las contraseñas no se almacenan en texto plano.
+
+El backend utiliza:
+
+```text
+Passlib
+  ↓
+bcrypt
+  ↓
+Hash almacenado
+```
+
+---
+
+### JWT
+
+Al iniciar sesión, FastAPI crea un token firmado.
+
+Configuración actual:
+
+```text
+Algoritmo: HS256
+Expiración: 60 minutos
+```
+
+Flujo:
+
+```text
+Credenciales
+   ↓
+Validación
+   ↓
+Usuario + rol
+   ↓
+JWT firmado
+   ↓
+Frontend
+```
+
+Las peticiones protegidas utilizan:
+
+```http
+Authorization: Bearer <token>
+```
+
+---
+
+### Usuario autenticado
+
+Antes de permitir una operación protegida, el backend:
+
+1. recibe el Bearer Token;
+2. valida el JWT;
+3. obtiene el `sub`;
+4. recupera al usuario desde PostgreSQL;
+5. comprueba que exista;
+6. comprueba que siga activo.
+
+Por tanto, una cuenta desactivada deja de tener acceso aunque todavía posea un JWT no expirado.
+
+---
+
+### RBAC
+
+El control de acceso se realiza mediante:
+
+```python
+require_roles(...)
+```
+
+Ejemplo conceptual:
+
+```python
+current_user = Depends(
+    require_roles(
+        "Administrador",
+        "Analista",
+    )
+)
+```
+
+El rol se consulta nuevamente en PostgreSQL.
+
+Esto evita depender exclusivamente del rol almacenado dentro del JWT.
+
+---
+
+## 8. Auditoría
+
+El backend puede registrar eventos como el inicio de sesión.
+
+Los registros de auditoría pueden conservar información como:
+
+- usuario;
+- acción;
+- fecha;
+- IP;
+- ciudad;
+- región;
+- país;
+- coordenadas aproximadas;
+- User-Agent.
+
+Estos datos alimentan el módulo **Seguridad y accesos** del frontend.
+
+> La geolocalización basada en IP es aproximada y no representa necesariamente la ubicación física exacta del usuario.
+
+---
+
+## 9. Flujo de una operación matemática
+
+El flujo sigue el patrón definido por el Plan Maestro:
+
+```text
+React
+  ↓
+POST /operations
+  ↓
+FastAPI Router
+  ↓
+Pydantic
+  ↓
+Operation Service
+  ↓
+NumPy
+  ↓
+Guardar historial
+  ↓
+JSON
+  ↓
+React
+```
+
+Esto mantiene separados:
+
+- transporte HTTP;
+- validación;
+- lógica del servicio;
+- cálculo matemático;
+- persistencia.
+
+---
+
+## 10. Endpoints principales
+
+El Plan Maestro define como base:
+
+| Método | Endpoint             | Propósito          |
+| ------ | -------------------- | ------------------ |
+| POST   | `/api/v1/auth/login` | Autenticación      |
+| GET    | `/api/v1/companies`  | Empresas           |
+| GET    | `/api/v1/branches`   | Sucursales         |
+| GET    | `/api/v1/products`   | Productos          |
+| GET    | `/api/v1/sales`      | Ventas             |
+| GET    | `/api/v1/inventory`  | Inventario         |
+| POST   | `/api/v1/vectors`    | Crear vector       |
+| POST   | `/api/v1/matrices`   | Crear matriz       |
+| POST   | `/api/v1/operations` | Ejecutar operación |
+| GET    | `/api/v1/operations` | Historial          |
+| GET    | `/api/v1/reports`    | Reportes           |
+
+La implementación actual extiende estos recursos con las operaciones necesarias para los módulos administrativos y empresariales.
+
+---
+
+## 11. Requerimientos funcionales relacionados
+
+| Código | Requerimiento                    | Estado en backend                                              |
+| ------ | -------------------------------- | -------------------------------------------------------------- |
+| RF-01  | Iniciar sesión                   | Implementado                                                   |
+| RF-02  | Gestionar usuarios y roles       | Implementado                                                   |
+| RF-03  | Gestionar empresas y sucursales  | Implementado                                                   |
+| RF-04  | Gestionar productos y categorías | Productos implementados; categorías dependen del alcance final |
+| RF-05  | Registrar ventas                 | Implementado                                                   |
+| RF-06  | Gestionar inventario             | Implementado                                                   |
+| RF-07  | Registrar metas                  | No forma parte del flujo principal actualmente expuesto        |
+| RF-08  | Crear y consultar vectores       | Implementado                                                   |
+| RF-09  | Crear y consultar matrices       | Implementado                                                   |
+| RF-10  | Ejecutar operaciones vectoriales | Implementado                                                   |
+| RF-11  | Ejecutar operaciones matriciales | Implementado                                                   |
+| RF-12  | Ejecutar combinaciones lineales  | Implementado                                                   |
+| RF-13  | Conservar historial              | Implementado                                                   |
+| RF-14  | Generar reportes                 | Implementado                                                   |
+| RF-15  | Registrar eventos de auditoría   | Implementado para accesos y trazabilidad de seguridad          |
+
+---
+
+## 12. Requerimientos no funcionales respetados
+
+### Seguridad y control de acceso
+
+- JWT;
+- contraseñas con hash;
+- RBAC;
+- validación del usuario activo;
+- secretos mediante variables de entorno.
+
+### Arquitectura modular
+
+Separación entre:
+
+```text
+routers
+schemas
+services
+repositories
+models
+algorithms
+core
+```
+
+### Separación frontend/backend
+
+El frontend consume una API REST; no existe acceso directo desde React a PostgreSQL.
+
+### Validación
+
+Pydantic valida estructuras recibidas por la API y el motor matemático verifica datos y dimensiones.
+
+### Persistencia estructurada
+
+SQLAlchemy gestiona la interacción con PostgreSQL.
+
+### Trazabilidad
+
+Las operaciones matemáticas pueden conservar entradas, resultados, usuario, fecha y tiempo de ejecución.
+
+### Escalabilidad y mantenibilidad
+
+La organización por capas reduce el acoplamiento entre rutas, lógica, persistencia y algoritmos.
+
+### Rendimiento matemático
+
+NumPy se utiliza para ejecutar operaciones vectoriales y matriciales.
+
+---
+
+## 13. Criterios de aceptación relacionados
+
+| Código | Criterio                                                    | Cobertura backend                              |
+| ------ | ----------------------------------------------------------- | ---------------------------------------------- |
+| CA-01  | El usuario puede autenticarse según su rol                  | Sí                                             |
+| CA-02  | El administrador puede registrar sucursales y productos     | Sí                                             |
+| CA-03  | El usuario autorizado puede registrar ventas                | Sí                                             |
+| CA-04  | El sistema permite representar datos como vectores          | Sí                                             |
+| CA-05  | El sistema permite representar datos como matrices          | Sí                                             |
+| CA-06  | Las dimensiones incompatibles son rechazadas                | Sí                                             |
+| CA-07  | Las operaciones producen resultados matemáticamente válidos | Sí, mediante NumPy                             |
+| CA-08  | Cada operación queda almacenada en el historial             | Sí                                             |
+| CA-09  | El resultado puede visualizarse en el frontend              | El backend devuelve el resultado mediante JSON |
+| CA-10  | Los reportes utilizan datos persistidos                     | Sí                                             |
+
+---
+
+## 14. Instalación
+
+### Crear entorno virtual
+
+Windows:
+
+```bash
+# Crear entorno virtual.
+python -m venv .venv
+
+# Activar en Git Bash.
+source .venv/Scripts/activate
+```
+
+PowerShell:
+
+```powershell
+# Activar el entorno virtual.
+.venv\Scripts\Activate.ps1
+```
+
+Linux/macOS:
+
+```bash
+# Crear y activar el entorno virtual.
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+---
+
+### Instalar dependencias
+
+```bash
+# Instalar las dependencias del backend.
+pip install -r requirements.txt
+```
+
+---
+
+## 15. Ejecutar el servidor
+
+```bash
+# Iniciar FastAPI con recarga automática.
+uvicorn app.main:app --reload
+```
+
+Servidor local:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-También se agregó:
+Swagger:
 
 ```text
-checkBackend()
+http://127.0.0.1:8000/docs
 ```
 
-Esta función consulta:
+OpenAPI:
 
 ```text
-GET /health
-```
-
-y permite comprobar si el backend está funcionando.
-
-En el navegador se comprobó que aparece:
-
-```text
-Backend conectado correctamente
-```
-
-Por lo tanto:
-
-**Frontend → Backend**
-
-ya funciona correctamente.
-
----
-
-# 9. Conexión con Supabase
-
-Se intentó primero conectar utilizando el host directo de PostgreSQL de Supabase.
-
-Ese método presentó un problema de resolución de red en Windows.
-
-Por eso se utilizó el **Session Pooler de Supabase**.
-
-Host utilizado:
-
-```text
-aws-0-us-east-2.pooler.supabase.com
-```
-
-Puerto:
-
-```text
-5432
-```
-
-Usuario:
-
-```text
-postgres.uyexpibwntyeqhjnnfvs
-```
-
-Base de datos:
-
-```text
-postgres
-```
-
-La conexión se probó directamente con Psycopg y funcionó:
-
-```text
-CONEXION SUPABASE OK
-```
-
-Por lo tanto:
-
-**Backend → Supabase PostgreSQL**
-
-también tiene las credenciales correctas.
-
-> Importante: nunca se debe subir la contraseña de Supabase a GitHub ni compartirla públicamente.
-
----
-
-# 10. Problema actual de la base de datos
-
-Cuando se llamó:
-
-```text
-GET /api/v1/products
-```
-
-FastAPI llegó correctamente hasta PostgreSQL, pero PostgreSQL respondió:
-
-```text
-relation "products" does not exist
-```
-
-Esto significa que:
-
-**La conexión a Supabase funciona.**
-
-El problema es que las tablas todavía no fueron creadas en la base de datos.
-
-Por eso ahora necesitamos utilizar **Alembic** para crear y administrar las tablas.
-
----
-
-# 11. Configuración inicial de Alembic
-
-Se ejecutó:
-
-```cmd
-alembic init alembic
-```
-
-Esto creó:
-
-```text
-backend/
-├── alembic/
-│   ├── env.py
-│   ├── README
-│   ├── script.py.mako
-│   └── versions/
-└── alembic.ini
-```
-
-Sin embargo, el `alembic.ini` original estaba vacío.
-
-El siguiente paso pendiente es configurar correctamente:
-
-```text
-alembic.ini
-```
-
-y:
-
-```text
-alembic/env.py
-```
-
-para que Alembic conozca los modelos de SQLAlchemy y la conexión de Supabase.
-
----
-
-# 12. Productos
-
-Se trabajó en el módulo de productos.
-
-## Modelo
-
-`backend/app/models/product.py`
-
-La tabla `products` contiene:
-
-```text
-id
-name
-category_id
-price
-active
-```
-
-El producto se relaciona con:
-
-```text
-categories
-```
-
-mediante:
-
-```text
-category_id
+http://127.0.0.1:8000/openapi.json
 ```
 
 ---
 
-# 13. Categorías
+## 16. Pruebas
 
-## Modelo
+El Plan Maestro define la **Fase 8 — Pruebas** con las siguientes categorías:
 
-`backend/app/models/category.py`
+- unitarias;
+- integración;
+- API;
+- UI;
+- seguridad;
+- aceptación.
 
-La tabla `categories` contiene:
+En el backend se pueden ejecutar las pruebas mediante:
 
-```text
-id
-name
+```bash
+# Ejecutar la suite de pruebas.
+pytest
 ```
 
-El nombre de la categoría es único.
+Las pruebas deben cubrir especialmente:
+
+- algoritmos NumPy;
+- dimensiones incompatibles;
+- autenticación;
+- JWT;
+- RBAC;
+- endpoints protegidos;
+- persistencia;
+- respuestas HTTP.
 
 ---
 
-# 14. Inventario
+## 17. Relación con los sprints del Plan Maestro
 
-## Archivo
+El backend participa principalmente en:
 
-`backend/app/models/inventory.py`
-
-Se definieron dos modelos:
-
-### Inventory
-
-Representa las existencias:
-
-```text
-id
-branch_id
-product_id
-quantity
-```
-
-### InventoryMovement
-
-Representa movimientos:
-
-```text
-id
-product_id
-branch_id
-movement_type
-quantity
-created_at
-```
-
-Esto permite posteriormente registrar:
-
-```text
-entradas
-salidas
-ajustes
-```
+- **Sprint 4:** FastAPI, endpoints y servicios.
+- **Sprint 5:** PostgreSQL, modelos y migraciones.
+- **Sprint 6:** Python + NumPy y pruebas unitarias.
+- **Sprint 7:** integración completa.
+- **Sprint 8:** JWT, roles, permisos y trazabilidad.
+- **Sprint 9:** reportes.
+- **Sprint 10:** pruebas y documentación.
 
 ---
 
-# 15. Repository de inventario
+## 18. Dependencias principales
 
-## Archivo
-
-`backend/app/repositories/inventory_repository.py`
-
-Se agregaron funciones para:
-
-- Obtener todo el inventario.
-- Buscar inventario por sucursal.
-- Buscar inventario por producto.
-- Crear inventario.
-- Registrar movimientos.
-
-La idea es mantener separada la consulta a la base de datos de la lógica de negocio.
-
----
-
-# 16. Repository de productos
-
-## Archivo
-
-`backend/app/repositories/product_repository.py`
-
-Se modificó la consulta de productos para obtener:
+El proyecto utiliza, entre otras:
 
 ```text
-id
-name
-category
-price
-stock
-active
-```
-
-El stock se calcula sumando las cantidades de inventario:
-
-```text
-SUM(inventory.quantity)
-```
-
-Y cuando un producto no tiene inventario se utiliza:
-
-```text
-COALESCE(..., 0)
-```
-
-para mostrar:
-
-```text
-stock = 0
-```
-
-También se implementaron funciones para:
-
-- Obtener todos los productos.
-- Obtener un producto por ID.
-- Obtener productos activos.
-- Crear productos.
-
----
-
-# 17. Servicio de productos
-
-## Archivo
-
-`backend/app/services/product_service.py`
-
-Se implementó la lógica para:
-
-- Listar productos.
-- Listar productos activos.
-- Buscar productos por ID.
-- Registrar productos.
-
-También se agregó una validación para evitar:
-
-```text
-nombre vacío
-precio negativo
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg[binary]
+pydantic
+python-dotenv
+numpy
+alembic
+python-jose[cryptography]
+passlib==1.7.4
+bcrypt==4.0.1
+python-multipart
+pytest
+httpx
+pydantic-settings
+email-validator
 ```
 
 ---
 
-# 18. Rutas de productos
+## 19. Producción
 
-## Archivo
-
-`backend/app/api/routes/products.py`
-
-Actualmente existen rutas para:
+En el entorno de producción deben definirse al menos:
 
 ```text
-GET  /api/v1/products
-GET  /api/v1/products/active
-GET  /api/v1/products/{product_id}
-POST /api/v1/products
+DATABASE_URL
+SECRET_KEY
 ```
 
-La ruta utiliza:
+Para producción se recomienda que `SECRET_KEY` sea:
 
-```text
-product_service
-```
+- larga;
+- aleatoria;
+- distinta a la utilizada en desarrollo;
+- almacenada únicamente como variable segura del proveedor de despliegue.
 
-para mantener la separación de responsabilidades.
+Un cambio de `SECRET_KEY` invalida los JWT firmados con la clave anterior, por lo que los usuarios deberán iniciar sesión nuevamente.
 
 ---
 
-# 19. Problema pendiente en productos
+## 20. Alcance respecto al Plan Maestro
 
-Hay una diferencia entre lo que devuelve el backend y lo que espera el frontend.
-
-El frontend utiliza:
-
-```typescript
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  status: "Activo" | "Inactivo";
-}
-```
-
-Pero una parte del backend devuelve:
+La implementación conserva el núcleo propuesto por el documento:
 
 ```text
-active
-```
-
-en lugar de:
-
-```text
-status
-```
-
-Esto deberá corregirse después de crear las tablas.
-
-También existe una limitación actual en:
-
-```text
-POST /api/v1/products
-```
-
-porque recibe:
-
-```text
-category
-stock
-```
-
-pero actualmente no utiliza completamente esos valores para crear la categoría y el inventario.
-
-Se dejó pendiente para no hacer cambios innecesarios antes de terminar la conexión con la base de datos.
-
----
-
-# 20. Frontend de Productos
-
-## Archivo
-
-`frontend/src/pages/Productos.tsx`
-
-La pantalla actualmente utiliza datos locales mediante:
-
-```typescript
-useState(initialProducts);
-```
-
-Tiene:
-
-- Buscador.
-- Tabla.
-- Crear producto.
-- Editar producto.
-- Eliminar producto.
-- Modal.
-- Validaciones.
-- Estado activo/inactivo.
-
-El objetivo es conectar posteriormente esta pantalla con:
-
-```text
-GET /api/v1/products
-POST /api/v1/products
-```
-
-sin cambiar su diseño visual.
-
----
-
-# 21. Combinaciones lineales
-
-## Archivo
-
-`frontend/src/pages/CombinacionesLineales.tsx`
-
-Actualmente el componente contiene solamente:
-
-```text
-Título:
-Combinaciones lineales
-
-Descripción:
-Módulo de análisis de combinaciones lineales.
-```
-
-El código actual es una página inicial.
-
-Por eso **no aparece ningún gráfico**.
-
-Todavía no se ha implementado:
-
-- Entrada de vectores.
-- Coeficientes.
-- Operación matemática.
-- Vector resultante.
-- Gráfico.
-- Representación visual de los vectores.
-
-La página actual no está rota: simplemente todavía no tiene implementada esa funcionalidad.
-
----
-
-# 22. Qué falta hacer ahora
-
-El orden recomendado para continuar es:
-
-## Paso 1 — Terminar Alembic
-
-Configurar:
-
-```text
-backend/alembic.ini
-backend/alembic/env.py
-```
-
-para conectar Alembic con:
-
-```text
-Supabase PostgreSQL
-```
-
----
-
-## Paso 2 — Detectar todos los modelos
-
-Alembic debe conocer todos los modelos de MatrixFlow.
-
-Por ejemplo:
-
-```text
-User
-Role
-Company
-Branch
-Category
-Product
-Inventory
-InventoryMovement
-Sale
-...
-```
-
-Esto permitirá generar el esquema inicial.
-
----
-
-## Paso 3 — Crear la migración inicial
-
-Ejecutar:
-
-```cmd
-alembic revision --autogenerate -m "initial schema"
-```
-
-Después revisar la migración generada.
-
----
-
-## Paso 4 — Crear las tablas en Supabase
-
-Ejecutar:
-
-```cmd
-alembic upgrade head
-```
-
-Esto debe crear las tablas en PostgreSQL.
-
----
-
-## Paso 5 — Probar productos
-
-Comprobar:
-
-```text
-GET /api/v1/products
-```
-
-Ahora ya no debería aparecer:
-
-```text
-relation "products" does not exist
-```
-
----
-
-## Paso 6 — Corregir la respuesta de productos
-
-Adaptar el backend para que devuelva exactamente:
-
-```text
-id
-name
-category
-price
-stock
-status
-```
-
-como espera React.
-
----
-
-## Paso 7 — Conectar Productos.tsx
-
-Sustituir gradualmente:
-
-```typescript
-useState(initialProducts);
-```
-
-por datos obtenidos desde FastAPI.
-
-El diseño actual se debe conservar.
-
----
-
-## Paso 8 — Implementar Combinaciones Lineales
-
-Después se puede construir el módulo matemático:
-
-```text
-Vector 1
-Vector 2
-Coeficiente 1
-Coeficiente 2
+Ventas / Inventario
         ↓
-Combinación lineal
+Vectores / Matrices
         ↓
-Vector resultante
+Python + NumPy
         ↓
-Gráfico
+Resultados
+        ↓
+Historial / Reportes
 ```
 
-La parte gráfica puede hacerse con una librería de gráficos adecuada para React.
+Elementos contemplados por el Plan Maestro que pueden permanecer como ampliaciones futuras o fuera del flujo principal actual:
+
+- metas empresariales;
+- exportaciones avanzadas;
+- gestión independiente de categorías;
+- ampliación del sistema de auditoría a más acciones.
 
 ---
 
-# 23. Estado actual del proyecto
+## 21. Documento de referencia
 
-| Área                              | Estado                                   |
-| --------------------------------- | ---------------------------------------- |
-| FastAPI                           | ✅ Funcionando                           |
-| React/Vite                        | ✅ Funcionando                           |
-| Frontend → Backend                | ✅ Conectado                             |
-| JWT                               | ✅ Implementado                          |
-| bcrypt                            | ✅ Configurado                           |
-| Supabase                          | ✅ Conexión validada                     |
-| SQLAlchemy                        | ✅ Configurado                           |
-| Productos API                     | 🟡 Implementada, falta validar contra BD |
-| Inventario                        | 🟡 Modelos/repository preparados         |
-| Alembic                           | 🟡 Inicializado, falta configurar        |
-| Tablas Supabase                   | 🔴 Todavía no creadas                    |
-| Productos frontend → API          | 🔴 Pendiente                             |
-| Combinaciones lineales            | 🔴 Solo pantalla inicial                 |
-| Gráfico de combinaciones lineales | 🔴 Pendiente                             |
+Este backend se desarrolló tomando como referencia:
+
+**MatrixFlow Enterprise — Plan Maestro de Desarrollo**  
+Versión 1.0 — Septiembre de 2026
+
+Fases especialmente relacionadas:
+
+- Fase 2 — Backend Python + FastAPI
+- Fase 3 — PostgreSQL y modelo de datos
+- Fase 4 — Motor matemático Python + NumPy
+- Fase 5 — Integración
+- Fase 6 — Seguridad y auditoría
+- Fase 7 — Dashboard y reportes
+- Fase 8 — Pruebas
 
 ---
 
-# 24. Arquitectura que estamos utilizando
+## 22. Proyecto académico
 
-La estructura principal sigue esta idea:
+MatrixFlow Enterprise aplica álgebra lineal dentro de un contexto empresarial realista.
+
+El backend representa la capa central del sistema:
 
 ```text
-React
-  │
-  │ HTTP
-  ▼
 FastAPI
-  │
-  ├── Routes
-  │
-  ├── Services
-  │
-  ├── Repositories
-  │
-  └── Models
-        │
-        ▼
-   SQLAlchemy
-        │
-        ▼
-PostgreSQL / Supabase
+├── Seguridad
+├── Servicios empresariales
+├── Persistencia PostgreSQL
+├── Auditoría
+└── Motor NumPy
 ```
 
-La ventaja es que cada parte tiene una responsabilidad específica.
-
----
-
-# 25. Regla importante para continuar
-
-Para evitar romper el proyecto:
-
-1. Cambiar una cosa a la vez.
-2. Probar después de cada cambio.
-3. No modificar el diseño del frontend sin necesidad.
-4. No colocar contraseñas directamente en el código.
-5. Mantener comentarios en español para entender el código.
-6. Revisar las migraciones antes de ejecutarlas.
-7. No hacer grandes refactorizaciones mientras estamos conectando los módulos.
-
----
-
-## Próximo paso
-
-El siguiente trabajo concreto es:
-
-**terminar la configuración de Alembic → generar la migración inicial → crear las tablas en Supabase.**
-
-Después podremos conectar las pantallas React directamente a los datos reales de MatrixFlow.
+Su objetivo es garantizar que los cálculos, reglas de negocio, permisos y datos persistidos puedan ser consumidos de forma segura y estructurada por el frontend.

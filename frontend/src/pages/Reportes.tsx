@@ -631,7 +631,9 @@ function Reportes() {
               </p>
             </div>
 
-            <div className="mt-6 h-80">
+            {/* Contenedor específico para adaptar el gráfico
+              circular al tema claro y oscuro. */}
+            <div className="report-inventory-pie mt-6 h-80">
               {inventoryReport.length === 0 ? (
                 // Estado vacío cuando todavía no existe inventario.
                 <div className="flex h-full items-center justify-center">
