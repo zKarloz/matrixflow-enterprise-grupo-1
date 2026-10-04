@@ -44,7 +44,6 @@ pwd_context = CryptContext(
 # ------------------------------------------------------------
 
 # Clave utilizada para firmar los tokens.
-#
 # La clave secreta se obtiene obligatoriamente desde .env
 # mediante la configuración central de MatrixFlow.
 SECRET_KEY = settings.SECRET_KEY

@@ -23,6 +23,7 @@ import {
   BrowserRouter,
   Route,
   Routes,
+  useLocation,
   useNavigate,
 } from 'react-router-dom'
 
@@ -122,6 +123,62 @@ function RoleProtectedRoute({
   )
 }
 
+// ============================================================
+// TÍTULO DINÁMICO DE LA PESTAÑA
+// ============================================================
+//
+// Actualiza el título del navegador según el módulo
+// que el usuario esté visitando.
+//
+// De esta manera toda la configuración queda centralizada
+// junto al sistema de rutas de MatrixFlow.
+// ============================================================
+
+function DocumentTitle() {
+  const location = useLocation()
+
+  useEffect(() => {
+    // Relacionamos cada ruta con el nombre que debe
+    // mostrarse en la pestaña del navegador.
+    const routeTitles: Record<string, string> = {
+      '/': 'Dashboard',
+      '/login': 'Iniciar sesión',
+
+      '/empresa': 'Empresa',
+      '/empresa/sucursales': 'Sucursales',
+      '/empresa/productos': 'Productos',
+
+      '/ventas': 'Ventas',
+      '/inventario': 'Inventario',
+
+      '/analisis-matematico': 'Vectores',
+      '/analisis-matematico/vectores': 'Vectores',
+      '/analisis-matematico/matrices': 'Matrices',
+      '/analisis-matematico/operaciones': 'Operaciones',
+      '/analisis-matematico/combinaciones-lineales':
+        'Combinaciones lineales',
+
+      '/historial': 'Historial',
+      '/reportes': 'Reportes',
+      '/usuarios': 'Usuarios',
+      '/seguridad': 'Seguridad',
+      '/configuracion': 'Configuración',
+    }
+
+    // Si una ruta no está registrada utilizamos solamente
+    // el nombre general de la aplicación.
+    const pageTitle =
+      routeTitles[location.pathname]
+
+    document.title = pageTitle
+      ? `MatrixFlow | ${pageTitle}`
+      : 'MatrixFlow Enterprise'
+  }, [location.pathname])
+
+  // Este componente solamente controla document.title,
+  // por lo que no necesita renderizar contenido visual.
+  return null
+}
 
 // ============================================================
 // LAYOUT PRINCIPAL
@@ -710,6 +767,9 @@ function App() {
 
   return (
     <BrowserRouter>
+
+      {/* Actualiza el título cuando cambia la ruta. */}
+      <DocumentTitle />
 
       <Routes>
 
