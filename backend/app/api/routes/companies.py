@@ -11,11 +11,16 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import require_roles
-from app.schemas.company import CompanyCreate, CompanyResponse
+from app.schemas.company import (
+    CompanyCreate,
+    CompanyResponse,
+    CompanyUpdate,
+)
 from app.services.company_service import (
     get_company,
     list_companies,
     register_company,
+    update_company,
 )
 
 
@@ -93,5 +98,44 @@ def create_company(
         # como una respuesta HTTP 400.
         raise HTTPException(
             status_code=400,
+            detail=str(error),
+        )
+
+
+# ------------------------------------------------------------
+# PATCH /companies/{company_id}
+# ------------------------------------------------------------
+@router.patch("/{company_id}", response_model=CompanyResponse)
+def edit_company(
+    company_id: int,
+    data: CompanyUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_roles("Administrador")
+    ),
+):
+    try:
+        # Actualizamos los datos corporativos de la empresa.
+        return update_company(
+            db=db,
+            company_id=company_id,
+            name=data.name,
+            tax_id=data.tax_id,
+            address=data.address,
+            phone=data.phone,
+            email=data.email,
+        )
+
+    except ValueError as error:
+        # Una empresa inexistente devuelve 404.
+        # Las demás validaciones de negocio devuelven 400.
+        status_code = (
+            404
+            if str(error) == "Empresa no encontrada"
+            else 400
+        )
+
+        raise HTTPException(
+            status_code=status_code,
             detail=str(error),
         )

@@ -4,10 +4,6 @@
 # ============================================================
 # Este archivo contiene las operaciones de persistencia
 # relacionadas con la tabla "companies".
-#
-# IMPORTANTE:
-# La definición debe coincidir con las columnas reales
-# de PostgreSQL.
 # ============================================================
 
 from sqlalchemy.orm import Session
@@ -31,6 +27,19 @@ def get_company_by_id(db: Session, company_id: int):
     return (
         db.query(Company)
         .filter(Company.id == company_id)
+        .first()
+    )
+
+
+# ------------------------------------------------------------
+# Obtener una empresa por RUC / tax_id
+# ------------------------------------------------------------
+def get_company_by_tax_id(db: Session, tax_id: str):
+    # Esta consulta permite comprobar la restricción UNIQUE
+    # antes de intentar guardar los cambios en PostgreSQL.
+    return (
+        db.query(Company)
+        .filter(Company.tax_id == tax_id)
         .first()
     )
 
@@ -67,4 +76,34 @@ def create_company(
     db.refresh(company)
 
     # Devolvemos la empresa creada.
+    return company
+
+
+# ------------------------------------------------------------
+# Actualizar una empresa
+# ------------------------------------------------------------
+def update_company(
+    db: Session,
+    company: Company,
+    name: str,
+    tax_id: str,
+    address: str | None = None,
+    phone: str | None = None,
+    email: str | None = None,
+):
+    # Modificamos únicamente los datos corporativos.
+    # El estado de la empresa no se altera desde este formulario.
+    company.name = name
+    company.tax_id = tax_id
+    company.address = address
+    company.phone = phone
+    company.email = email
+
+    # Persistimos los cambios realizados.
+    db.commit()
+
+    # Recargamos el objeto para devolver exactamente
+    # los valores almacenados en PostgreSQL.
+    db.refresh(company)
+
     return company

@@ -17,10 +17,12 @@ class CompanyBase(BaseModel):
     name: str
 
     # Identificador tributario.
-    # En nuestra BD es obligatorio.
+    # En nuestra BD es obligatorio y único.
     tax_id: str
 
-    # Datos adicionales que permite la tabla companies.
+    # Datos corporativos opcionales.
+    # address representa el domicilio fiscal de la empresa,
+    # no la dirección de una sucursal específica.
     address: str | None = None
     phone: str | None = None
     email: str | None = None
@@ -31,6 +33,15 @@ class CompanyBase(BaseModel):
 # ------------------------------------------------------------
 class CompanyCreate(CompanyBase):
     # Hereda todos los campos de CompanyBase.
+    pass
+
+
+# ------------------------------------------------------------
+# Datos utilizados para actualizar una empresa
+# ------------------------------------------------------------
+class CompanyUpdate(CompanyBase):
+    # Para editar una empresa enviamos nuevamente sus datos
+    # corporativos principales. El ID se recibe por la URL.
     pass
 
 

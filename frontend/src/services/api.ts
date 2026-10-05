@@ -556,8 +556,8 @@ export async function updateBranch(
 // EMPRESAS
 // ============================================================
 //
-// Estas funciones permiten consultar las empresas existentes
-// para utilizarlas, entre otras cosas, al registrar sucursales.
+// Estas funciones permiten consultar, registrar y editar
+// empresas mediante la API de FastAPI.
 //
 // El endpoint está protegido en FastAPI para Administrador.
 // ============================================================
@@ -575,13 +575,14 @@ export interface Company {
   // Identificador tributario.
   tax_id: string
 
-  // Dirección de la empresa.
+  // Domicilio fiscal de la empresa.
+  // Las direcciones operativas pertenecen a las sucursales.
   address: string | null
 
-  // Teléfono de la empresa.
+  // Teléfono corporativo.
   phone: string | null
 
-  // Correo electrónico.
+  // Correo electrónico corporativo.
   email: string | null
 }
 
@@ -595,7 +596,23 @@ export interface CreateCompanyData {
   // RUC u otro identificador tributario.
   tax_id: string
 
-  // Datos de contacto opcionales.
+  // Datos corporativos opcionales.
+  address?: string | null
+  phone?: string | null
+  email?: string | null
+}
+
+/**
+ * Datos que pueden modificarse en una empresa existente.
+ */
+export interface UpdateCompanyData {
+  // Nombre comercial o razón social.
+  name: string
+
+  // RUC o identificador tributario.
+  tax_id: string
+
+  // Datos corporativos editables.
   address?: string | null
   phone?: string | null
   email?: string | null
@@ -664,6 +681,48 @@ export async function createCompany(
 
   return response.json()
 }
+
+/**
+ * Actualiza los datos corporativos de una empresa.
+ *
+ * Endpoint:
+ * PATCH /api/v1/companies/{companyId}
+ */
+export async function updateCompany(
+  companyId: number,
+  data: UpdateCompanyData,
+): Promise<Company> {
+  // authenticatedFetch agrega automáticamente el JWT
+  // del usuario Administrador.
+  const response = await authenticatedFetch(
+    `/api/v1/companies/${companyId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    let message =
+      'No se pudo actualizar la empresa.'
+
+    try {
+      const errorData = await response.json()
+
+      if (errorData.detail) {
+        message = errorData.detail
+      }
+    } catch {
+      // Si FastAPI no devuelve JSON,
+      // conservamos el mensaje general.
+    }
+
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
 
 // ============================================================
 // CATEGORÍAS

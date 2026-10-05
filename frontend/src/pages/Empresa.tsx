@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   Package,
+  Pencil,
   Phone,
   Plus,
   Store,
@@ -23,6 +24,7 @@ import CompanyInfoCard from '../components/company/CompanyInfoCard'
 import {
   createCompany,
   getCompanies,
+  updateCompany,
   type Company,
 } from '../services/api'
 
@@ -48,9 +50,14 @@ function Empresa() {
   const [error, setError] =
     useState('')
 
-  // Modal de creación de empresa.
+  // Modal utilizado tanto para crear como para editar.
   const [showForm, setShowForm] =
     useState(false)
+
+  // Cuando contiene un ID, el formulario está en modo edición.
+  // Si es null, el formulario crea una nueva empresa.
+  const [editingCompanyId, setEditingCompanyId] =
+    useState<number | null>(null)
 
   const [saving, setSaving] =
     useState(false)
@@ -148,7 +155,10 @@ function Empresa() {
   // ----------------------------------------------------------
 
   const resetForm = () => {
+    // Cerramos el modal y devolvemos todos los estados
+    // a sus valores iniciales.
     setShowForm(false)
+    setEditingCompanyId(null)
     setSaving(false)
     setFormError('')
     setName('')
@@ -160,7 +170,34 @@ function Empresa() {
 
 
   const openCreateForm = () => {
+    // Abrimos el formulario vacío en modo creación.
     resetForm()
+    setShowForm(true)
+  }
+
+
+  const openEditForm = () => {
+    if (!selectedCompany) {
+      return
+    }
+
+    // Precargamos en el formulario los datos actuales
+    // para que el usuario pueda modificarlos.
+    setEditingCompanyId(
+      selectedCompany.id,
+    )
+    setName(selectedCompany.name)
+    setTaxId(selectedCompany.tax_id)
+    setAddress(
+      selectedCompany.address ?? '',
+    )
+    setPhone(
+      selectedCompany.phone ?? '',
+    )
+    setEmail(
+      selectedCompany.email ?? '',
+    )
+    setFormError('')
     setShowForm(true)
   }
 
@@ -184,20 +221,45 @@ function Empresa() {
       setSaving(true)
       setFormError('')
 
-      const createdCompany =
-        await createCompany({
-          name: name.trim(),
-          tax_id: taxId.trim(),
-          address:
-            address.trim() || null,
-          phone:
-            phone.trim() || null,
-          email:
-            email.trim() || null,
-        })
+      // Construimos una sola estructura de datos para crear
+      // o actualizar una empresa.
+      const companyData = {
+        name: name.trim(),
+        tax_id: taxId.trim(),
+        address:
+          address.trim() || null,
+        phone:
+          phone.trim() || null,
+        email:
+          email.trim() || null,
+      }
+
+      let companyIdToSelect: number
+
+      if (editingCompanyId !== null) {
+        // Modo edición: actualizamos la empresa existente.
+        const updatedCompany =
+          await updateCompany(
+            editingCompanyId,
+            companyData,
+          )
+
+        companyIdToSelect =
+          updatedCompany.id
+      } else {
+        // Modo creación: registramos una nueva empresa.
+        const createdCompany =
+          await createCompany(
+            companyData,
+          )
+
+        companyIdToSelect =
+          createdCompany.id
+      }
 
       // Recargamos para reflejar exactamente lo almacenado
-      // por PostgreSQL y seleccionamos la nueva empresa.
+      // por PostgreSQL y mantenemos seleccionada la empresa
+      // recién creada o editada.
       const updatedCompanies =
         await getCompanies()
 
@@ -206,7 +268,7 @@ function Empresa() {
       )
 
       setSelectedCompanyId(
-        String(createdCompany.id),
+        String(companyIdToSelect),
       )
 
       resetForm()
@@ -214,7 +276,9 @@ function Empresa() {
       setFormError(
         requestError instanceof Error
           ? requestError.message
-          : 'No se pudo registrar la empresa.',
+          : editingCompanyId !== null
+            ? 'No se pudo actualizar la empresa.'
+            : 'No se pudo registrar la empresa.',
       )
     } finally {
       setSaving(false)
@@ -338,20 +402,31 @@ function Empresa() {
         <>
           <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <Building2 size={22} />
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <Building2 size={22} />
+                  </div>
+
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      {selectedCompany.name}
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Información corporativa registrada en MatrixFlow.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    {selectedCompany.name}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Información corporativa registrada en MatrixFlow.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={openEditForm}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <Pencil size={16} />
+                  Editar empresa
+                </button>
               </div>
             </div>
 
@@ -380,10 +455,10 @@ function Empresa() {
               />
 
               <CompanyInfoCard
-                label="Dirección"
+                label="Domicilio fiscal"
                 value={
                   selectedCompany.address ??
-                  'No registrada'
+                  'No registrado'
                 }
               />
             </div>
@@ -505,7 +580,7 @@ function Empresa() {
 
 
       {/* ======================================================
-          MODAL NUEVA EMPRESA
+          MODAL CREAR / EDITAR EMPRESA
           ====================================================== */}
       <Modal
         open={showForm}
@@ -519,11 +594,15 @@ function Empresa() {
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
-              Nueva empresa
+              {editingCompanyId !== null
+                ? 'Editar empresa'
+                : 'Nueva empresa'}
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Registra la información corporativa principal.
+              {editingCompanyId !== null
+                ? 'Actualiza la información corporativa principal.'
+                : 'Registra la información corporativa principal.'}
             </p>
           </div>
 
@@ -596,7 +675,7 @@ function Empresa() {
 
           <div>
             <label className="text-sm font-semibold text-slate-700">
-              Dirección
+              Domicilio fiscal
             </label>
 
             <div className="relative mt-2">
@@ -614,7 +693,7 @@ function Empresa() {
                   )
                 }
                 disabled={saving}
-                placeholder="Dirección opcional"
+                placeholder="Ej. Av. Javier Prado 1234, Lima"
                 className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -698,7 +777,9 @@ function Empresa() {
           >
             {saving
               ? 'Guardando...'
-              : 'Crear empresa'}
+              : editingCompanyId !== null
+                ? 'Guardar cambios'
+                : 'Crear empresa'}
           </button>
         </div>
       </Modal>
